@@ -128,3 +128,18 @@ body.test-mode::before{content:"TEST MODE · SPARAR INGET";position:fixed;z-inde
 .advanced-auto-grid p,.advanced-final-grid p{margin:6px 0 0;font-weight:760;line-height:1.4}
 @media(max-width:900px){.advanced-auto-grid,.advanced-final-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.advanced-auto-grid,.advanced-final-grid{grid-template-columns:1fr}}
+
+.loading-call{border-color:#49698f;background:linear-gradient(180deg,rgba(20,31,49,.99),rgba(12,19,31,.99))}
+.loading-call-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+.loading-call-grid>div{background:#101a2c;border:1px solid #2c3b58;border-radius:12px;padding:13px}
+.loading-call-grid p{margin:7px 0 0;font-weight:800;line-height:1.42}
+.loading-script{margin-top:12px;padding:16px;border-radius:12px;border:1px solid rgba(240,199,94,.28);background:rgba(240,199,94,.07)}
+.loading-script strong{display:block;margin-top:7px;font-size:18px;line-height:1.45}
+body.draft-complete #allRoleRecsCard,
+body.draft-complete #aiInsightCard,
+body.draft-complete .live-coach-card,
+body.draft-complete #autoReadCard,
+body.draft-complete #compCheckCard,
+body.draft-complete .comps{display:none!important}
+@media(max-width:1000px){.loading-call-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.loading-call-grid{grid-template-columns:1fr}.loading-script strong{font-size:16px}}
