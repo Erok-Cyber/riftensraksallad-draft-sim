@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Riftensräksallad Draft Trainer</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-design3" />
+  <link rel="stylesheet" href="styles.css?v=20260928-analysis1" />
 </head>
 <body>
   <main class="app">
@@ -14,6 +14,10 @@
         <h1>Draft Trainer</h1>
         </div></div>
       <div class="header-actions">
+        <div id="homeTabs" class="top-tabs">
+          <button id="startTabBtn" class="top-tab active">Start</button>
+          <button id="analysisTabBtn" class="top-tab">Analys</button>
+        </div>
         <button id="homeBtn" class="secondary nav-action hidden">← Hem</button>
         <button id="undoBtn" class="secondary nav-action hidden">↶ Undo</button>
         <button id="resetBtn" class="secondary">↻ Starta om</button>
@@ -133,18 +137,77 @@
       </div>
     </section>
 
+    <section id="analysisDashboard" class="analysis-dashboard hidden">
+      <div class="analysis-dashboard-head">
+        <div>
+          <p class="eyebrow">VÅRA MATCHER</p>
+          <h2>Analys</h2>
+          <p class="analysis-intro">Statistik från matcher som sparats efter färdig Draft Brain-draft.</p>
+        </div>
+        <div class="analysis-filters">
+          <button class="analysis-filter active" data-filter="all">Alla</button>
+          <button class="analysis-filter" data-filter="league">Liga</button>
+          <button class="analysis-filter" data-filter="flex">Flex / 5v5</button>
+        </div>
+      </div>
+
+      <div class="analysis-kpis">
+        <article><span>Matcher</span><strong id="statMatches">0</strong><small id="statFilterLabel">Alla matcher</small></article>
+        <article><span>Winrate</span><strong id="statWinrate">—</strong><small id="statRecord">0W · 0L</small></article>
+        <article><span>Liga WR</span><strong id="statLeagueWr">—</strong><small id="statLeagueCount">0 matcher</small></article>
+        <article><span>Flex / 5v5 WR</span><strong id="statFlexWr">—</strong><small id="statFlexCount">0 matcher</small></article>
+        <article><span>Senaste 10</span><strong id="statRecent">—</strong><small id="statRecentRecord">Ingen data</small></article>
+      </div>
+
+      <div class="analysis-two-col">
+        <section class="analysis-panel">
+          <div class="panel-head"><h3>Winrate per comp</h3><span id="bestCompStat" class="analysis-note">—</span></div>
+          <div id="compStats" class="stat-list"></div>
+        </section>
+        <section class="analysis-panel">
+          <div class="panel-head"><h3>Side & draftprofil</h3><span class="analysis-note">Blue vs Red</span></div>
+          <div id="sideStats" class="stat-list"></div>
+          <div id="profileStats" class="analysis-mini-grid"></div>
+        </section>
+      </div>
+
+      <div class="analysis-two-col">
+        <section class="analysis-panel">
+          <div class="panel-head"><h3>Mest spelade champions</h3><span class="analysis-note">Våra picks</span></div>
+          <div id="champStats" class="champ-stat-list"></div>
+        </section>
+        <section class="analysis-panel">
+          <div class="panel-head"><h3>Mönster</h3><span class="analysis-note">Automatiskt</span></div>
+          <div id="patternInsights" class="pattern-list"></div>
+        </section>
+      </div>
+
+      <section class="analysis-panel match-history-panel">
+        <div class="panel-head">
+          <h3>Matchhistorik</h3>
+          <span id="historyCount" class="analysis-note">0 matcher</span>
+        </div>
+        <div id="matchHistory" class="match-history"></div>
+      </section>
+
+      <div id="analysisEmpty" class="analysis-empty hidden">
+        <strong>Ingen matchdata ännu.</strong>
+        <p>Färdigställ en riktig draft i Draft Brain och välj Win/Loss + Liga/Flex innan du sparar.</p>
+      </div>
+    </section>
+
     <section class="card comps">
       <h2>Våra standardcomps</h2>
       <div class="comp-list">
-        <article class="comp-card early-comp"><span class="comp-icon">⚔</span><div><h3>Early Skirmish</h3><p>Renekton · Xin Zhao · Ahri · Ashe · Nautilus</p></div><span class="comp-arrow">→</span></article>
-        <article class="comp-card press-comp"><span class="comp-icon">✦</span><div><h3>PRESS R</h3><p>Malphite · Jarvan IV · Annie · Jinx · Leona</p></div><span class="comp-arrow">→</span></article>
-        <article class="comp-card objective-comp"><span class="comp-icon">◆</span><div><h3>Objective Control</h3><p>Mordekaiser · Udyr/Lillia · Taliyah · Varus · Maokai</p></div><span class="comp-arrow">→</span></article>
-        <article class="comp-card jungle-comp"><span class="comp-icon">▲</span><div><h3>Jungle Carry</h3><p>Shen · Viego/Kindred/Graves/Lillia · Taliyah/Ahri · Ashe · Nautilus</p></div><span class="comp-arrow">→</span></article>
+        <article class="comp-card early-comp"><span class="comp-icon">⚔</span><div><h3>Early Skirmish</h3><p>Renekton · Xin Zhao · Ahri · Ashe · Nautilus</p></div></article>
+        <article class="comp-card press-comp"><span class="comp-icon">✦</span><div><h3>PRESS R</h3><p>Malphite · Jarvan IV · Annie · Jinx · Leona</p></div></article>
+        <article class="comp-card objective-comp"><span class="comp-icon">◆</span><div><h3>Objective Control</h3><p>Mordekaiser · Udyr/Lillia · Taliyah · Varus · Maokai</p></div></article>
+        <article class="comp-card jungle-comp"><span class="comp-icon">▲</span><div><h3>Jungle Carry</h3><p>Shen · Viego/Kindred/Graves/Lillia · Taliyah/Ahri · Ashe · Nautilus</p></div></article>
       </div>
     </section>
   </main>
 
-  <script src="brand.js?v=20260928-design3"></script>
-  <script src="app.js?v=20260928-design3"></script>
+  <script src="brand.js?v=20260928-analysis1"></script>
+  <script src="app.js?v=20260928-analysis1"></script>
 </body>
 </html>
