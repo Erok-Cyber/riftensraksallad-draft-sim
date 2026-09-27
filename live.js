@@ -296,7 +296,7 @@ function recommendedNextRole(){
 
 function render(){
   if(!userSide)return;
-  renderTeam("blue");renderTeam("red");renderTurn();renderStatus();renderCoach();renderRecommendation();renderAllRoleRecommendations();renderCompChecks();renderFinalGameplan();
+  renderTeam("blue");renderTeam("red");renderTurn();renderStatus();renderCoach();renderRecommendation();renderAllRoleRecommendations();renderCompChecks();renderAutoRead();renderFinalGameplan();
   $("draftProgress").textContent=step+" / "+draftOrder.length;
   if(step>=draftOrder.length)saveRecentDraft();
 }
@@ -769,7 +769,11 @@ function buildFinalGameplan(){
   }
 
   const power=buildPowerCurvePlan();
-  return {comp,early,mid,fight,objective,rule,...power};
+  const firstObjective=objectiveAutoPlan();
+  const fightJobText=fightJobs();
+  const risks=draftRiskEngine();
+  if(risks[0]?.severity>=3) rule+=" WATCH: "+risks[0].text;
+  return {comp,early,mid,fight,objective,rule,firstObjective,fightJobText,...power};
 }
 
 function renderFinalGameplan(){
@@ -794,6 +798,8 @@ function renderFinalGameplan(){
   $("gp010").textContent=gp.p010;
   $("gp1025").textContent=gp.p1025;
   $("gp25").textContent=gp.p25;
+  $("gpFirstObjective").textContent=gp.firstObjective.call+" — "+gp.firstObjective.detail;
+  $("gpFightJobs").textContent=gp.fightJobText;
 }
 
 function saveRecentDraft(){
@@ -1322,25 +1328,161 @@ function smartLaneValue(role){
 }
 
 function buildPath(){
-  const map=ownRoleMap(), enemyMap=enemyRoleMap();
+  const map=ownRoleMap();
   if(!map.jungle)return "Låses när er jungle är pickad.";
+  const p=jungleAutoPlan();
+  return p.focus+". "+p.reason;
+}
 
-  const top=smartLaneValue("top"),bot=smartLaneValue("bot");
-  const mid=laneSetupScore(map.mid||"");
-  let path;
 
-  if(top>-90&&bot>-90&&Math.abs(top-bot)<2){
-    path="Fullclear flexibelt. Låt första waves/prio avgöra top vs bot.";
-  }else if(top>bot){
-    path="Bot → top. Topsidan har bättre setup/volatilitet.";
-  }else{
-    path="Top → bot. Botsidan har bättre setup/target access.";
+const mobilityThreats=new Set(["Ahri","Akali","Ambessa","Camille","Ezreal","Fiora","Fizz","Kassadin","Katarina","LeBlanc","Lucian","Rakan","Tristana","Vayne","Yone","Zed"]);
+const backlineAccess=new Set(["Ahri","Annie","Jarvan IV","Leona","Malphite","Maokai","Nautilus","Nocturne","Vi","Vex","Wukong"]);
+const sustainedDamage=new Set(["Aphelios","Cassiopeia","Graves","Jinx","Kindred","Kog'Maw","Master Yi","Tristana","Varus","Vayne","Viego","Viktor","Xayah","Yunara","Zeri"]);
+const strongPeelSet=new Set(["Alistar","Braum","Galio","Janna","Lulu","Maokai","Milio","Nami","Nautilus","Poppy","Rakan","Renata Glasc","Shen","Tahm Kench","Thresh","Xayah"]);
+const reliableEngageSet=new Set(["Alistar","Amumu","Annie","Ashe","Galio","Jarvan IV","Leona","Malphite","Maokai","Nautilus","Nocturne","Rakan","Rell","Sejuani","Vi","Vex","Wukong"]);
+const highWaveclearSet=new Set(["Anivia","Azir","Hwei","Jinx","Orianna","Sivir","Smolder","Taliyah","Tristana","Varus","Veigar","Vex","Viktor","Xayah","Ziggs"]);
+const rangedSet=new Set(["Ahri","Anivia","Annie","Aphelios","Ashe","Azir","Caitlyn","Ezreal","Graves","Heimerdinger","Hwei","Jhin","Jinx","Kai'Sa","Kindred","Kog'Maw","Lucian","Senna","Sivir","Smolder","Taliyah","Tristana","Varus","Vayne","Vex","Viktor","Xayah","Yunara","Zeri"]);
+
+function lanePrioUnit(ally,enemy){
+  if(!ally)return {score:0,label:"okänd"};
+  let s=0;
+  if(smartTraits.lanePressure.has(ally))s+=2;
+  if(powerCurve.earlyHeavy.has(ally))s+=1.5;
+  if(powerCurve.hardScale.has(ally))s-=1;
+  if(rangedSet.has(ally))s+=.5;
+  if(enemy){
+    if(smartTraits.lanePressure.has(enemy))s-=1.5;
+    if(powerCurve.earlyHeavy.has(enemy))s-=1;
+    if(powerCurve.hardScale.has(enemy))s+=.6;
+    if(rangedSet.has(enemy)&&!rangedSet.has(ally))s-=.5;
   }
+  return {score:s,label:s>=1.5?"PRIO":s<=-1.2?"SVAG":"JÄMN"};
+}
 
-  if(mid>=2)path+=" Mid har bra setup och kan bli pivot efter clear.";
-  if(enemyMap.jungle&&traits.earlyJungle.has(enemyMap.jungle))path+=" Tracka "+enemyMap.jungle+"; undvik blind river-fight utan prio.";
-  else if(enemyMap.jungle&&traits.scalingJungle.has(enemyMap.jungle))path+=" Straffa "+enemyMap.jungle+"s scaling med prio/invade när lanes kan röra sig.";
-  return path;
+function laneRead(){
+  const own=ownRoleMap(), enemy=enemyRoleMap();
+  const top=lanePrioUnit(own.top,enemy.top);
+  const mid=lanePrioUnit(own.mid,enemy.mid);
+  let botScore=0;
+  if(own.adc||own.support){
+    botScore+=(smartTraits.lanePressure.has(own.adc)?1.3:0)+(traits.engage.has(own.support)?1.2:0)+(rangedSet.has(own.adc)?0.4:0);
+    botScore-=(enemy.adc&&smartTraits.lanePressure.has(enemy.adc)?1.0:0)-(enemy.support&&traits.enchanter.has(enemy.support)?-.2:0);
+    if(enemy.support&&traits.disengage.has(enemy.support))botScore-=.8;
+    if(powerCurve.hardScale.has(own.adc))botScore-=.4;
+  }
+  const bot={score:botScore,label:botScore>=1.6?"PRIO":botScore<=-.9?"SVAG":"JÄMN"};
+  return {top,mid,bot};
+}
+
+function draftRiskEngine(){
+  const n=currentNeeds(), p=enemyProfile(), own=ours(), enemy=enemies();
+  const risks=[];
+  const access=own.filter(e=>backlineAccess.has(e.champ)).length;
+  const sustained=own.filter(e=>sustainedDamage.has(e.champ)).length;
+  const range=own.filter(e=>rangedSet.has(e.champ)).length;
+  const peel=own.filter(e=>strongPeelSet.has(e.champ)).length;
+  const engage=own.filter(e=>reliableEngageSet.has(e.champ)).length;
+  const wave=own.filter(e=>highWaveclearSet.has(e.champ)).length;
+
+  const add=(severity,text)=>risks.push({severity,text});
+  if(own.length>=3&&n.front===0)add(3,"Ingen riktig frontline ännu.");
+  if(own.length>=3&&engage===0)add(3,"Ingen pålitlig fight-start.");
+  if(p.dive>=2&&peel===0&&own.length>=3)add(3,"Enemy har dive men ni saknar tydlig peel.");
+  if(p.hyper>=1&&p.enchanter>=1&&access===0&&own.length>=3)add(3,"Hypercarry + enchanter och ni saknar backline access.");
+  if(p.tanks>=2&&sustained===0&&n.antiTank===0&&own.length>=3)add(3,"2+ tanks men låg sustained/anti-tank damage.");
+  if(own.length>=4&&n.ad>=4&&n.ap===0)add(3,"Nästan full AD — enemy kan stacka armor.");
+  if(own.length>=4&&n.ap>=4&&n.ad===0)add(3,"Nästan full AP — enemy kan stacka MR.");
+  if(enemy.length>=3&&p.poke>=2&&engage===0)add(2,"Enemy poke; ni behöver access/engage.");
+  if(own.length>=4&&range<=1)add(2,"Väldigt kort range; svårt att spela långsamma front-to-back fights.");
+  if(own.length>=4&&wave===0)add(2,"Låg waveclear kan göra siege/defense jobbigt.");
+  if(p.split>=1&&!own.some(e=>traits.splitpush.has(e.champ)||["Shen","Mordekaiser","Trundle","Garen","Yorick"].includes(e.champ)))add(2,"Enemy sidelane kan kräva tydlig side-assign.");
+  if(!risks.length&&own.length>=2)add(1,"Inga stora strukturella problem just nu.");
+  risks.sort((a,b)=>b.severity-a.severity);
+  return risks;
+}
+
+function jungleAutoPlan(){
+  const map=ownRoleMap(), enemy=enemyRoleMap(), lr=laneRead();
+  if(!map.jungle)return {focus:"Väntar på er jungle.",first:"—",reason:""};
+  const lanes=[
+    {name:"TOP",score:lr.top.score+(laneSetupScore(map.top)||0)*.7,target:map.top},
+    {name:"MID",score:lr.mid.score+(laneSetupScore(map.mid)||0)*.7,target:map.mid},
+    {name:"BOT",score:lr.bot.score+((laneSetupScore(map.adc)||0)+(laneSetupScore(map.support)||0))*.55,target:(map.adc||"")+"+"+(map.support||"")}
+  ].sort((a,b)=>b.score-a.score);
+  const best=lanes[0];
+  let focus;
+  if(best.score>=2.4)focus="PATHA MOT "+best.name;
+  else if(lanes.every(x=>x.score<.5))focus="FULLCLEAR / REAGERA";
+  else focus="FLEXA MOT "+best.name;
+
+  let reason=best.name+" har bäst kombination av prio + setup.";
+  if(enemy.jungle&&traits.earlyJungle.has(enemy.jungle))reason+=" Tracka "+enemy.jungle+" och undvik river utan lane-move.";
+  else if(enemy.jungle&&traits.scalingJungle.has(enemy.jungle))reason+=" Ni kan trycka tempo före "+enemy.jungle+" skalar.";
+  return {focus,first:best.name,reason};
+}
+
+function objectiveAutoPlan(){
+  const lr=laneRead(), map=ownRoleMap(), enemy=enemyRoleMap();
+  const botSide=lr.bot.score+lr.mid.score*.65;
+  const topSide=lr.top.score+lr.mid.score*.65;
+  let call,detail;
+  if(botSide>=1.8&&botSide>topSide+.5){
+    call="BOTSIDE NEUTRAL";
+    detail="Mid/bot ser bäst ut för första setupen. Ta vision med prio; forcea bara om lanes kan flytta.";
+  }else if(topSide>=1.8&&topSide>botSide+.5){
+    call="TOPSIDE NEUTRAL";
+    detail="Top/mid ger bäst första setup. Spela för topside tempo och tradea hellre än coinflippa botside.";
+  }else if(botSide<0&&topSide<0){
+    call="TRADEA FÖRSTA";
+    detail="Låg sannolik prio runt båda sidor. Cross-map/camps/waves är bättre än blind contest.";
+  }else{
+    call="PRIO AVGÖR";
+    detail="Ingen sida är självklar i draften. Låt första waves avgöra och gå till sidan som faktiskt har move.";
+  }
+  if(map.jungle&&["Udyr","Volibear","Xin Zhao"].includes(map.jungle))detail+=" Er jungle kan spela aktivt runt första neutrala.";
+  if(enemy.jungle&&traits.earlyJungle.has(enemy.jungle))detail+=" Respektera enemy jungle tidigt.";
+  return {call,detail};
+}
+
+function counterpickAutoRead(){
+  const own=ownRoleMap(), enemy=enemyRoleMap();
+  const open=roles.filter(r=>!own[r]);
+  if(!open.length)return "Alla roller låsta.";
+  if(open.includes("top")&&!enemy.top)return "SPARA TOP om möjligt — enemy top är fortfarande dold.";
+  if(open.includes("mid")&&!enemy.mid)return "SPARA MID om möjligt — enemy mid är fortfarande flexibel/dold.";
+  const shown=open.filter(r=>enemy[r]);
+  if(shown.length)return "Bra läge att låsa "+roleNames[shown[0]]+" — enemy-roll är redan visad.";
+  const scarce=open.map(r=>({r,n:(teamPool[r]||[]).filter(ch=>!unavailable().has(ch.toLowerCase())).length})).sort((a,b)=>a.n-b.n)[0];
+  if(scarce&&scarce.n<=3)return "LÅS "+roleNames[scarce.r]+" snart — poolen börjar bli pressad.";
+  return "Behåll solo-lane countervärde och ta flexibel/robust pick först.";
+}
+
+function fightJobs(){
+  const own=ownRoleMap(), enemy=enemies();
+  const starter=ours().find(e=>reliableEngageSet.has(e.champ));
+  const peel=ours().find(e=>strongPeelSet.has(e.champ)&&(!starter||e.champ!==starter.champ));
+  const carry=ours().find(e=>traits.hyperCarry.has(e.champ))||ours().find(e=>sustainedDamage.has(e.champ));
+  const target=enemy.find(e=>traits.hyperCarry.has(e.champ))||enemy.find(e=>traits.immobileCarry.has(e.champ));
+  const jobs=[];
+  if(starter)jobs.push(starter.champ+" startar");
+  if(peel)jobs.push(peel.champ+" sparar peel");
+  if(carry)jobs.push(carry.champ+" följer/cleanar");
+  if(target)jobs.push("target: "+target.champ);
+  return jobs.join(" → ")||"Bestäm en starter och en carry innan fighten.";
+}
+
+function renderAutoRead(){
+  const risks=draftRiskEngine(), top=risks[0], lr=laneRead(), jg=jungleAutoPlan();
+  const badge=$("autoRiskBadge");
+  if(!badge)return;
+  const sev=top?.severity||1;
+  badge.className="badge "+(sev>=3?"high":sev===2?"medium":"low");
+  badge.textContent=sev>=3?"HÖG RISK":sev===2?"WATCH":"STABIL";
+  $("autoRisk").textContent=top?.text||"För få picks ännu.";
+  $("autoPrio").textContent="TOP "+lr.top.label+" · MID "+lr.mid.label+" · BOT "+lr.bot.label;
+  $("autoJungle").textContent=jg.focus+(jg.reason?" — "+jg.reason:"");
+  $("autoDraftOrder").textContent=counterpickAutoRead();
+  $("autoReadTitle").textContent=ours().length<2?"Draften läses automatiskt":"AUTO: "+desiredComp()+" · "+compConfidence()+" confidence";
 }
 
 function renderStatsStatus(){
