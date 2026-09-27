@@ -306,9 +306,29 @@ function renderTeam(side){
   $(side+"Bans").innerHTML=bans.length?bans.map(e=>'<span class="ban-chip">'+e.champ+"</span>").join(""):'<span class="hint">—</span>';
   const picks=events.filter(e=>e.side===side&&e.type==="pick");
   const box=$(side+"Picks");box.innerHTML="";
+  const isEnemy=side!==userSide;
+  const inferred=isEnemy?inferEnemyRoles().byChamp:{};
   for(let i=0;i<5;i++){
-    const p=picks[i],div=document.createElement("div");div.className="pick";
-    div.innerHTML='<span class="slot">'+(p&&p.role?roleNames[p.role]:"P"+(i+1))+'</span><span class="champ">'+(p?p.champ:"—")+"</span>";
+    const p=picks[i],div=document.createElement("div");div.className="pick"+(isEnemy&&p?" inferred-pick":"");
+    if(!p){
+      div.innerHTML='<span class="slot">P'+(i+1)+'</span><span class="champ">—</span>';
+    }else if(isEnemy){
+      const g=inferred[p.champ];
+      const hard=p.role&&p.role!=="unknown";
+      const role=g?.role||p.role||"unknown";
+      const confidence=Math.round((g?.confidence||0)*100);
+      const alt=g?.alternatives?.[0];
+      const altText=alt&&alt.p>=.12?" · "+roleNames[alt.role]+" "+Math.round(alt.p*100)+"%":"";
+      const roleText=hard?roleNames[role]:"~ "+roleNames[role]+" "+confidence+"%";
+      div.innerHTML='<span class="slot enemy-inferred-role">'+roleText+'</span><span class="champ">'+p.champ+'</span>';
+      if(!hard&&g){
+        div.title="Draft Brain inference: "+roleNames[role]+" "+confidence+"%"+altText+". Räknas om efter varje enemy-pick.";
+      }else if(hard){
+        div.title="Manuellt låst enemy-roll.";
+      }
+    }else{
+      div.innerHTML='<span class="slot">'+(p.role?roleNames[p.role]:"P"+(i+1))+'</span><span class="champ">'+p.champ+"</span>";
+    }
     box.appendChild(div);
   }
 }
@@ -334,8 +354,13 @@ function renderTurn(){
     });
     const hint=$("suggestedRoleText");
     if(hint){
-      hint.classList.toggle("hidden",!isOwn||!suggested);
-      hint.textContent=suggested?"Rekommenderad nästa roll: "+roleNames[suggested]+" · gul markering = Draft Brains förslag":"";
+      if(isOwn){
+        hint.classList.toggle("hidden",!suggested);
+        hint.textContent=suggested?"Rekommenderad nästa roll: "+roleNames[suggested]+" · gul markering = Draft Brains förslag":"";
+      }else{
+        hint.classList.remove("hidden");
+        hint.textContent="Enemy: lämna ? för AUTO. Draft Brain infererar mest sannolik roll och räknar om när fler picks visas.";
+      }
     }
   }
 }
@@ -825,39 +850,152 @@ function hasSmartTrait(champ,set,tag){
   return false;
 }
 
-function enemyRoleCandidates(champ){
+const enemyRolePriors = {
+  "Poppy":{top:.15,jungle:.43,support:.42},
+  "Maokai":{top:.04,jungle:.38,support:.58},
+  "Gragas":{top:.50,jungle:.44,mid:.04,support:.02},
+  "Galio":{top:.08,mid:.82,support:.10},
+  "Trundle":{top:.33,jungle:.67},
+  "Senna":{adc:.38,support:.62},
+  "Seraphine":{mid:.18,adc:.25,support:.57},
+  "Karma":{top:.05,mid:.18,support:.77},
+  "Lux":{mid:.45,support:.55},
+  "Xerath":{mid:.61,support:.39},
+  "Vel'Koz":{mid:.42,support:.58},
+  "Brand":{jungle:.18,mid:.17,support:.65},
+  "Swain":{top:.05,mid:.37,adc:.12,support:.46},
+  "Tahm Kench":{top:.55,support:.45},
+  "Pantheon":{top:.29,jungle:.08,mid:.33,support:.30},
+  "Sett":{top:.75,mid:.10,support:.15},
+  "Akali":{top:.22,mid:.78},
+  "Irelia":{top:.45,mid:.55},
+  "Yone":{top:.31,mid:.69},
+  "Aurora":{top:.32,mid:.68},
+  "Vladimir":{top:.22,mid:.78},
+  "Cassiopeia":{top:.08,mid:.84,adc:.08},
+  "Tristana":{mid:.24,adc:.76},
+  "Smolder":{mid:.20,adc:.80},
+  "Corki":{mid:.46,adc:.54},
+  "Ziggs":{mid:.52,adc:.48},
+  "Veigar":{mid:.70,adc:.12,support:.18},
+  "Morgana":{jungle:.08,mid:.14,support:.78},
+  "Zyra":{jungle:.10,support:.90},
+  "Rumble":{top:.69,jungle:.06,mid:.25},
+  "Kennen":{top:.90,mid:.10},
+  "Jayce":{top:.67,mid:.33},
+  "Vayne":{top:.13,adc:.87},
+  "Quinn":{top:.91,adc:.09},
+  "Karthus":{jungle:.79,adc:.08,mid:.13},
+  "Taliyah":{jungle:.31,mid:.69},
+  "Ekko":{jungle:.42,mid:.58},
+  "Diana":{jungle:.74,mid:.26},
+  "Naafiri":{jungle:.28,mid:.72},
+  "Talon":{jungle:.18,mid:.82},
+  "Shaco":{jungle:.72,support:.28},
+  "Fiddlesticks":{jungle:.96,support:.04},
+  "Rell":{jungle:.05,support:.95},
+  "Nautilus":{mid:.03,support:.97},
+  "Ashe":{adc:.86,support:.14},
+  "Varus":{mid:.07,adc:.93},
+  "Heimerdinger":{top:.45,mid:.24,adc:.05,support:.26}
+};
+
+function normalizedRolePriors(champ){
+  const explicit=enemyRolePriors[champ];
+  if(explicit){
+    const out={top:.003,jungle:.003,mid:.003,adc:.003,support:.003,...explicit};
+    const sum=roles.reduce((n,r)=>n+(out[r]||0),0);
+    roles.forEach(r=>out[r]=(out[r]||0)/sum);
+    return out;
+  }
+
   const found=roles.filter(r=>roleHints[r]&&roleHints[r].has(champ));
-  return found.length?found:["unknown"];
+  const out={top:.006,jungle:.006,mid:.006,adc:.006,support:.006};
+  if(found.length===1){
+    out[found[0]]=.976;
+  }else if(found.length>1){
+    const each=.97/found.length;
+    found.forEach(r=>out[r]=each);
+  }else{
+    roles.forEach(r=>out[r]=.20);
+  }
+  const sum=roles.reduce((n,r)=>n+out[r],0);
+  roles.forEach(r=>out[r]/=sum);
+  return out;
+}
+
+function inferEnemyRoles(){
+  const picks=enemies();
+  if(!picks.length)return {map:{},byChamp:{},assignments:[]};
+
+  const probs=picks.map(p=>{
+    if(p.role&&p.role!=="unknown"){
+      const hard={top:.000001,jungle:.000001,mid:.000001,adc:.000001,support:.000001};
+      hard[p.role]=1;
+      return hard;
+    }
+    return normalizedRolePriors(p.champ);
+  });
+
+  const assignments=[];
+  function walk(i,used,current,score){
+    if(i>=picks.length){
+      assignments.push({roles:[...current],score});
+      return;
+    }
+    for(const role of roles){
+      if(used.has(role))continue;
+      const p=Math.max(.000001,probs[i][role]||.000001);
+      used.add(role);current.push(role);
+      walk(i+1,used,current,score+Math.log(p));
+      current.pop();used.delete(role);
+    }
+  }
+  walk(0,new Set(),[],0);
+  assignments.sort((a,b)=>b.score-a.score);
+  const best=assignments[0]||{roles:[],score:0};
+
+  // Soft marginals: confidence can change as later picks constrain the whole composition.
+  const marginals=picks.map(()=>Object.fromEntries(roles.map(r=>[r,0])));
+  let totalWeight=0;
+  for(const a of assignments){
+    const w=Math.exp(Math.max(-25,a.score-best.score));
+    totalWeight+=w;
+    a.roles.forEach((r,i)=>marginals[i][r]+=w);
+  }
+  if(totalWeight){
+    marginals.forEach(m=>roles.forEach(r=>m[r]/=totalWeight));
+  }
+
+  const map={},byChamp={};
+  picks.forEach((p,i)=>{
+    const role=best.roles[i]||"unknown";
+    if(role!=="unknown")map[role]=p.champ;
+    const ranked=roles.map(r=>({role:r,p:marginals[i][r]||0})).sort((a,b)=>b.p-a.p);
+    byChamp[p.champ]={
+      role,
+      confidence:marginals[i][role]||0,
+      alternatives:ranked.filter(x=>x.role!==role).slice(0,2),
+      explicit:!!(p.role&&p.role!=="unknown")
+    };
+  });
+  return {map,byChamp,assignments};
+}
+
+function enemyRoleCandidates(champ){
+  const inf=inferEnemyRoles().byChamp[champ];
+  if(inf){
+    const candidates=[{role:inf.role,p:inf.confidence},...inf.alternatives]
+      .filter(x=>x.role&&x.role!=="unknown"&&x.p>=.08)
+      .map(x=>x.role);
+    if(candidates.length)return [...new Set(candidates)];
+  }
+  const priors=normalizedRolePriors(champ);
+  return roles.filter(r=>priors[r]>=.08);
 }
 
 function enemyRoleMap(){
-  const map={};
-  const unresolved=[];
-  enemies().forEach(e=>{
-    if(e.role&&e.role!=="unknown")map[e.role]=e.champ;
-    else unresolved.push(e.champ);
-  });
-
-  const used=new Set(Object.keys(map));
-  let changed=true;
-  while(changed){
-    changed=false;
-    for(let i=unresolved.length-1;i>=0;i--){
-      const champ=unresolved[i];
-      const candidates=enemyRoleCandidates(champ).filter(r=>r!=="unknown"&&!used.has(r));
-      if(candidates.length===1){
-        map[candidates[0]]=champ;used.add(candidates[0]);unresolved.splice(i,1);changed=true;
-      }
-    }
-  }
-
-  // When four roles are effectively known, the last remaining role is safe to infer.
-  if(unresolved.length===1){
-    const open=roles.filter(r=>!used.has(r));
-    const candidates=enemyRoleCandidates(unresolved[0]).filter(r=>open.includes(r));
-    if(candidates.length===1)map[candidates[0]]=unresolved[0];
-  }
-  return map;
+  return inferEnemyRoles().map;
 }
 
 function enemyProfile(){
