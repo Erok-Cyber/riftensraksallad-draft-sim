@@ -388,8 +388,21 @@ function renderRecommendation(){
 
 const deterministicRender = render;
 render = function(){
-  deterministicRender();
-  renderAIInsight();
+  try{
+    deterministicRender();
+  }catch(err){
+    console.error("Draft Brain core render error:",err);
+    const badge=document.getElementById("autoRiskBadge");
+    if(badge){badge.className="badge high";badge.textContent="RENDER ERROR";}
+    const risk=document.getElementById("autoRisk");
+    if(risk)risk.textContent="En analysmodul föll, men draften är kvar. Prova Undo och fortsätt.";
+  }
+  try{
+    renderAIInsight();
+  }catch(err){
+    console.error("Draft Brain AI insight error:",err);
+    document.getElementById("aiInsightCard")?.classList.add("hidden");
+  }
 };
 
 if(userSide)render();
