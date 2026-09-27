@@ -1,3 +1,5 @@
+window.RIFT_ENGINE_VERSION="advanced-3";
+
 /* Riftensräksallad Draft Brain — Advanced automatic layer
    Runs after live.js and before draft-ai.js.
    No extra user input: derives structure, dependencies and team patterns from the draft. */
