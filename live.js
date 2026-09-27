@@ -319,9 +319,23 @@ function recommendedNextRole(){
 
 function render(){
   if(!userSide)return;
-  renderTeam("blue");renderTeam("red");renderTurn();renderStatus();renderCoach();renderRecommendation();renderAllRoleRecommendations();renderCompChecks();renderAutoRead();renderFinalGameplan();
+  const done=step>=draftOrder.length;
+  document.body.classList.toggle("draft-complete",done);
+  renderTeam("blue");renderTeam("red");renderTurn();renderStatus();
   $("draftProgress").textContent=step+" / "+draftOrder.length;
-  if(step>=draftOrder.length)saveRecentDraft();
+
+  if(done){
+    renderFinalGameplan();
+    saveRecentDraft();
+    return;
+  }
+
+  renderCoach();
+  renderRecommendation();
+  renderAllRoleRecommendations();
+  renderCompChecks();
+  renderAutoRead();
+  renderFinalGameplan();
 }
 
 function renderTeam(side){
@@ -799,30 +813,57 @@ function buildFinalGameplan(){
   return {comp,early,mid,fight,objective,rule,firstObjective,fightJobText,...power};
 }
 
+function shortLoadingPlan(){
+  const comp=desiredComp(), map=ownRoleMap(), p=enemyProfile();
+  let plan,objective,fight,watch;
+
+  if(comp==="EARLY SKIRMISH"){
+    plan="Prio först. Fighta bara 2v2/3v3 när lanes kan flytta.";
+    fight="Pick → kill → direkt tower/objective. Jaga inte.";
+  }else if(comp==="PRESS R"){
+    plan="Spela stabilt tills engage-ults. Gruppera när knapparna är uppe.";
+    fight="En person startar. Alla följer samma target direkt.";
+  }else if(comp==="OBJECTIVE CONTROL"){
+    plan="Push → reset → kom först till river. Jaga inte.";
+    fight="Låt dem gå in i er setup och turna tillsammans.";
+  }else{
+    plan="Lanes skapar prio. Spela runt jungle-tempo och river.";
+    fight="Junglern ska följa/cleana, inte vara första sacrifice.";
+  }
+
+  const obj=objectiveAutoPlan();
+  if(obj.call==="BOTSIDE NEUTRAL")objective="Spela första setup botside med mid/bot-prio.";
+  else if(obj.call==="TOPSIDE NEUTRAL")objective="Spela första setup topside med top/mid-prio.";
+  else if(obj.call==="TRADEA FÖRSTA")objective="Coinflippa inte första objective — crossmap/tradea.";
+  else objective="Låt lane-prio avgöra första objective. Forcea inte utan move.";
+
+  const jobs=fightJobs();
+  if(jobs&&jobs.length<150)fight+=" "+jobs;
+
+  const risk=draftRiskEngine()[0];
+  watch=risk?.severity>=2?risk.text:buildWatch();
+  if(watch.length>125)watch=watch.split(".")[0]+".";
+
+  let jungle=buildPath();
+  if(jungle.length>135)jungle=jungle.split(".").slice(0,2).join(".")+".";
+  if(!map.jungle)jungle="Spela mot sidan som faktiskt har prio.";
+
+  const call="Vi spelar "+comp+". "+plan+" "+objective+" "+fight+" WATCH: "+watch;
+  return {comp,plan,jungle,objective,fight,watch,call};
+}
+
 function renderFinalGameplan(){
   const card=$("finalGameplanCard");
   if(step<draftOrder.length){card.classList.add("hidden");return}
-  const gp=buildFinalGameplan();
+  const gp=shortLoadingPlan();
   card.classList.remove("hidden");
   $("finalCompBadge").textContent=gp.comp;
-  $("gpEarly").textContent=gp.early;
-  $("gpMid").textContent=gp.mid;
-  $("gpFight").textContent=gp.fight;
-  $("gpObjective").textContent=gp.objective;
-  $("gpRule").textContent=gp.rule;
-  $("gpScaling").textContent=gp.scaling;
-  $("gpScalingDetail").textContent=gp.scalingDetail;
-  $("gpEarlyNeed").textContent=gp.earlyNeed;
-  $("gpEarlyNeedDetail").textContent=gp.earlyNeedDetail;
-  $("gpWindow").textContent=gp.window;
-  $("gpWindowDetail").textContent=gp.windowDetail;
-  $("gpBehind").textContent=gp.behind;
-  $("gpBehindDetail").textContent=gp.behindDetail;
-  $("gp010").textContent=gp.p010;
-  $("gp1025").textContent=gp.p1025;
-  $("gp25").textContent=gp.p25;
-  $("gpFirstObjective").textContent=gp.firstObjective.call+" — "+gp.firstObjective.detail;
-  $("gpFightJobs").textContent=gp.fightJobText;
+  $("gpCallPlan").textContent=gp.plan;
+  $("gpCallJungle").textContent=gp.jungle;
+  $("gpCallObjective").textContent=gp.objective;
+  $("gpCallFight").textContent=gp.fight;
+  $("gpCallWatch").textContent=gp.watch;
+  $("gpLoadingCall").textContent=gp.call;
 }
 
 function saveRecentDraft(){
@@ -834,28 +875,21 @@ function saveRecentDraft(){
     localStorage.setItem("rs_recent_picks",JSON.stringify([...old,...picks].slice(-20)));
 
     const archive=JSON.parse(localStorage.getItem("rs_draft_archive")||"[]");
-    const power=buildPowerCurvePlan();
+    const inferred=inferEnemyRoles();
     const record={
       savedAt:new Date().toISOString(),
       side:userSide,
       ourPicks:ours().map(e=>({champ:e.champ,role:e.role})),
-      enemyPicks:enemies().map(e=>({champ:e.champ,inferredRole:inferEnemyRoles().byChamp[e.champ]?.role||e.role||"unknown"})),
+      enemyPicks:enemies().map(e=>({champ:e.champ,inferredRole:inferred.byChamp[e.champ]?.role||e.role||"unknown"})),
       ourBans:events.filter(e=>e.side===userSide&&e.type==="ban").map(e=>e.champ),
       enemyBans:events.filter(e=>e.side!==userSide&&e.type==="ban").map(e=>e.champ),
       comp:desiredComp(),
-      scaling:power.scaling,
-      bestWindow:power.window,
-      topRisk:draftRiskEngine()[0]?.text||null,
-      hybridIdentity:window.RiftAdvanced?.hybridIdentity?.()||desiredComp(),
-      compHealth:window.RiftAdvanced?.structure?.()?.good||null,
-      damageProfile:window.RiftAdvanced?.damageProfile?.()?.text||null,
-      objectiveStyle:window.RiftAdvanced?.objectiveProfile?.()?.label||null
+      topRisk:draftRiskEngine()[0]?.text||null
     };
     localStorage.setItem("rs_draft_archive",JSON.stringify([...archive,record].slice(-50)));
   }catch{}
   historySaved=true;saveState();
 }
-
 
 /* ============================================================
    DRAFT BRAIN v2
@@ -1003,20 +1037,27 @@ function inferEnemyRoles(){
   });
 
   const assignments=[];
-  function walk(i,used,current,score){
+  const allowedRoles=probs.map(pr=>{
+    const ranked=roles.map(r=>({r,p:pr[r]||0})).sort((a,b)=>b.p-a.p);
+    if(ranked[0]?.p>=.97&&ranked[1]?.p<.02)return [ranked[0].r];
+    return ranked.filter(x=>x.p>=.06).map(x=>x.r);
+  });
+  function walk(i,used,current,score,relaxed=false){
     if(i>=picks.length){
       assignments.push({roles:[...current],score});
       return;
     }
-    for(const role of roles){
+    const candidates=relaxed?roles:(allowedRoles[i].length?allowedRoles[i]:roles);
+    for(const role of candidates){
       if(used.has(role))continue;
       const p=Math.max(.000001,probs[i][role]||.000001);
       used.add(role);current.push(role);
-      walk(i+1,used,current,score+Math.log(p));
+      walk(i+1,used,current,score+Math.log(p),relaxed);
       current.pop();used.delete(role);
     }
   }
-  walk(0,new Set(),[],0);
+  walk(0,new Set(),[],0,false);
+  if(!assignments.length)walk(0,new Set(),[],0,true);
   assignments.sort((a,b)=>b.score-a.score);
   const best=assignments[0]||{roles:[],score:0};
 
