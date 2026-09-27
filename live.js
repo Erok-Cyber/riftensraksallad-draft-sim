@@ -1,5 +1,5 @@
 const fallbackChampions = [
-"Aatrox","Ahri","Akali","Alistar","Ambessa","Amumu","Anivia","Annie","Aphelios","Ashe","Aurora","Azir","Braum","Caitlyn","Camille","Cassiopeia","Darius","Ezreal","Fiora","Galio","Garen","Gnar","Gragas","Graves","Heimerdinger","Hwei","Ivern","Jarvan IV","Jax","Jayce","Jinx","Kai'Sa","Kalista","Kayn","Kennen","Kindred","Kog'Maw","K'Sante","Lee Sin","Leona","Lucian","Lulu","Malphite","Maokai","Milio","Miss Fortune","Mordekaiser","Nami","Nautilus","Nocturne","Olaf","Orianna","Ornn","Poppy","Rakan","Rell","Renekton","Rumble","Ryze","Sejuani","Senna","Shen","Sion","Skarner","Smolder","Sylas","Syndra","Tahm Kench","Taliyah","Tristana","Trundle","Tryndamere","Twisted Fate","Udyr","Varus","Vex","Vi","Viego","Viktor","Volibear","Wukong","Xayah","Xin Zhao","Yone","Yunara","Zac","Zeri"
+"Aatrox","Ahri","Akali","Alistar","Ambessa","Amumu","Anivia","Annie","Aphelios","Ashe","Aurora","Azir","Braum","Caitlyn","Camille","Cassiopeia","Darius","Ezreal","Fiora","Galio","Garen","Gnar","Gragas","Graves","Heimerdinger","Hwei","Ivern","Jarvan IV","Jax","Jayce","Jinx","Kai'Sa","Kalista","Kayn","Kennen","Kindred","Kog'Maw","K'Sante","Lee Sin","Leona","Lillia","Lucian","Lulu","Malphite","Maokai","Milio","Miss Fortune","Mordekaiser","Nami","Nautilus","Nocturne","Olaf","Orianna","Ornn","Poppy","Rakan","Rell","Renekton","Rumble","Ryze","Sejuani","Senna","Shen","Sion","Skarner","Smolder","Sylas","Syndra","Tahm Kench","Taliyah","Tristana","Trundle","Tryndamere","Twisted Fate","Udyr","Varus","Vex","Vi","Viego","Viktor","Volibear","Wukong","Xayah","Xin Zhao","Yone","Yunara","Zac","Zeri"
 ].sort();
 
 let championRoster = [...fallbackChampions];
@@ -7,7 +7,7 @@ let championMeta = {};
 
 const teamPool = {
   top:["Renekton","Malphite","Shen","Mordekaiser","Sion","Garen","Darius","Olaf","Trundle","Heimerdinger","Yorick","Galio"],
-  jungle:["Xin Zhao","Jarvan IV","Viego","Volibear","Udyr","Vi","Wukong","Graves","Kindred"],
+  jungle:["Xin Zhao","Jarvan IV","Viego","Volibear","Udyr","Lillia","Vi","Wukong","Graves","Kindred"],
   mid:["Ahri","Annie","Vex","Hwei","Taliyah","Viktor","Sylas","Anivia"],
   adc:["Ashe","Varus","Xayah","Jinx","Senna"],
   support:["Nautilus","Leona","Maokai"]
@@ -15,7 +15,7 @@ const teamPool = {
 
 const comfort = {
   top:{"Renekton":10,"Malphite":10,"Shen":9,"Mordekaiser":9,"Sion":8,"Garen":8,"Darius":7,"Olaf":7,"Trundle":7,"Heimerdinger":6,"Yorick":6,"Galio":6},
-  jungle:{"Xin Zhao":10,"Jarvan IV":10,"Viego":9,"Volibear":9,"Udyr":9,"Vi":8,"Wukong":7,"Graves":7,"Kindred":6},
+  jungle:{"Xin Zhao":10,"Jarvan IV":10,"Viego":9,"Volibear":9,"Udyr":9,"Lillia":8,"Vi":8,"Wukong":7,"Graves":7,"Kindred":6},
   mid:{"Ahri":10,"Annie":10,"Vex":9,"Hwei":8,"Taliyah":8,"Viktor":8,"Sylas":6,"Anivia":6},
   adc:{"Ashe":10,"Varus":9,"Xayah":9,"Jinx":8,"Senna":6},
   support:{"Nautilus":10,"Leona":9,"Maokai":9}
@@ -50,7 +50,7 @@ const comps = {
     core:{top:"Mordekaiser",jungle:"Udyr",mid:"Taliyah",adc:"Varus",support:"Maokai"},
     alts:{
       top:["Sion","Shen","Galio","Heimerdinger"],
-      jungle:["Volibear","Xin Zhao"],
+      jungle:["Volibear","Xin Zhao","Lillia"],
       mid:["Hwei","Ahri","Viktor","Anivia"],
       adc:["Ashe","Xayah"],
       support:["Nautilus","Leona"]
@@ -62,7 +62,7 @@ const comps = {
     core:{top:"Shen",jungle:"Viego",mid:"Taliyah",adc:"Ashe",support:"Nautilus"},
     alts:{
       top:["Malphite","Sion","Mordekaiser"],
-      jungle:["Kindred","Graves"],
+      jungle:["Kindred","Graves","Lillia"],
       mid:["Ahri","Hwei","Viktor"],
       adc:["Varus","Senna","Xayah"],
       support:["Leona","Maokai"]
@@ -90,7 +90,7 @@ const draftOrder = [
 const traits = {
   engage:new Set(["Amumu","Annie","Ashe","Galio","Gragas","Jarvan IV","Leona","Malphite","Maokai","Nautilus","Nocturne","Ornn","Rakan","Rell","Sejuani","Sion","Skarner","Vi","Wukong","Zac"]),
   frontline:new Set(["Alistar","Amumu","Galio","Garen","Gragas","Jarvan IV","K'Sante","Leona","Malphite","Maokai","Mordekaiser","Nautilus","Ornn","Poppy","Rell","Renekton","Sejuani","Shen","Sion","Skarner","Tahm Kench","Trundle","Udyr","Vi","Volibear","Wukong","Xin Zhao","Zac"]),
-  damage:new Set(["Ahri","Anivia","Annie","Ashe","Darius","Graves","Hwei","Jinx","Kindred","Mordekaiser","Olaf","Taliyah","Varus","Vex","Viego","Viktor","Xayah","Xin Zhao"]),
+  damage:new Set(["Ahri","Anivia","Annie","Ashe","Darius","Graves","Hwei","Jinx","Kindred","Lillia","Mordekaiser","Olaf","Taliyah","Varus","Vex","Viego","Viktor","Xayah","Xin Zhao"]),
   early:new Set(["Ahri","Ashe","Darius","Jarvan IV","Leona","Nautilus","Olaf","Poppy","Renekton","Taliyah","Varus","Vi","Volibear","Wukong","Xin Zhao"]),
   dive:new Set(["Akali","Ambessa","Camille","Diana","Ekko","Hecarim","Irelia","Jarvan IV","Jax","Kai'Sa","Katarina","Kennen","Kled","Lee Sin","Leona","Malphite","Naafiri","Nocturne","Pantheon","Qiyana","Rakan","Rell","Renekton","Rengar","Samira","Sejuani","Vi","Wukong","Yone","Zac","Zed"]),
   melee:new Set(["Aatrox","Akali","Alistar","Ambessa","Amumu","Camille","Darius","Diana","Ekko","Fiora","Galio","Garen","Gragas","Hecarim","Irelia","Jarvan IV","Jax","K'Sante","Kayn","Kled","Lee Sin","Leona","Malphite","Maokai","Mordekaiser","Nautilus","Nocturne","Olaf","Ornn","Pantheon","Poppy","Rakan","Rell","Renekton","Rengar","Sejuani","Shen","Sion","Skarner","Sylas","Tahm Kench","Trundle","Tryndamere","Udyr","Vi","Viego","Volibear","Wukong","Xin Zhao","Yone","Yorick","Zac"]),
@@ -102,12 +102,12 @@ const traits = {
   enchanter:new Set(["Janna","Karma","Lulu","Milio","Nami","Renata Glasc","Senna","Seraphine","Sona","Soraka","Yuumi"]),
   splitpush:new Set(["Camille","Fiora","Gwen","Jax","Nasus","Tryndamere","Yorick"]),
   earlyJungle:new Set(["Elise","Graves","Jarvan IV","Kindred","Lee Sin","Nidalee","Rek'Sai","Volibear","Xin Zhao"]),
-  scalingJungle:new Set(["Evelynn","Karthus","Kayn","Master Yi","Shyvana"])
+  scalingJungle:new Set(["Evelynn","Karthus","Kayn","Lillia","Master Yi","Shyvana"])
 };
 
 const damageType = {
   "Renekton":"AD","Malphite":"AP","Shen":"MIX","Mordekaiser":"AP","Sion":"AD","Garen":"AD","Darius":"AD","Olaf":"AD","Trundle":"AD","Heimerdinger":"AP","Yorick":"AD","Galio":"AP",
-  "Xin Zhao":"AD","Jarvan IV":"AD","Viego":"AD","Volibear":"MIX","Udyr":"MIX","Vi":"AD","Wukong":"AD","Graves":"AD","Kindred":"AD",
+  "Xin Zhao":"AD","Jarvan IV":"AD","Viego":"AD","Volibear":"MIX","Udyr":"MIX","Lillia":"AP","Vi":"AD","Wukong":"AD","Graves":"AD","Kindred":"AD",
   "Ahri":"AP","Annie":"AP","Vex":"AP","Hwei":"AP","Taliyah":"AP","Viktor":"AP","Sylas":"AP","Anivia":"AP",
   "Ashe":"AD","Varus":"MIX","Xayah":"AD","Jinx":"AD","Senna":"AD",
   "Nautilus":"UTIL","Leona":"UTIL","Maokai":"AP"
@@ -132,11 +132,11 @@ const synergyRules = [
   {own:["Ashe"],role:"support",boost:{"Nautilus":18,"Leona":14,"Maokai":12}},
   {own:["Nautilus"],role:"adc",boost:{"Ashe":15,"Varus":12,"Jinx":8}},
   {own:["Maokai"],role:"mid",boost:{"Vex":14,"Ahri":12,"Hwei":9}},
-  {own:["Maokai"],role:"jungle",boost:{"Xin Zhao":12,"Viego":10,"Volibear":8}},
+  {own:["Maokai"],role:"jungle",boost:{"Xin Zhao":12,"Viego":10,"Lillia":10,"Volibear":8}},
   {own:["Vex"],role:"jungle",boost:{"Xin Zhao":10,"Volibear":8,"Vi":8}},
   {own:["Annie"],role:"jungle",boost:{"Jarvan IV":16,"Vi":10,"Wukong":8}},
   {own:["Malphite"],role:"mid",boost:{"Annie":14,"Vex":8,"Hwei":7}},
-  {own:["Shen"],role:"jungle",boost:{"Viego":15,"Kindred":13,"Graves":10}}
+  {own:["Shen"],role:"jungle",boost:{"Viego":15,"Kindred":13,"Lillia":11,"Graves":10}}
 ];
 
 const banBase = {
@@ -591,7 +591,7 @@ function renderCoach(){
 
 const powerCurve = {
   hardScale:new Set(["Aurelion Sol","Azir","Cassiopeia","Kayle","Kassadin","Kog'Maw","Jinx","Aphelios","Smolder","Senna","Vayne","Zeri","Veigar","Viktor","Kindred"]),
-  goodScale:new Set(["Anivia","Graves","Gwen","Hwei","Kai'Sa","Master Yi","Nasus","Orianna","Ryze","Sion","Sylas","Tristana","Xayah","Yone","Yorick","Viego","Taliyah"]),
+  goodScale:new Set(["Anivia","Graves","Gwen","Hwei","Kai'Sa","Lillia","Master Yi","Nasus","Orianna","Ryze","Sion","Sylas","Tristana","Xayah","Yone","Yorick","Viego","Taliyah"]),
   earlyHeavy:new Set(["Darius","Draven","Elise","Jarvan IV","Kalista","Lee Sin","Olaf","Pantheon","Rek'Sai","Renekton","Xin Zhao","Volibear","Nidalee"]),
   midSpike:new Set(["Ahri","Annie","Ashe","Garen","Leona","Malphite","Maokai","Mordekaiser","Nautilus","Nocturne","Rell","Shen","Trundle","Udyr","Varus","Vex","Vi","Wukong"]),
   utilityScale:new Set(["Alistar","Braum","Ivern","Janna","Lulu","Milio","Nami","Poppy","Rakan","Renata Glasc","Seraphine","Soraka","Tahm Kench","Thresh"])
@@ -808,6 +808,22 @@ function saveRecentDraft(){
   try{
     const old=recentPicks();
     localStorage.setItem("rs_recent_picks",JSON.stringify([...old,...picks].slice(-20)));
+
+    const archive=JSON.parse(localStorage.getItem("rs_draft_archive")||"[]");
+    const power=buildPowerCurvePlan();
+    const record={
+      savedAt:new Date().toISOString(),
+      side:userSide,
+      ourPicks:ours().map(e=>({champ:e.champ,role:e.role})),
+      enemyPicks:enemies().map(e=>({champ:e.champ,inferredRole:inferEnemyRoles().byChamp[e.champ]?.role||e.role||"unknown"})),
+      ourBans:events.filter(e=>e.side===userSide&&e.type==="ban").map(e=>e.champ),
+      enemyBans:events.filter(e=>e.side!==userSide&&e.type==="ban").map(e=>e.champ),
+      comp:desiredComp(),
+      scaling:power.scaling,
+      bestWindow:power.window,
+      topRisk:draftRiskEngine()[0]?.text||null
+    };
+    localStorage.setItem("rs_draft_archive",JSON.stringify([...archive,record].slice(-50)));
   }catch{}
   historySaved=true;saveState();
 }
@@ -831,13 +847,13 @@ const roleHints = {
 const smartTraits = {
   peel:new Set(["Alistar","Braum","Galio","Gragas","Janna","Karma","Leona","Lulu","Maokai","Milio","Nami","Nautilus","Poppy","Rakan","Renata Glasc","Shen","Tahm Kench","Thresh","Xayah"]),
   waveclear:new Set(["Anivia","Annie","Ashe","Hwei","Jinx","Malphite","Maokai","Mordekaiser","Sion","Taliyah","Varus","Vex","Viktor","Xayah"]),
-  antiTank:new Set(["Darius","Kindred","Mordekaiser","Olaf","Trundle","Udyr","Varus","Viego","Xayah"]),
+  antiTank:new Set(["Darius","Kindred","Lillia","Mordekaiser","Olaf","Trundle","Udyr","Varus","Viego","Xayah"]),
   pick:new Set(["Ahri","Annie","Ashe","Jarvan IV","Leona","Maokai","Nautilus","Shen","Taliyah","Varus","Vex","Vi"]),
-  zone:new Set(["Anivia","Heimerdinger","Hwei","Maokai","Taliyah","Varus","Viktor"]),
+  zone:new Set(["Anivia","Heimerdinger","Hwei","Lillia","Maokai","Taliyah","Varus","Viktor"]),
   rangedDamage:new Set(["Ahri","Anivia","Annie","Ashe","Graves","Heimerdinger","Hwei","Jinx","Kindred","Senna","Taliyah","Varus","Vex","Viktor","Xayah"]),
-  objective:new Set(["Graves","Heimerdinger","Kindred","Mordekaiser","Trundle","Udyr","Varus","Viego","Volibear","Xin Zhao"]),
+  objective:new Set(["Graves","Heimerdinger","Kindred","Lillia","Mordekaiser","Trundle","Udyr","Varus","Viego","Volibear","Xin Zhao"]),
   lanePressure:new Set(["Ahri","Ashe","Darius","Heimerdinger","Olaf","Renekton","Taliyah","Trundle","Varus","Vex","Xin Zhao"]),
-  reliableFollow:new Set(["Ahri","Annie","Ashe","Hwei","Jinx","Taliyah","Varus","Vex","Viego","Viktor","Xayah"]),
+  reliableFollow:new Set(["Ahri","Annie","Ashe","Hwei","Jinx","Lillia","Taliyah","Varus","Vex","Viego","Viktor","Xayah"]),
   safeBlind:new Set(["Ahri","Ashe","Hwei","Jarvan IV","Malphite","Maokai","Nautilus","Shen","Sion","Taliyah","Varus","Xayah"]),
   counterSensitive:new Set(["Darius","Garen","Heimerdinger","Kindred","Olaf","Trundle","Yorick"])
 };
@@ -1109,7 +1125,7 @@ function scoreCandidateDetails(champ,role,compName){
   }
   if(p.melee>=3){
     if(smartTraits.zone.has(champ)||traits.poke.has(champ))add(9,"straffar kort range");
-    if(["Udyr","Wukong","Mordekaiser","Maokai"].includes(champ))add(6,"stark i melee-fights");
+    if(["Udyr","Wukong","Lillia","Mordekaiser","Maokai"].includes(champ))add(6,"stark i melee-fights");
   }
   if(p.poke>=2){
     if(traits.engage.has(champ)||smartTraits.pick.has(champ))add(10,"ger access mot poke");
@@ -1120,6 +1136,8 @@ function scoreCandidateDetails(champ,role,compName){
 
   if(role==="jungle"&&p.scalingJungle&&traits.earlyJungle.has(champ))add(9,"kan pressa scaling-jungle");
   if(role==="jungle"&&p.earlyJungle&&["Xin Zhao","Volibear","Udyr","Jarvan IV"].includes(champ))add(6,"stabil tidig 2v2");
+  if(role==="jungle"&&champ==="Lillia"&&p.melee>=2)add(7,"Lillia kitar melee");
+  if(role==="jungle"&&champ==="Lillia"&&p.tanks>=1)add(6,"%HP + sustained mot frontline");
 
   if(ours().some(e=>traits.engage.has(e.champ))&&smartTraits.reliableFollow.has(champ))add(5,"bra follow-up");
   if(ours().some(e=>traits.immobileCarry.has(e.champ))&&(smartTraits.peel.has(champ)||traits.frontline.has(champ)))add(6,"skyddar egen carry");
@@ -1161,8 +1179,6 @@ function scoreCandidateDetails(champ,role,compName){
   }
 
   const recent=recentPicks();
-  const times=recent.filter(x=>x===champ).length;
-  s-=Math.min(10,times*3);
   if(role==="mid"&&champ==="Taliyah"&&recent.slice(-2).includes("Taliyah"))s-=8;
 
   return {ch:champ,score:s,reasons:reasons.sort((a,b)=>b.pts-a.pts)};
@@ -1487,6 +1503,24 @@ function executionRead(){
   return {label,detail:reasons.slice(0,3).join(" · ")||"normal execution"};
 }
 
+function nextPickNeed(){
+  const n=currentNeeds(), p=enemyProfile(), own=ours();
+  if(own.length<2)return "Bygg först en flexibel kärna.";
+  const needs=[];
+  if(n.front===0)needs.push({p:10,t:"FRONTLINE"});
+  if(n.engage===0)needs.push({p:9,t:"ENGAGE"});
+  if(n.ad>=2&&n.ap===0)needs.push({p:10,t:"AP DAMAGE"});
+  if(n.ap>=2&&n.ad===0)needs.push({p:8,t:"AD DAMAGE"});
+  if(p.dive>=2&&n.peel===0)needs.push({p:9,t:"PEEL"});
+  if(p.tanks>=2&&n.antiTank===0)needs.push({p:9,t:"ANTI-TANK"});
+  if(n.ranged===0&&own.length>=3)needs.push({p:6,t:"RANGE"});
+  if(n.wave===0&&own.length>=3)needs.push({p:5,t:"WAVECLEAR"});
+  if(n.dmg<2&&own.length>=3)needs.push({p:8,t:"SECOND DAMAGE THREAT"});
+  needs.sort((a,b)=>b.p-a.p);
+  if(!needs.length)return "Ingen akut lucka — välj bästa comp-fit/counter.";
+  return needs.slice(0,2).map(x=>x.t).join(" + ");
+}
+
 function renderAutoRead(){
   const risks=draftRiskEngine(), top=risks[0], lr=laneRead(), jg=jungleAutoPlan();
   const badge=$("autoRiskBadge");
@@ -1501,6 +1535,7 @@ function renderAutoRead(){
   const obj=objectiveAutoPlan(), exec=executionRead();
   $("autoObjective").textContent=obj.call+" — "+obj.detail;
   $("autoExecution").textContent=exec.label+" — "+exec.detail;
+  $("autoNextNeed").textContent=nextPickNeed();
   $("autoReadTitle").textContent=ours().length<2?"Draften läses automatiskt":"AUTO: "+desiredComp()+" · "+compConfidence()+" confidence";
 }
 
