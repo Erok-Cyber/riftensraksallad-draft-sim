@@ -120,3 +120,11 @@
 .final-gameplan .gameplan-grid{grid-template-columns:repeat(3,1fr)}
 @media(max-width:900px){.final-gameplan .gameplan-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.final-gameplan .gameplan-grid{grid-template-columns:1fr}}
+
+.test-mode-btn.active{background:#3c2f10!important;border-color:#a47a16!important;color:#ffe38c!important;box-shadow:0 0 0 1px rgba(240,199,94,.2)}
+body.test-mode::before{content:"TEST MODE · SPARAR INGET";position:fixed;z-index:999;right:12px;bottom:12px;background:#3a2c0c;color:#ffe38c;border:1px solid #8d6c1d;border-radius:999px;padding:7px 11px;font-size:11px;font-weight:900;letter-spacing:.06em}
+.advanced-auto-grid,.advanced-final-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:10px}
+.advanced-auto-grid>div,.advanced-final-grid>div{background:rgba(0,0,0,.14);border:1px solid rgba(255,255,255,.07);border-radius:12px;padding:13px}
+.advanced-auto-grid p,.advanced-final-grid p{margin:6px 0 0;font-weight:760;line-height:1.4}
+@media(max-width:900px){.advanced-auto-grid,.advanced-final-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.advanced-auto-grid,.advanced-final-grid{grid-template-columns:1fr}}
