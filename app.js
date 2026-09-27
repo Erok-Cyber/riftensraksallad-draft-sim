@@ -182,6 +182,9 @@ const $=id=>document.getElementById(id);
 champions.forEach(c=>{const o=document.createElement("option");o.value=c;$("champions").appendChild(o)});
 loadChampionRoster();
 setTrainerNav(false);
+if(new URLSearchParams(location.search).get("view")==="analysis"){
+  queueMicrotask(()=>showAnalysisView());
+}
 
 $("startTabBtn").addEventListener("click",()=>showHomeView());
 $("analysisTabBtn").addEventListener("click",()=>showAnalysisView());
