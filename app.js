@@ -1,6 +1,6 @@
 const fallbackChampions = [
 "Ahri","Amumu","Anivia","Annie","Ashe","Darius","Galio","Garen","Graves","Heimerdinger","Hwei","Jarvan IV","Jinx","Kindred","Leona","Malphite","Maokai","Mordekaiser","Nautilus","Olaf","Renekton","Senna","Shen","Sion","Sylas","Taliyah","Trundle","Udyr","Varus","Vex","Vi","Viego","Viktor","Volibear","Wukong","Xayah","Xin Zhao",
-"Aatrox","Akali","Alistar","Ambessa","Aphelios","Aurora","Azir","Braum","Caitlyn","Camille","Cassiopeia","Ezreal","Fiora","Gnar","Gragas","Ivern","Jax","Jayce","Kai'Sa","Kalista","Kayn","Kennen","K'Sante","Lee Sin","Lucian","Lulu","Milio","Miss Fortune","Nami","Nocturne","Orianna","Ornn","Poppy","Rakan","Rell","Rumble","Ryze","Sejuani","Skarner","Smolder","Syndra","Tahm Kench","Tristana","Tryndamere","Twisted Fate","Yone","Yunara","Zac","Zeri"
+"Aatrox","Akali","Alistar","Ambessa","Aphelios","Aurora","Azir","Braum","Caitlyn","Camille","Cassiopeia","Ezreal","Fiora","Gnar","Gragas","Ivern","Jax","Jayce","Kai'Sa","Kalista","Kayn","Kennen","K'Sante","Lee Sin","Lucian","Lulu","Milio","Miss Fortune","Nami","Nocturne","Orianna","Ornn","Poppy","Rakan","Rell","Rumble","Ryze","Sejuani","Skarner","Smolder","Syndra","Tahm Kench","Tristana","Tryndamere","Twisted Fate","Yone","Yunara","Zac","Zeri","Janna"
 ].sort();
 let champions=[...fallbackChampions];
 
@@ -41,14 +41,14 @@ const comps = {
   },
   "OBJECTIVE CONTROL":{
     core:["Mordekaiser","Udyr","Taliyah","Varus","Maokai"],
-    alts:["Sion","Shen","Galio","Heimerdinger","Volibear","Xin Zhao","Hwei","Ahri","Viktor","Anivia","Ashe","Xayah","Nautilus","Leona"],
+    alts:["Sion","Shen","Galio","Heimerdinger","Volibear","Xin Zhao","Lillia","Hwei","Ahri","Viktor","Anivia","Ashe","Xayah","Nautilus","Leona"],
     why:"Kom först till river och tvinga enemy att gå in i er.",
     focus:"Push waves, reset tidigt, setup vision. JAGA INTE.",
     call:"PUSH → RESET → RIVER → HÅLL CHOKES → TURNA."
   },
   "JUNGLE CARRY":{
-    core:["Shen","Kindred","Viego","Taliyah","Ashe","Nautilus"],
-    alts:["Malphite","Sion","Mordekaiser","Graves","Ahri","Hwei","Viktor","Varus","Senna","Xayah","Leona","Maokai"],
+    core:["Shen","Viego","Taliyah","Ashe","Nautilus"],
+    alts:["Malphite","Sion","Mordekaiser","Kindred","Graves","Lillia","Ahri","Hwei","Viktor","Varus","Senna","Xayah","Leona","Maokai"],
     why:"Lanes enablear jungle med prio, setup och vision.",
     focus:"Kindred kräver prio. Ingen prio = Viego eller byt comp.",
     call:"LANES FÅR PRIO → JG TAR RIVER/ENEMY CAMPS → SPELA RUNT JG."
@@ -113,9 +113,68 @@ const scenarios = [
   }
 ];
 
+const trainerRoles=["top","jungle","mid","adc","support"];
+const trainerRoleNames={top:"TOP",jungle:"JUNGLE",mid:"MID",adc:"ADC",support:"SUPPORT"};
+const trainerRolePools={
+  top:["Aatrox","Ambessa","Camille","Darius","Fiora","Galio","Garen","Gnar","Gragas","Gwen","Heimerdinger","Jax","Jayce","Kayle","Kennen","K'Sante","Malphite","Mordekaiser","Olaf","Ornn","Poppy","Renekton","Rumble","Shen","Sion","Tahm Kench","Trundle","Tryndamere","Yone","Yorick"],
+  jungle:["Amumu","Diana","Ekko","Gragas","Graves","Ivern","Jarvan IV","Kayn","Kindred","Lee Sin","Lillia","Nocturne","Poppy","Sejuani","Skarner","Trundle","Udyr","Vi","Viego","Volibear","Wukong","Xin Zhao","Zac"],
+  mid:["Ahri","Akali","Anivia","Annie","Aurora","Azir","Cassiopeia","Galio","Hwei","Orianna","Ryze","Sylas","Syndra","Taliyah","Tristana","Twisted Fate","Vex","Viktor","Yone"],
+  adc:["Aphelios","Ashe","Caitlyn","Ezreal","Jinx","Kai'Sa","Kalista","Lucian","Miss Fortune","Samira","Senna","Sivir","Smolder","Tristana","Varus","Xayah","Yunara","Zeri"],
+  support:["Alistar","Braum","Janna","Leona","Lulu","Maokai","Milio","Nami","Nautilus","Poppy","Rakan","Rell","Senna","Tahm Kench"]
+};
+
+function shuffled(list){
+  const a=[...list];
+  for(let i=a.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    [a[i],a[j]]=[a[j],a[i]];
+  }
+  return a;
+}
+
+function scenarioRoleEntries(){
+  return trainerRoles.map((role,i)=>({role,champ:currentScenario.enemy[i]}));
+}
+
+let enemyRoleOrder=[],scenarioEnemyPlan=[];
+
+function prepareEnemyPlan(){
+  enemyRoleOrder=shuffled(trainerRoles);
+  scenarioEnemyPlan=mode==="test"?shuffled(scenarioRoleEntries()):[];
+}
+
+function nextEnemyRole(){
+  const enemyIndex=picks.filter(p=>p.side!==userSide).length;
+  if(mode==="test")return scenarioEnemyPlan[enemyIndex]?.role||enemyRoleOrder[enemyIndex]||"support";
+  return enemyRoleOrder[enemyIndex]||trainerRoles[enemyIndex]||"support";
+}
+
+function randomChampionForRole(role,used){
+  let pool=(trainerRolePools[role]||[]).filter(ch=>champions.includes(ch)&&!used.has(ch));
+  if(!pool.length){
+    // Emergency fallback: keep draft moving, but prefer champions not already used.
+    pool=champions.filter(ch=>!used.has(ch));
+  }
+  return pool[Math.floor(Math.random()*pool.length)];
+}
+
+function nextEnemyChampion(){
+  const used=new Set(picks.map(p=>p.champ));
+  const enemyIndex=picks.filter(p=>p.side!==userSide).length;
+  const role=nextEnemyRole();
+
+  if(mode==="test"){
+    const planned=scenarioEnemyPlan[enemyIndex]?.champ;
+    if(planned&&champions.includes(planned)&&!used.has(planned))return {champ:planned,role};
+    return {champ:randomChampionForRole(role,used),role};
+  }
+
+  return {champ:randomChampionForRole(role,used),role};
+}
+
 const engage = new Set(["Malphite","Jarvan IV","Annie","Leona","Nautilus","Maokai","Vi","Wukong","Amumu","Sion","Rakan","Rell","Sejuani","Zac"]);
 const frontline = new Set(["Malphite","Jarvan IV","Leona","Nautilus","Maokai","Mordekaiser","Udyr","Volibear","Sion","Shen","Galio","Renekton","Xin Zhao","Wukong","Vi","Poppy","Ornn","Sejuani","Zac"]);
-const damage = new Set(["Jinx","Varus","Xayah","Ashe","Viego","Kindred","Graves","Taliyah","Hwei","Viktor","Ahri","Annie","Darius","Olaf","Mordekaiser","Xin Zhao","Yone","Caitlyn","Kai'Sa","Lucian","Zeri","Syndra","Orianna"]);
+const damage = new Set(["Jinx","Varus","Xayah","Ashe","Viego","Kindred","Graves","Lillia","Taliyah","Hwei","Viktor","Ahri","Annie","Darius","Olaf","Mordekaiser","Xin Zhao","Yone","Caitlyn","Kai'Sa","Lucian","Zeri","Syndra","Orianna"]);
 const early = new Set(["Renekton","Xin Zhao","Ahri","Ashe","Nautilus","Leona","Jarvan IV","Volibear","Darius","Olaf","Taliyah","Varus","Vi","Wukong","Poppy","Lee Sin","Lucian","Caitlyn"]);
 
 let mode=null,userSide=null,picks=[],step=0,currentScenario=null;
@@ -136,8 +195,9 @@ document.querySelectorAll(".side-btn").forEach(btn=>btn.addEventListener("click"
   $("setup").classList.add("hidden");
   $("draftArea").classList.remove("hidden");
   if(mode==="sim") $("analysis").classList.remove("hidden");
+  prepareEnemyPlan();
   if(mode==="test") seedScenarioEnemyPicks();
-  render();
+  else render();
 }));
 
 function selectMode(m){
@@ -157,7 +217,7 @@ function selectMode(m){
 
 function seedScenarioEnemyPicks(){
   picks=[];step=0;
-  render();
+  autoEnemy();
 }
 
 function lockPick(randomEnemy){
@@ -166,13 +226,12 @@ function lockPick(randomEnemy){
   const used=new Set(picks.map(p=>p.champ));
   let champ=$("championSearch").value.trim();
 
+  let role=null;
   if(turn.side!==userSide){
-    if(mode==="test"){
-      const enemyIndex=picks.filter(p=>p.side!==userSide).length;
-      champ=currentScenario.enemy[enemyIndex];
-    }else if(randomEnemy){
-      const pool=champions.filter(c=>!used.has(c));
-      champ=pool[Math.floor(Math.random()*pool.length)];
+    if(mode==="test"||randomEnemy){
+      const enemyPick=nextEnemyChampion();
+      champ=enemyPick.champ;
+      role=enemyPick.role;
     }else{
       $("coachCall").textContent="Slumpa enemy pick.";
       return;
@@ -182,7 +241,7 @@ function lockPick(randomEnemy){
   if(!champions.includes(champ)){$("coachCall").textContent="Välj en champion från listan.";return;}
   if(used.has(champ)){$("coachCall").textContent="Championen är redan pickad.";return;}
 
-  picks.push({...turn,champ});
+  picks.push({...turn,champ,role});
   step++;
   $("championSearch").value="";
   render();
@@ -192,9 +251,9 @@ function lockPick(randomEnemy){
 
 function autoEnemy(){
   while(step<order.length && order[step].side!==userSide){
-    const enemyIndex=picks.filter(p=>p.side!==userSide).length;
-    const champ=currentScenario.enemy[enemyIndex];
-    picks.push({...order[step],champ});
+    const enemyPick=nextEnemyChampion();
+    if(!enemyPick.champ)break;
+    picks.push({...order[step],champ:enemyPick.champ,role:enemyPick.role});
     step++;
   }
   render();
@@ -208,6 +267,7 @@ function render(){
     $("turnLabel").textContent=t.slot+" · "+t.side.toUpperCase();
     const enemyTurn=t.side!==userSide;
     $("randomEnemyBtn").style.display=(mode==="sim"&&enemyTurn)?"block":"none";
+    if(mode==="sim"&&enemyTurn)$("randomEnemyBtn").textContent="Slumpa enemy "+trainerRoleNames[nextEnemyRole()];
     $("lockBtn").style.display=enemyTurn?"none":"block";
     $("championSearch").style.display=enemyTurn?"none":"block";
     document.querySelector('label[for="championSearch"]').style.display=enemyTurn?"none":"block";
@@ -232,7 +292,8 @@ function renderSide(side,id){
   [0,1,2,3,4].forEach(i=>{
     const p=picks.filter(x=>x.side===side)[i];
     const div=document.createElement("div");div.className="pick";
-    div.innerHTML='<span class="slot">'+(side==="blue"?"B":"R")+(i+1)+'</span><span class="champ">'+(p?p.champ:"—")+'</span>';
+    const roleText=p&&p.role?" · "+trainerRoleNames[p.role]:"";
+    div.innerHTML='<span class="slot">'+(side==="blue"?"B":"R")+(i+1)+roleText+'</span><span class="champ">'+(p?p.champ:"—")+'</span>';
     list.appendChild(div);
   });
 }
