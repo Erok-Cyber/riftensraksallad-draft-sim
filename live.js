@@ -844,7 +844,11 @@ function saveRecentDraft(){
       comp:desiredComp(),
       scaling:power.scaling,
       bestWindow:power.window,
-      topRisk:draftRiskEngine()[0]?.text||null
+      topRisk:draftRiskEngine()[0]?.text||null,
+      hybridIdentity:window.RiftAdvanced?.hybridIdentity?.()||desiredComp(),
+      compHealth:window.RiftAdvanced?.structure?.()?.good||null,
+      damageProfile:window.RiftAdvanced?.damageProfile?.()?.text||null,
+      objectiveStyle:window.RiftAdvanced?.objectiveProfile?.()?.label||null
     };
     localStorage.setItem("rs_draft_archive",JSON.stringify([...archive,record].slice(-50)));
   }catch{}
