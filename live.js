@@ -564,6 +564,122 @@ function renderCoach(){
 }
 
 
+const powerCurve = {
+  hardScale:new Set(["Aurelion Sol","Azir","Cassiopeia","Kayle","Kassadin","Kog'Maw","Jinx","Aphelios","Smolder","Senna","Vayne","Zeri","Veigar","Viktor","Kindred"]),
+  goodScale:new Set(["Anivia","Graves","Gwen","Hwei","Kai'Sa","Master Yi","Nasus","Orianna","Ryze","Sion","Sylas","Tristana","Xayah","Yone","Yorick","Viego","Taliyah"]),
+  earlyHeavy:new Set(["Darius","Draven","Elise","Jarvan IV","Kalista","Lee Sin","Olaf","Pantheon","Rek'Sai","Renekton","Xin Zhao","Volibear","Nidalee"]),
+  midSpike:new Set(["Ahri","Annie","Ashe","Garen","Leona","Malphite","Maokai","Mordekaiser","Nautilus","Nocturne","Rell","Shen","Trundle","Udyr","Varus","Vex","Vi","Wukong"]),
+  utilityScale:new Set(["Alistar","Braum","Ivern","Janna","Lulu","Milio","Nami","Poppy","Rakan","Renata Glasc","Seraphine","Soraka","Tahm Kench","Thresh"])
+};
+
+function championCurve(champ){
+  if(powerCurve.hardScale.has(champ))return {early:2.1,mid:3.4,late:4.8};
+  if(powerCurve.goodScale.has(champ))return {early:2.6,mid:3.7,late:4.15};
+  if(powerCurve.earlyHeavy.has(champ))return {early:4.5,mid:4.0,late:2.45};
+  if(powerCurve.midSpike.has(champ))return {early:3.45,mid:4.4,late:3.15};
+  if(powerCurve.utilityScale.has(champ))return {early:3.0,mid:3.75,late:3.85};
+  return {early:3.05,mid:3.35,late:3.3};
+}
+
+function teamCurve(list){
+  if(!list.length)return {early:3,mid:3,late:3};
+  const total=list.reduce((a,e)=>{
+    const c=championCurve(e.champ);
+    a.early+=c.early;a.mid+=c.mid;a.late+=c.late;return a;
+  },{early:0,mid:0,late:0});
+  return {
+    early:total.early/list.length,
+    mid:total.mid/list.length,
+    late:total.late/list.length
+  };
+}
+
+function curveGrade(v){
+  if(v>=4.25)return "MYCKET BRA";
+  if(v>=3.7)return "BRA";
+  if(v>=3.15)return "OKEJ";
+  return "SVAG";
+}
+
+function buildPowerCurvePlan(){
+  const own=teamCurve(ours()), enemy=teamCurve(enemies());
+  const lateDiff=own.late-enemy.late;
+  const earlyDiff=own.early-enemy.early;
+  const midDiff=own.mid-enemy.mid;
+  const comp=desiredComp();
+
+  let scaling,scalingDetail;
+  if(lateDiff>=0.55){
+    scaling=curveGrade(own.late)+" · NI OUTSCALAR";
+    scalingDetail="Ni blir relativt starkare ju längre matchen går.";
+  }else if(lateDiff<=-0.55){
+    scaling=curveGrade(own.late)+" · DE OUTSCALAR";
+    scalingDetail="Enemy får tydlig relativ fördel om matchen går väldigt sent.";
+  }else{
+    scaling=curveGrade(own.late)+" · JÄMNT";
+    scalingDetail="Ingen sida har en massiv ren late-scalingfördel.";
+  }
+
+  let earlyNeed,earlyNeedDetail;
+  if(lateDiff<=-0.55 && earlyDiff>=0){
+    earlyNeed="JA · SKAPA LEAD";
+    earlyNeedDetail="Ni behöver inte stomp, men vill gå in i 15–20 min med tempo/objectives.";
+  }else if(comp==="EARLY SKIRMISH" && lateDiff<0.25){
+    earlyNeed="HELST · VINN TEMPO";
+    earlyNeedDetail="Er comp betalar mest när ni konverterar early till starkt midgame.";
+  }else if(lateDiff>=0.55){
+    earlyNeed="NEJ · INGEN PANIK";
+    earlyNeedDetail="Spela stabilt. Ni behöver inte coinflippa early för att vinna.";
+  }else{
+    earlyNeed="NEJ · MEN GE INTE GRATIS";
+    earlyNeedDetail="Jämn kurva: håll matchen kontrollerad och spela för era spikes.";
+  }
+
+  const phases=[
+    {name:"0–10",value:own.early,enemy:enemy.early},
+    {name:"10–25",value:own.mid,enemy:enemy.mid},
+    {name:"25+",value:own.late,enemy:enemy.late}
+  ];
+  const best=phases.sort((a,b)=>(b.value-b.enemy)-(a.value-a.enemy))[0];
+  let window=best.name+" MIN";
+  let windowDetail;
+  if(best.name==="0–10")windowDetail="Ni har mest relativ edge tidigt: prio, skirmish och första objective.";
+  else if(best.name==="10–25")windowDetail="Det här är er viktigaste power window: grupperingar, picks och objectives.";
+  else windowDetail="Ni blir starkast relativt sent: håll economy och undvik onödiga coinflips.";
+
+  let behind,behindDetail;
+  if(lateDiff>=0.55){
+    behind="STABILISERA";
+    behindDetail="Catch waves, trade objectives och dra ut matchen — ni har scaling att falla tillbaka på.";
+  }else if(lateDiff<=-0.55){
+    behind="SKAPA PICKS";
+    behindDetail="Undvik passiv farmfest. Sök numbers advantage, fog-picks och cross-map innan enemy når full late.";
+  }else{
+    behind="BYT TEMPO";
+    behindDetail="Trade istället för att contestera allt. Hitta nästa starka objective/setup-fönster.";
+  }
+
+  let p010,p1025,p25;
+  if(earlyDiff>=0.4)p010="Använd lane-prio och jungle för första tempo. Fighta bara där lanes kan röra sig.";
+  else p010="Spela disciplinerat. Fullclear/farm där det behövs och ge inte gratis deaths för river.";
+
+  if(comp==="OBJECTIVE CONTROL")p1025="Detta är setup-fasen: push → reset → vision 45–60s före objective → tvinga dem in i er.";
+  else if(comp==="PRESS R")p1025="Gruppera runt era R-cooldowns. En tydlig GO-call → kill → objective.";
+  else if(comp==="JUNGLE CARRY")p1025="Lanes enablear jungle. Ta river/enemy camps och spela runt carryns tempo.";
+  else p1025="Spela mid/jg/sup tillsammans. Pick eller prio ska direkt konverteras till tower/objective.";
+
+  if(lateDiff>=0.55)p25="Bra läge för er. Spela front-to-back/kring carry och låt scaling göra jobbet — forcea inte.";
+  else if(lateDiff<=-0.55)p25="Enemy har bättre ren late. Undvik raka 5v5 utan setup; spela vision, flank och picks före objective.";
+  else p25="Late är spelbar för båda. Vision + engage execution och target selection avgör mer än scaling.";
+
+  return {
+    scaling,scalingDetail,earlyNeed,earlyNeedDetail,
+    window,windowDetail,behind,behindDetail,
+    p010,p1025,p25,
+    own,enemy,lateDiff,earlyDiff,midDiff
+  };
+}
+
 function buildFinalGameplan(){
   const comp=desiredComp(), enemy=enemies(), map=ownRoleMap(), enemyMap=enemyRoleMap();
   const dive=countTrait(enemy,traits.dive), melee=countTrait(enemy,traits.melee), poke=countTrait(enemy,traits.poke);
@@ -627,7 +743,8 @@ function buildFinalGameplan(){
     early+=" Ward/track "+enemyMap.jungle+" tidigt.";
   }
 
-  return {comp,early,mid,fight,objective,rule};
+  const power=buildPowerCurvePlan();
+  return {comp,early,mid,fight,objective,rule,...power};
 }
 
 function renderFinalGameplan(){
@@ -641,6 +758,17 @@ function renderFinalGameplan(){
   $("gpFight").textContent=gp.fight;
   $("gpObjective").textContent=gp.objective;
   $("gpRule").textContent=gp.rule;
+  $("gpScaling").textContent=gp.scaling;
+  $("gpScalingDetail").textContent=gp.scalingDetail;
+  $("gpEarlyNeed").textContent=gp.earlyNeed;
+  $("gpEarlyNeedDetail").textContent=gp.earlyNeedDetail;
+  $("gpWindow").textContent=gp.window;
+  $("gpWindowDetail").textContent=gp.windowDetail;
+  $("gpBehind").textContent=gp.behind;
+  $("gpBehindDetail").textContent=gp.behindDetail;
+  $("gp010").textContent=gp.p010;
+  $("gp1025").textContent=gp.p1025;
+  $("gp25").textContent=gp.p25;
 }
 
 function saveRecentDraft(){
