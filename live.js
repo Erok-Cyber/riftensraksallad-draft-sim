@@ -1138,6 +1138,18 @@ function scoreCandidateDetails(champ,role,compName){
   if(role==="jungle"&&p.earlyJungle&&["Xin Zhao","Volibear","Udyr","Jarvan IV"].includes(champ))add(6,"stabil tidig 2v2");
   if(role==="jungle"&&champ==="Lillia"&&p.melee>=2)add(7,"Lillia kitar melee");
   if(role==="jungle"&&champ==="Lillia"&&p.tanks>=1)add(6,"%HP + sustained mot frontline");
+  if(role==="jungle"&&["Lillia","Graves","Kindred","Viego"].includes(champ)){
+    if(need.front===0&&ours().length>=2){
+      s-=7;
+      reasons.push({pts:-7,label:"behöver frontline från annan roll"});
+    }else if(need.front>0&&need.engage>0){
+      add(6,"laget enablear carry-jungle");
+    }
+    if(need.engage===0&&ours().length>=3){
+      s-=4;
+      reasons.push({pts:-4,label:"lite setup för carry-jungle"});
+    }
+  }
 
   if(ours().some(e=>traits.engage.has(e.champ))&&smartTraits.reliableFollow.has(champ))add(5,"bra follow-up");
   if(ours().some(e=>traits.immobileCarry.has(e.champ))&&(smartTraits.peel.has(champ)||traits.frontline.has(champ)))add(6,"skyddar egen carry");
@@ -1353,7 +1365,7 @@ function buildPath(){
 
 const mobilityThreats=new Set(["Ahri","Akali","Ambessa","Camille","Ezreal","Fiora","Fizz","Kassadin","Katarina","LeBlanc","Lucian","Rakan","Tristana","Vayne","Yone","Zed"]);
 const backlineAccess=new Set(["Ahri","Annie","Jarvan IV","Leona","Malphite","Maokai","Nautilus","Nocturne","Vi","Vex","Wukong"]);
-const sustainedDamage=new Set(["Aphelios","Cassiopeia","Graves","Jinx","Kindred","Kog'Maw","Master Yi","Tristana","Varus","Vayne","Viego","Viktor","Xayah","Yunara","Zeri"]);
+const sustainedDamage=new Set(["Aphelios","Cassiopeia","Graves","Jinx","Kindred","Kog'Maw","Lillia","Master Yi","Tristana","Varus","Vayne","Viego","Viktor","Xayah","Yunara","Zeri"]);
 const strongPeelSet=new Set(["Alistar","Braum","Galio","Janna","Lulu","Maokai","Milio","Nami","Nautilus","Poppy","Rakan","Renata Glasc","Shen","Tahm Kench","Thresh","Xayah"]);
 const reliableEngageSet=new Set(["Alistar","Amumu","Annie","Ashe","Galio","Jarvan IV","Leona","Malphite","Maokai","Nautilus","Nocturne","Rakan","Rell","Sejuani","Vi","Vex","Wukong"]);
 const highWaveclearSet=new Set(["Anivia","Azir","Hwei","Jinx","Orianna","Sivir","Smolder","Taliyah","Tristana","Varus","Veigar","Vex","Viktor","Xayah","Ziggs"]);
