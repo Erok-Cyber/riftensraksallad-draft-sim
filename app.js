@@ -1,7 +1,21 @@
-const champions = [
+const fallbackChampions = [
 "Ahri","Amumu","Anivia","Annie","Ashe","Darius","Galio","Garen","Graves","Heimerdinger","Hwei","Jarvan IV","Jinx","Kindred","Leona","Malphite","Maokai","Mordekaiser","Nautilus","Olaf","Renekton","Senna","Shen","Sion","Sylas","Taliyah","Trundle","Udyr","Varus","Vex","Vi","Viego","Viktor","Volibear","Wukong","Xayah","Xin Zhao",
-"Aatrox","Akali","Alistar","Ambessa","Aphelios","Aurora","Azir","Braum","Caitlyn","Camille","Cassiopeia","Ezreal","Fiora","Gnar","Gragas","Ivern","Jax","Jayce","Kai'Sa","Kalista","Kennen","K'Sante","Lee Sin","Lucian","Lulu","Milio","Miss Fortune","Nami","Nocturne","Orianna","Ornn","Poppy","Rakan","Rell","Rumble","Ryze","Sejuani","Skarner","Smolder","Syndra","Tahm Kench","Tristana","Tryndamere","Twisted Fate","Yone","Yunara","Zac","Zeri"
+"Aatrox","Akali","Alistar","Ambessa","Aphelios","Aurora","Azir","Braum","Caitlyn","Camille","Cassiopeia","Ezreal","Fiora","Gnar","Gragas","Ivern","Jax","Jayce","Kai'Sa","Kalista","Kayn","Kennen","K'Sante","Lee Sin","Lucian","Lulu","Milio","Miss Fortune","Nami","Nocturne","Orianna","Ornn","Poppy","Rakan","Rell","Rumble","Ryze","Sejuani","Skarner","Smolder","Syndra","Tahm Kench","Tristana","Tryndamere","Twisted Fate","Yone","Yunara","Zac","Zeri"
 ].sort();
+let champions=[...fallbackChampions];
+
+async function loadChampionRoster(){
+  try{
+    const versions=await fetch("https://ddragon.leagueoflegends.com/api/versions.json").then(r=>r.json());
+    const data=await fetch("https://ddragon.leagueoflegends.com/cdn/"+versions[0]+"/data/en_US/champion.json").then(r=>r.json());
+    champions=Object.values(data.data).map(c=>c.name).sort((a,b)=>a.localeCompare(b));
+    const list=document.getElementById("champions");
+    list.innerHTML="";
+    champions.forEach(c=>{const o=document.createElement("option");o.value=c;list.appendChild(o)});
+  }catch(e){
+    console.warn("Data Dragon roster fallback används.",e);
+  }
+}
 
 const order = [
 {side:"blue",slot:"B1"},{side:"red",slot:"R1"},{side:"red",slot:"R2"},
@@ -107,7 +121,7 @@ const early = new Set(["Renekton","Xin Zhao","Ahri","Ashe","Nautilus","Leona","J
 let mode=null,userSide=null,picks=[],step=0,currentScenario=null;
 
 const $=id=>document.getElementById(id);
-champions.forEach(c=>{const o=document.createElement("option");o.value=c;$("champions").appendChild(o)});
+champions.forEach(c=>{const o=document.createElement("option");o.value=c;$("champions").appendChild(o)});\nloadChampionRoster();
 
 $("simModeBtn").addEventListener("click",()=>selectMode("sim"));
 $("testModeBtn").addEventListener("click",()=>selectMode("test"));
