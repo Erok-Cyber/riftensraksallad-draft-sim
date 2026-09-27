@@ -246,7 +246,7 @@ function firstOpenRole(){
 
 function render(){
   if(!userSide)return;
-  renderTeam("blue");renderTeam("red");renderTurn();renderStatus();renderCoach();renderRecommendation();renderAllRoleRecommendations();renderCompChecks();
+  renderTeam("blue");renderTeam("red");renderTurn();renderStatus();renderCoach();renderRecommendation();renderAllRoleRecommendations();renderCompChecks();renderFinalGameplan();
   $("draftProgress").textContent=step+" / "+draftOrder.length;
   if(step>=draftOrder.length)saveRecentDraft();
 }
@@ -500,6 +500,86 @@ function renderCoach(){
   $("winconCall").textContent=buildWincon(comp);
   $("watchCall").textContent=buildWatch();
   $("pathCall").textContent=buildPath();
+}
+
+
+function buildFinalGameplan(){
+  const comp=desiredComp(), enemy=enemies(), map=ownRoleMap(), enemyMap=enemyRoleMap();
+  const dive=countTrait(enemy,traits.dive), melee=countTrait(enemy,traits.melee), poke=countTrait(enemy,traits.poke);
+  const dis=countTrait(enemy,traits.disengage), tanks=countTrait(enemy,traits.tanks), split=countTrait(enemy,traits.splitpush);
+  const hyper=countTrait(enemy,traits.hyperCarry), ench=countTrait(enemy,traits.enchanter);
+
+  let early="", mid="", fight="", objective="", rule="";
+
+  if(comp==="EARLY SKIRMISH"){
+    early="Spela för prio + 2v2/3v3. Patha mot lane med bäst setup.";
+    mid="Flytta mid/jg/support tillsammans. Pick → tower/objective.";
+    fight="Starta på isolerad target; undvik lång front-to-back.";
+    objective="Kom först, få vision och tvinga fight med prio.";
+    rule="VINN TEMPO → KONVERTERA. Chasa inte efter extra kill.";
+  }else if(comp==="PRESS R"){
+    early="Spela stabilt tills era engage-tools är online.";
+    mid="Gruppera 4–5 och leta tydliga engage-fönster.";
+    fight="En GO-call. Chain CC samma target och följ direkt.";
+    objective="Tvinga fights i chokes där engage blir enkelt.";
+    rule="INGEN SPLIT ENGAGE. Alla följer samma knapp.";
+  }else if(comp==="OBJECTIVE CONTROL"){
+    early="Säkra lanes + tempo; ta inga coinflip-riverfights.";
+    mid="Push waves → reset tillsammans → setup river tidigt.";
+    fight="Låt dem gå in i er zon. Fronta, zona och turna.";
+    objective="Var där 45–60s tidigt. Vision först, objective sen.";
+    rule="JAGA INTE. De ska komma in i ER.";
+  }else{
+    early="Lanes skapar prio så jungle kan ta camps/river/marks.";
+    mid="Spela runt jungle-tempo och invades med lane support.";
+    fight="Jungle ska cleanup/carry — inte vara första sacrifice.";
+    objective="Använd prio för att äga river före spawn.";
+    rule="ENABLEA JUNGLE. Ge carryn space och resurser.";
+  }
+
+  if(dive>=2){
+    fight+=" Spara peel till deras dive.";
+    rule="ÖVERLEV FÖRSTA DIVE → kontra när deras cooldowns är nere.";
+  }
+  if(hyper>=1&&ench>=1){
+    fight="Hitta hypercarryn direkt eller tvinga bort supporten först. Undvik lång front-to-back.";
+    rule="GE INTE "+enemy.filter(e=>traits.hyperCarry.has(e.champ)).map(e=>e.champ).slice(0,1).join("")+" GRATIS DPS.";
+  }
+  if(poke>=2&&dis>=1){
+    mid="Skapa flank/vision denial; gå inte rakt genom deras poke.";
+    fight="Kort, explosiv engage. Missad engage = reset.";
+  }
+  if(melee>=3){
+    objective="Setup chokes tidigt och låt dem gå in i er CC/damage.";
+  }
+  if(tanks>=2){
+    fight+=" Bränn inte alla cooldowns på första tanken.";
+  }
+  if(split>=1){
+    mid+=" Bestäm vem som matchar side innan ni tappar tempo.";
+  }
+
+  const path=buildPath();
+  if(map.jungle&&path&&!path.startsWith("Låses"))early=path;
+
+  if(enemyMap.jungle&&traits.earlyJungle.has(enemyMap.jungle)){
+    early+=" Ward/track "+enemyMap.jungle+" tidigt.";
+  }
+
+  return {comp,early,mid,fight,objective,rule};
+}
+
+function renderFinalGameplan(){
+  const card=$("finalGameplanCard");
+  if(step<draftOrder.length){card.classList.add("hidden");return}
+  const gp=buildFinalGameplan();
+  card.classList.remove("hidden");
+  $("finalCompBadge").textContent=gp.comp;
+  $("gpEarly").textContent=gp.early;
+  $("gpMid").textContent=gp.mid;
+  $("gpFight").textContent=gp.fight;
+  $("gpObjective").textContent=gp.objective;
+  $("gpRule").textContent=gp.rule;
 }
 
 function saveRecentDraft(){
