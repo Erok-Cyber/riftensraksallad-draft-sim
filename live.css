@@ -35,3 +35,11 @@
 @media(max-width:1080px){.live-call-grid{grid-template-columns:repeat(2,1fr)}.role-rec-grid,.check-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:980px){.live-layout{grid-template-columns:1fr}.role-status{grid-template-columns:1fr}.header-actions{width:100%}}
 @media(max-width:600px){.live-call-grid,.role-rec-grid,.check-grid{grid-template-columns:1fr}}
+.final-gameplan{margin-top:16px;border:1px solid #5b4d21;background:linear-gradient(180deg,rgba(28,31,42,.98),rgba(18,26,45,.98))}
+.gameplan-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.gameplan-grid>div{background:var(--card2);border-radius:12px;padding:14px}
+.gameplan-grid p{margin:6px 0 0;font-weight:800;line-height:1.4}
+.golden-rule{margin-top:10px;background:#2f2919;border:1px solid #66572b;border-radius:12px;padding:14px}
+.golden-rule strong{display:block;margin-top:5px;font-size:18px}
+@media(max-width:900px){.gameplan-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:600px){.gameplan-grid{grid-template-columns:1fr}}
