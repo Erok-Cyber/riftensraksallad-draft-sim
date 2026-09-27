@@ -872,6 +872,22 @@ function scoreCandidateDetails(champ,role,compName){
     else if((role==="top"||role==="mid")&&smartTraits.counterSensitive.has(champ)){s-=6;reasons.push({pts:-6,label:"counterkänslig blind"});}
   }
 
+  const riotStat=window.RiftStats?.scoreChampion({
+    champ,
+    role,
+    enemies:enemies().map(e=>e.champ),
+    allies:ours().map(e=>e.champ)
+  });
+  if(riotStat?.available){
+    s+=riotStat.points;
+    if(Math.abs(riotStat.points)>=1.5){
+      reasons.push({pts:riotStat.points,label:"Riot-data "+(riotStat.points>=0?"+":"")+riotStat.points.toFixed(1)});
+    }
+    for(const rr of (riotStat.reasons||[]).slice(0,2)){
+      reasons.push({pts:Math.max(1,Math.abs(riotStat.points)/2),label:rr});
+    }
+  }
+
   const recent=recentPicks();
   const times=recent.filter(x=>x===champ).length;
   s-=Math.min(10,times*3);
@@ -1054,6 +1070,35 @@ function buildPath(){
   return path;
 }
 
+function renderStatsStatus(){
+  const status=window.RiftStats?.getStatus?.();
+  const el=$("statsStatus"), select=$("statsProfile");
+  if(!el||!status)return;
+  if(select&&select.value!==status.profileKey)select.value=status.profileKey;
+  el.className="stats-status";
+  if(status.hasData){
+    el.classList.add("live");
+    el.textContent="LIVE · "+status.matches+" matcher · "+(status.patch||"aktuell patch");
+    el.title="Riot Games API · "+(status.generatedAt||"");
+  }else if(status.state==="loading"){
+    el.classList.add("waiting");
+    el.textContent="Laddar…";
+  }else{
+    el.classList.add("waiting");
+    el.textContent="Redo · API-nyckel saknas";
+    el.title="Team/comp/matchup-motorn används fullt ut; Riot-delen aktiveras när en riktig stats-snapshot finns.";
+  }
+}
+
+document.addEventListener("riftstats:change",()=>{
+  renderStatsStatus();
+  if(userSide)render();
+});
+$("statsProfile")?.addEventListener("change",e=>{
+  window.RiftStats?.setProfile?.(e.target.value);
+});
+
 loadChampionRoster();
 restoreState();
+renderStatsStatus();
 if(userSide)render();
