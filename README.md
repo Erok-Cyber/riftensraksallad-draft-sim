@@ -34,3 +34,24 @@ Draft Brain är fortfarande ett beslutstöd, inte en garanti för en matematisk 
 Live Draft Brain använder nu ett separat `draft-ai.js`-lager ovanpå de vanliga reglerna. Lagret gör explainable lookahead över kommande egna picks, väger draftens struktur, enemy threats, team comfort, blind/counter-värde, risk och hur många av lagets core-comp-pivots som fortfarande hålls öppna.
 
 Detta är ett lokalt heuristiskt AI/search-lager, inte en modell som påstår sig vara tränad på miljontals Riot-matcher. Core comps fungerar som starka priors/ankare och AI-lagret får justera rekommendationerna när draftläget motiverar det.
+
+
+## Riot-statistik
+
+Draft Brain har ett separat statistiklager som kan väga in riktig Riot Games API-data utan att exponera API-nyckeln i webbläsaren.
+
+Standardprofilen är **Gold/Plat team**:
+- övriga roller: Gold 70 %, Platinum 25 %, Emerald 5 %
+- jungle: Gold 35 %, Platinum 30 %, Emerald 20 %, Diamond 15 %
+
+Statistiken används som ett extra lager ovanpå team-comfort, comp fit, frontline/engage, damage split, matchupregler och Hybrid AI/lookahead. Den ersätter alltså inte lagets core-strategier.
+
+### Aktivera riktig Riot-data
+
+1. Skapa/ha en giltig Riot API-nyckel i Riot Developer Portal.
+2. I GitHub: **Settings → Secrets and variables → Actions → New repository secret**.
+3. Namn: `RIOT_API_KEY`.
+4. Kör workflowet **Refresh Riot draft stats** manuellt under Actions, eller låt schemat köra automatiskt.
+5. Workflowet bygger `riot-stats.json` från EUW ranked Solo/Duo-data och Draft Brain börjar använda snapshoten automatiskt.
+
+API-nyckeln ska aldrig läggas direkt i JavaScript eller committas till repot.
