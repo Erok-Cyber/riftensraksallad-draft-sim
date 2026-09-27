@@ -206,8 +206,9 @@ document.querySelectorAll(".side-btn").forEach(btn=>btn.addEventListener("click"
 document.querySelectorAll(".role-buttons button").forEach(btn=>btn.addEventListener("click",()=>{
   if(btn.classList.contains("locked"))return;
   selectedRole=btn.dataset.role;
-  document.querySelectorAll(".role-buttons button").forEach(b=>b.classList.toggle("active",b.dataset.role===selectedRole));
+  renderTurn();
   renderRecommendation();
+  renderAllRoleRecommendations();
 }));
 
 $("lockBtn").addEventListener("click",lockCurrent);
@@ -228,7 +229,15 @@ function lockCurrent(){
   let role=null;
   if(turn.type==="pick"){
     if(!selectedRole){
-      selectedRole=turn.side===userSide?firstOpenRole():"unknown";
+      if(turn.side===userSide){
+        const possibleRoles=championOpenRoles(champ);
+        const suggested=recommendedNextRole();
+        selectedRole=possibleRoles.length===1
+          ? possibleRoles[0]
+          : (suggested&&possibleRoles.includes(suggested) ? suggested : (possibleRoles[0]||suggested||firstOpenRole()));
+      }else{
+        selectedRole="unknown";
+      }
     }
     if(turn.side===userSide&&selectedRole==="unknown"){alert("Välj riktig roll för er pick.");return}
     if(turn.side===userSide&&ownRoleMap()[selectedRole]){alert("Den rollen är redan fylld.");return}
@@ -242,6 +251,44 @@ function lockCurrent(){
 
 function firstOpenRole(){
   const map=ownRoleMap();return roles.find(r=>!map[r])||"top";
+}
+
+function championOpenRoles(champ){
+  const map=ownRoleMap();
+  return roles.filter(role=>!map[role]&&(teamPool[role]||[]).includes(champ));
+}
+
+function recommendedNextRole(){
+  const map=ownRoleMap();
+  const open=roles.filter(role=>!map[role]);
+  if(!open.length)return null;
+
+  const enemyMap=enemyRoleMap();
+  const comp=desiredComp();
+  const need=currentNeeds();
+  const ownCount=ours().length;
+  const base={top:4,jungle:8,mid:5,adc:6,support:7};
+  const counter={top:18,jungle:10,mid:15,adc:8,support:8};
+
+  return open.map(role=>{
+    const available=(teamPool[role]||[]).filter(ch=>!unavailable().has(ch.toLowerCase()));
+    const bestScore=available.length?Math.max(...available.map(ch=>candidateScore(ch,role,comp))):0;
+    const bestPick=topRecommendations(role)[0];
+    let score=(base[role]||0)+(bestScore*0.35);
+
+    // Om enemy redan har visat motsvarande roll är det mer värdefullt att svara/counterpicka den nu.
+    if(enemyMap[role])score+=counter[role]||0;
+    // Håll gärna solo-lanes öppna när motståndaren ännu inte visat dem.
+    if(!enemyMap[role]&&role==="top")score-=10;
+    if(!enemyMap[role]&&role==="mid")score-=6;
+    // Om compen saknar grundverktyg prioriteras en roll vars bästa pick kan fylla hålet.
+    if(bestPick&&need.front===0&&traits.frontline.has(bestPick))score+=9;
+    if(bestPick&&need.engage===0&&traits.engage.has(bestPick))score+=9;
+    // När draften börjar bli låst ska kvarvarande solo-lanes inte skjutas upp för länge.
+    if(ownCount>=3&&(role==="top"||role==="mid"))score+=5;
+
+    return {role,score};
+  }).sort((a,b)=>b.score-a.score)[0].role;
 }
 
 function render(){
@@ -273,11 +320,20 @@ function renderTurn(){
   $("turnLabel").textContent=t.label+" · "+(t.side===userSide?"NI":"ENEMY");
   $("roleWrap").classList.toggle("hidden",t.type!=="pick");
   if(t.type==="pick"){
+    const isOwn=t.side===userSide;
+    const suggested=isOwn?recommendedNextRole():null;
     document.querySelectorAll(".role-buttons button").forEach(b=>{
-      const isOwn=t.side===userSide;
+      const locked=isOwn&&!!ownRoleMap()[b.dataset.role];
       b.classList.toggle("hidden",isOwn&&b.dataset.role==="unknown");
-      b.classList.toggle("locked",isOwn&&!!ownRoleMap()[b.dataset.role]);
+      b.classList.toggle("locked",locked);
+      b.classList.toggle("active",b.dataset.role===selectedRole);
+      b.classList.toggle("suggested",isOwn&&!locked&&b.dataset.role===suggested);
     });
+    const hint=$("suggestedRoleText");
+    if(hint){
+      hint.classList.toggle("hidden",!isOwn||!suggested);
+      hint.textContent=suggested?"Rekommenderad nästa roll: "+roleNames[suggested]+" · gul markering = Draft Brains förslag":"";
+    }
   }
 }
 
@@ -398,22 +454,24 @@ function renderRecommendation(){
     return;
   }
 
-  if(!selectedRole){box.classList.add("hidden");return}
-  const recs=topRecommendations(selectedRole);
+  const autoRole=recommendedNextRole();
+  const role=selectedRole||autoRole;
+  if(!role){box.classList.add("hidden");return}
+  const recs=topRecommendations(role);
   box.classList.remove("hidden");
-  $("recommendEyebrow").textContent="PICKFÖRSLAG";
-  $("recommendRole").textContent=roleNames[selectedRole]+":";
+  $("recommendEyebrow").textContent=selectedRole?"PICKFÖRSLAG":"REKOMMENDERAD NÄSTA ROLL";
+  $("recommendRole").textContent=roleNames[role]+":";
   $("recommendPicks").textContent=recs.length?recs.join(" / "):"Inga tillgängliga picks i team-poolen";
-  $("recommendReason").textContent="Riktning: "+desiredComp()+" · bans/picks + comfort + comp-behov + enemy hot + variation.";
+  $("recommendReason").textContent=(selectedRole?"Manuellt vald roll. ":"Draft Brain föreslår denna roll nu. ")+"Riktning: "+desiredComp()+" · bans/picks + comfort + comp-behov + enemy hot + countervärde.";
 }
 
 function renderAllRoleRecommendations(){
   const t=current(),card=$("allRoleRecsCard"),box=$("allRoleRecommendations");
   if(!t||t.type!=="pick"||t.side!==userSide){card.classList.add("hidden");return}
   card.classList.remove("hidden");box.innerHTML="";
-  const map=ownRoleMap();
+  const map=ownRoleMap(),suggested=recommendedNextRole();
   roles.filter(r=>!map[r]).forEach(role=>{
-    const recs=topRecommendations(role),div=document.createElement("div");div.className="role-rec";
+    const recs=topRecommendations(role),div=document.createElement("div");div.className="role-rec"+(role===suggested?" recommended":"");
     div.innerHTML="<span>"+roleNames[role]+"</span><strong>"+(recs.join(" / ")||"—")+"</strong>";
     div.addEventListener("click",()=>{
       selectedRole=role;
