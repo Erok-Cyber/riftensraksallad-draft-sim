@@ -144,6 +144,8 @@ const banBase = {
 };
 
 let userSide=null, step=0, events=[], selectedRole=null, historySaved=false;
+let testMode=(new URLSearchParams(location.search).get("test")==="1")||localStorage.getItem("rs_test_mode")==="1";
+let draftIsTest=testMode;
 const roles=["top","jungle","mid","adc","support"];
 const roleNames={top:"TOP",jungle:"JUNGLE",mid:"MID",adc:"ADC",support:"SUPPORT",unknown:"?"};
 const $=id=>document.getElementById(id);
@@ -185,9 +187,11 @@ function hasOwn(name){return ours().some(e=>e.champ===name)}
 function recentPicks(){try{return JSON.parse(localStorage.getItem("rs_recent_picks")||"[]")}catch{return[]}}
 
 function saveState(){
+  if(testMode||draftIsTest)return;
   localStorage.setItem("rs_draft_state",JSON.stringify({userSide,step,events,historySaved}));
 }
 function restoreState(){
+  if(testMode)return false;
   try{
     const state=JSON.parse(localStorage.getItem("rs_draft_state")||"null");
     if(state&&state.userSide&&Array.isArray(state.events)){
@@ -201,7 +205,7 @@ function restoreState(){
 function clearState(){localStorage.removeItem("rs_draft_state")}
 
 document.querySelectorAll(".side-btn").forEach(btn=>btn.addEventListener("click",()=>{
-  userSide=btn.dataset.side;step=0;events=[];selectedRole=null;historySaved=false;
+  userSide=btn.dataset.side;step=0;events=[];selectedRole=null;historySaved=false;draftIsTest=testMode;
   $("startCard").classList.add("hidden");$("liveArea").classList.remove("hidden");
   saveState();render();
 }));
@@ -223,6 +227,24 @@ $("undoBtn").addEventListener("click",()=>{
 $("resetBtn").addEventListener("click",()=>{
   if(confirm("Starta en helt ny draft?")){clearState();location.reload()}
 });
+
+function renderTestMode(){
+  const btn=$("testModeBtn");
+  if(!btn)return;
+  btn.classList.toggle("active",testMode);
+  btn.textContent=testMode?"🧪 TEST MODE: PÅ":"🧪 TEST MODE: AV";
+  document.body.classList.toggle("test-mode",testMode);
+}
+$("testModeBtn")?.addEventListener("click",()=>{
+  testMode=!testMode;
+  localStorage.setItem("rs_test_mode",testMode?"1":"0");
+  if(testMode){
+    draftIsTest=true;
+    clearState();
+  }
+  renderTestMode();
+});
+renderTestMode();
 
 function lockCurrent(){
   const turn=current(); if(!turn)return;
@@ -803,6 +825,7 @@ function renderFinalGameplan(){
 }
 
 function saveRecentDraft(){
+  if(testMode||draftIsTest){historySaved=true;return;}
   if(historySaved)return;
   const picks=ours().map(e=>e.champ);
   try{
