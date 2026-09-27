@@ -47,3 +47,32 @@
 .golden-rule strong{display:block;margin-top:5px;font-size:18px}
 @media(max-width:900px){.gameplan-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.gameplan-grid{grid-template-columns:1fr}}
+
+
+/* Hybrid AI insight */
+.ai-insight-card{
+  border:1px solid rgba(255,255,255,.11);
+  background:
+    radial-gradient(circle at top right, rgba(87,116,255,.12), transparent 34%),
+    rgba(255,255,255,.035);
+}
+.ai-grid{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:12px;
+  margin-top:14px;
+}
+.ai-grid>div,.ai-explain{
+  background:rgba(0,0,0,.16);
+  border:1px solid rgba(255,255,255,.07);
+  border-radius:12px;
+  padding:12px 14px;
+}
+.ai-grid p,.ai-explain p{margin:.35rem 0 0}
+.ai-explain{margin-top:10px}
+@media (max-width:900px){
+  .ai-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (max-width:560px){
+  .ai-grid{grid-template-columns:1fr}
+}
