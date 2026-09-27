@@ -143,3 +143,9 @@ body.draft-complete #compCheckCard,
 body.draft-complete .comps{display:none!important}
 @media(max-width:1000px){.loading-call-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:600px){.loading-call-grid{grid-template-columns:1fr}.loading-script strong{font-size:16px}}
+
+.loading-script-top{margin-top:0;margin-bottom:12px;border-width:2px;box-shadow:0 0 24px rgba(240,199,94,.06)}
+.final-explanation-head{margin:18px 0 10px;padding-top:16px;border-top:1px solid rgba(255,255,255,.09)}
+.final-explanation-head p{margin:5px 0 0;color:var(--muted);font-size:13px}
+.final-gameplan .power-summary{margin-top:0}
+.final-gameplan .golden-rule{margin-top:12px}
