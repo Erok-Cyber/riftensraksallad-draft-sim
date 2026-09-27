@@ -28,3 +28,9 @@ Projektet är förberett för GitHub Pages via GitHub Actions. När Pages är ak
 
 ## Tanke
 Draft Brain är fortfarande ett beslutstöd, inte en garanti för en matematisk "optimal draft". v2 försöker däremot resonera mer som en coach: först teamets faktiska champion pool och comfort, sedan draftstruktur, enemy threats, synergy, countervärde, damage profile, execution och win condition. Reglerna är förklarbara och kan fortsätta finjusteras när laget samlar fler drafts.
+
+
+## Hybrid AI layer
+Live Draft Brain använder nu ett separat `draft-ai.js`-lager ovanpå de vanliga reglerna. Lagret gör explainable lookahead över kommande egna picks, väger draftens struktur, enemy threats, team comfort, blind/counter-värde, risk och hur många av lagets core-comp-pivots som fortfarande hålls öppna.
+
+Detta är ett lokalt heuristiskt AI/search-lager, inte en modell som påstår sig vara tränad på miljontals Riot-matcher. Core comps fungerar som starka priors/ankare och AI-lagret får justera rekommendationerna när draftläget motiverar det.
