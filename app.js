@@ -183,6 +183,26 @@ champions.forEach(c=>{const o=document.createElement("option");o.value=c;$("cham
 loadChampionRoster();
 setTrainerNav(false);
 
+$("startTabBtn").addEventListener("click",()=>showHomeView());
+$("analysisTabBtn").addEventListener("click",()=>showAnalysisView());
+document.querySelectorAll(".analysis-filter").forEach(btn=>btn.addEventListener("click",()=>{
+  document.querySelectorAll(".analysis-filter").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  currentAnalysisFilter=btn.dataset.filter;
+  renderAnalysis();
+}));
+$("matchHistory").addEventListener("click",e=>{
+  const btn=e.target.closest("[data-delete-match]");
+  if(!btn)return;
+  const id=btn.dataset.deleteMatch;
+  if(confirm("Radera den här sparade matchen?")){
+    const next=matchHistoryData().filter(m=>m.id!==id);
+    localStorage.setItem("rs_match_history",JSON.stringify(next));
+    syncDraftArchiveFromMatches(next);
+    renderAnalysis();
+  }
+});
+
 $("simModeBtn").addEventListener("click",()=>selectMode("sim"));
 $("testModeBtn").addEventListener("click",()=>selectMode("test"));
 $("resetBtn").addEventListener("click",()=>location.reload());
@@ -203,7 +223,126 @@ document.querySelectorAll(".side-btn").forEach(btn=>btn.addEventListener("click"
   else render();
 }));
 
+let currentAnalysisFilter="all";
+
+function matchHistoryData(){
+  try{return JSON.parse(localStorage.getItem("rs_match_history")||"[]")}catch{return[]}
+}
+function syncDraftArchiveFromMatches(matches){
+  const archive=matches.slice(-50).map(m=>({
+    savedAt:m.savedAt,side:m.side,ourPicks:m.ourPicks||[],enemyPicks:m.enemyPicks||[],
+    ourBans:m.ourBans||[],enemyBans:m.enemyBans||[],comp:m.comp||null,
+    scaling:m.scaling||null,bestWindow:m.bestWindow||null,topRisk:m.topRisk||null,
+    fightStyle:m.fightStyle||null,objectiveStyle:m.objectiveStyle||null,
+    result:m.result||null,matchType:m.matchType||null
+  }));
+  localStorage.setItem("rs_draft_archive",JSON.stringify(archive));
+}
+function percent(w,n){return n?Math.round(w/n*100)+"%":"—"}
+function resultCounts(list){
+  const w=list.filter(m=>m.result==="win").length;
+  return {w,l:list.length-w,n:list.length};
+}
+function filteredMatches(){
+  const all=matchHistoryData().sort((a,b)=>new Date(b.savedAt)-new Date(a.savedAt));
+  return currentAnalysisFilter==="all"?all:all.filter(m=>m.matchType===currentAnalysisFilter);
+}
+function showHomeView(){
+  if(mode)return goHome();
+  $("analysisDashboard").classList.add("hidden");
+  $("modeSelect").classList.remove("hidden");
+  document.querySelector(".comps").classList.remove("hidden");
+  $("startTabBtn").classList.add("active");$("analysisTabBtn").classList.remove("active");
+}
+function showAnalysisView(){
+  if(mode)goHome();
+  $("modeSelect").classList.add("hidden");
+  document.querySelector(".comps").classList.add("hidden");
+  $("analysisDashboard").classList.remove("hidden");
+  $("startTabBtn").classList.remove("active");$("analysisTabBtn").classList.add("active");
+  renderAnalysis();
+}
+function renderAnalysis(){
+  const all=matchHistoryData().sort((a,b)=>new Date(b.savedAt)-new Date(a.savedAt));
+  const list=filteredMatches();
+  const c=resultCounts(list),league=resultCounts(all.filter(m=>m.matchType==="league")),flex=resultCounts(all.filter(m=>m.matchType==="flex"));
+  const recent=list.slice(0,10),rc=resultCounts(recent);
+
+  $("statMatches").textContent=c.n;
+  $("statWinrate").textContent=percent(c.w,c.n);
+  $("statRecord").textContent=c.w+"W · "+c.l+"L";
+  $("statLeagueWr").textContent=percent(league.w,league.n);$("statLeagueCount").textContent=league.n+" matcher";
+  $("statFlexWr").textContent=percent(flex.w,flex.n);$("statFlexCount").textContent=flex.n+" matcher";
+  $("statRecent").textContent=recent.length?percent(rc.w,rc.n):"—";
+  $("statRecentRecord").textContent=recent.length?rc.w+"W · "+rc.l+"L":"Ingen data";
+  $("statFilterLabel").textContent=currentAnalysisFilter==="all"?"Alla matcher":currentAnalysisFilter==="league"?"Ligamatcher":"Flex / 5v5";
+
+  $("analysisEmpty").classList.toggle("hidden",all.length>0);
+  document.querySelectorAll(".analysis-panel,.analysis-kpis").forEach(el=>el.classList.toggle("hidden",all.length===0));
+  if(!all.length)return;
+
+  const compsMap={};
+  list.forEach(m=>{const k=m.comp||"Övrig";const x=compsMap[k]||(compsMap[k]={n:0,w:0});x.n++;if(m.result==="win")x.w++});
+  const compRows=Object.entries(compsMap).sort((a,b)=>b[1].n-a[1].n);
+  $("compStats").innerHTML=compRows.length?compRows.map(([name,x])=>{
+    const wr=x.n?Math.round(x.w/x.n*100):0;
+    return '<div class="stat-row"><span class="stat-name">'+name+'</span><span class="stat-bar"><i style="width:'+wr+'%"></i></span><span class="stat-value">'+wr+'% <small>('+x.n+')</small></span></div>';
+  }).join(""):'<span class="analysis-note">Ingen data i filtret.</span>';
+  const eligible=compRows.filter(([,x])=>x.n>=2).sort((a,b)=>(b[1].w/b[1].n)-(a[1].w/a[1].n))[0];
+  $("bestCompStat").textContent=eligible?"Bäst: "+eligible[0]+" · "+percent(eligible[1].w,eligible[1].n):"Minst 2 matcher för trend";
+
+  const blue=resultCounts(list.filter(m=>m.side==="blue")),red=resultCounts(list.filter(m=>m.side==="red"));
+  $("sideStats").innerHTML=[
+    ["Blue side",blue],["Red side",red]
+  ].map(([name,x])=>'<div class="stat-row"><span class="stat-name">'+name+'</span><span class="stat-bar"><i style="width:'+(x.n?Math.round(x.w/x.n*100):0)+'%"></i></span><span class="stat-value">'+percent(x.w,x.n)+' <small>('+x.n+')</small></span></div>').join("");
+
+  const leagueShare=list.length?Math.round(list.filter(m=>m.matchType==="league").length/list.length*100):0;
+  const compKinds=new Set(list.map(m=>m.comp).filter(Boolean)).size;
+  $("profileStats").innerHTML=
+    '<div><span>Ligandel</span><strong>'+leagueShare+'%</strong></div>'+
+    '<div><span>Comps spelade</span><strong>'+compKinds+'</strong></div>'+
+    '<div><span>Blue matcher</span><strong>'+blue.n+'</strong></div>'+
+    '<div><span>Red matcher</span><strong>'+red.n+'</strong></div>';
+
+  const champs={};
+  list.forEach(m=>(m.ourPicks||[]).forEach(p=>{const ch=p.champ||p;champs[ch]=(champs[ch]||0)+1}));
+  const champRows=Object.entries(champs).sort((a,b)=>b[1]-a[1]).slice(0,10);
+  $("champStats").innerHTML=champRows.map(([ch,n])=>'<div class="champ-stat"><strong>'+ch+'</strong><span>'+n+' picks</span></div>').join("")||'<span class="analysis-note">Ingen data.</span>';
+
+  const patterns=[];
+  if(c.n>=3){
+    if(blue.n>=2&&red.n>=2){
+      const bw=blue.w/blue.n,rw=red.w/red.n;
+      if(Math.abs(bw-rw)>=.15)patterns.push((bw>rw?"Blue":"Red")+" side har hittills bättre resultat ("+percent(Math.max(blue.w,red.w),bw>rw?blue.n:red.n)+").");
+    }
+    if(eligible)patterns.push(eligible[0]+" är bästa comp-trenden med minst två matcher: "+percent(eligible[1].w,eligible[1].n)+" WR över "+eligible[1].n+" matcher.");
+    const recentFive=resultCounts(list.slice(0,5));
+    if(recentFive.n>=3)patterns.push("Senaste "+recentFive.n+": "+recentFive.w+"W · "+recentFive.l+"L.");
+    const riskCounts={};
+    list.forEach(m=>{if(m.topRisk)riskCounts[m.topRisk]=(riskCounts[m.topRisk]||0)+1});
+    const topRisk=Object.entries(riskCounts).sort((a,b)=>b[1]-a[1])[0];
+    if(topRisk&&topRisk[1]>=2)patterns.push("Återkommande draft-risk: "+topRisk[0]+" ("+topRisk[1]+" matcher).");
+  }
+  if(!patterns.length)patterns.push("Mer data behövs innan tydliga lagmönster går att skilja från enstaka matcher.");
+  $("patternInsights").innerHTML=patterns.slice(0,4).map(t=>'<div class="pattern-item">'+t+'</div>').join("");
+
+  $("historyCount").textContent=list.length+" matcher";
+  $("matchHistory").innerHTML=list.slice(0,50).map(m=>{
+    const d=new Date(m.savedAt);const date=isNaN(d)?m.savedAt:d.toLocaleDateString("sv-SE",{month:"2-digit",day:"2-digit"});
+    const picks=(m.ourPicks||[]).map(p=>p.champ||p).join(" · ");
+    return '<div class="match-row">'+
+      '<span class="match-result '+m.result+'">'+(m.result==="win"?"WIN":"LOSS")+'</span>'+
+      '<span class="match-type">'+(m.matchType==="league"?"LIGA":"FLEX")+'</span>'+
+      '<span>'+date+'</span>'+
+      '<span class="match-comp">'+(m.comp||"—")+'</span>'+
+      '<span class="match-picks">'+picks+'</span>'+
+      '<button class="delete-match" data-delete-match="'+m.id+'" title="Radera match">×</button>'+
+    '</div>';
+  }).join("")||'<span class="analysis-note">Ingen data i filtret.</span>';
+}
+
 function setTrainerNav(active){
+  $("homeTabs").classList.toggle("hidden",active);
   $("homeBtn").classList.toggle("hidden",!active);
   $("undoBtn").classList.toggle("hidden",!active);
   $("resetBtn").classList.toggle("hidden",!active);
@@ -222,6 +361,10 @@ function goHome(){
   $("testGrade").classList.add("hidden");
   $("championSearch").value="";
   setTrainerNav(false);
+  $("analysisDashboard").classList.add("hidden");
+  $("modeSelect").classList.remove("hidden");
+  document.querySelector(".comps").classList.remove("hidden");
+  $("startTabBtn").classList.add("active");$("analysisTabBtn").classList.remove("active");
 }
 
 function undoPick(){
