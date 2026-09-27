@@ -331,13 +331,6 @@ buildFinalGameplan=function(){
 const advBaseRenderFinalGameplan=renderFinalGameplan;
 renderFinalGameplan=function(){
   advBaseRenderFinalGameplan();
-  if(step<draftOrder.length)return;
-  const gp=buildFinalGameplan();
-  const a=document.getElementById("gpFightStyle");
-  if(!a)return;
-  a.textContent=gp.advFightStyle;
-  document.getElementById("gpCooldowns").textContent=gp.advCooldowns;
-  document.getElementById("gpSideLane").textContent=gp.advSideLane;
 };
 
 // Expose a small read-only surface for debugging/future UI.
