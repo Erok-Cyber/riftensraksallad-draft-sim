@@ -10,11 +10,11 @@
 <body>
   <main class="app">
     <header>
-      <div>
+      <div class="brand-head"><img class="team-logo" alt="Riftens Räksallad" hidden><div>
         <p class="eyebrow">RIFTENSRÄKSALLAD · PATCH 26.19</p>
         <h1>Draft Brain</h1>
         <p class="sub">Live coach för bans, picks, pivots, wincon och jungle-pathing.</p>
-      </div>
+        </div></div>
       <div class="header-actions">
         <a href="index.html" class="secondary link-btn">← Trainer</a>
         <button id="undoBtn" class="secondary">↶ Undo</button>
@@ -29,6 +29,10 @@
         <button class="side-btn" data-side="red">Red side</button>
       </div>
       <p class="hint">Blue = laget med first pick. Draften autosparas i webbläsaren.</p>
+      <div class="stats-bar">
+        <div><span class="mini-label">META-PROFIL</span><select id="statsProfile"><option value="team_gold_plat">Gold/Plat team</option><option value="gold">Gold</option><option value="platinum">Platinum</option><option value="emerald_plus">Emerald+</option></select></div>
+        <div><span class="mini-label">RIOT DATA</span><span id="statsStatus" class="stats-status">Laddar…</span></div>
+      </div>
     </section>
 
     <section id="liveArea" class="hidden">
@@ -178,6 +182,8 @@
       </div>
     </section>
   </main>
+  <script src="brand.js"></script>
+  <script src="stats-engine.js"></script>
   <script src="live.js"></script>
   <script src="draft-ai.js"></script>
 </body>
