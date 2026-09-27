@@ -48,3 +48,16 @@ GitHub Pages publicerar `main` automatiskt.
 
 ## Tanke
 Draft Brain är ett beslutstöd, inte en garanti för en matematisk optimal draft. Målet är att kombinera lagets riktiga champion pools och strategier med aktuell meta utan att en soloqueue-winrate får styra över en bättre 5v5-comp.
+
+
+## Test Mode
+Live Draft Brain har ett 🧪 **TEST MODE** i headern. När det är på kan man fritt prova drafts utan att:
+- spara draften i history
+- påverka recent-picks
+- påverka framtida team-learning
+- autospara den aktiva testdraften
+
+`?test=1` i URL:en öppnar också sidan direkt i Test Mode.
+
+## Advanced automatic engine
+`advanced-engine.js` lägger ett automatiskt lager ovanpå grundmotorn och före Hybrid AI. Det analyserar bland annat comp completeness, damage profile, pick dependencies, role responsibility, frontline/engage/peel-kvalitet, objective DPS/turn style, side-lane, vision/fog dependency, cooldown dependency, hybrid identity och mönster från tidigare riktiga drafts.
