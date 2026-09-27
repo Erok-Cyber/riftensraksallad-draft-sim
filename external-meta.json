@@ -162,6 +162,20 @@
         "winrate": null,
         "strong": [],
         "weak": []
+      },
+      "Lillia": {
+        "tier": "A",
+        "winrate": 50.97,
+        "strong": [
+          "Jax",
+          "Zed",
+          "Elise"
+        ],
+        "weak": [
+          "Jarvan IV",
+          "Kindred",
+          "Hecarim"
+        ]
       }
     },
     "mid": {
