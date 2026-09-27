@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Riftensräksallad Live Draft Coach</title>
+  <title>Riftensräksallad Draft Brain</title>
   <link rel="stylesheet" href="styles.css" />
   <link rel="stylesheet" href="live.css" />
 </head>
@@ -11,23 +11,24 @@
   <main class="app">
     <header>
       <div>
-        <p class="eyebrow">RIFTENSRÄKSALLAD</p>
-        <h1>Live Draft Coach</h1>
-        <p class="sub">Bans + picks + live-rekommendationer för er riktiga draft.</p>
+        <p class="eyebrow">RIFTENSRÄKSALLAD · PATCH 26.19</p>
+        <h1>Draft Brain</h1>
+        <p class="sub">Live coach för bans, picks, pivots, wincon och jungle-pathing.</p>
       </div>
       <div class="header-actions">
         <a href="index.html" class="secondary link-btn">← Trainer</a>
-        <button id="resetBtn" class="secondary">Ny live draft</button>
+        <button id="undoBtn" class="secondary">↶ Undo</button>
+        <button id="resetBtn" class="danger-btn">Ny draft</button>
       </div>
     </header>
 
     <section id="startCard" class="card">
       <h2>Välj sida</h2>
       <div class="side-buttons">
-        <button class="side-btn" data-side="blue">Blue side</button>
+        <button class="side-btn" data-side="blue">Blue side · First pick</button>
         <button class="side-btn" data-side="red">Red side</button>
       </div>
-      <p class="hint">Coach följer riktig draftordning med 3 bans → 3 picks → 2 bans → 2 picks.</p>
+      <p class="hint">Blue = laget med first pick. Draften autosparas i webbläsaren.</p>
     </section>
 
     <section id="liveArea" class="hidden">
@@ -64,7 +65,7 @@
           <button id="lockBtn" class="primary">Lås</button>
 
           <div id="recommendationBox" class="recommendation hidden">
-            <p class="eyebrow">REKOMMENDATION</p>
+            <p class="eyebrow" id="recommendEyebrow">REKOMMENDATION</p>
             <h3 id="recommendRole">PICK</h3>
             <p id="recommendPicks" class="big-picks">—</p>
             <p id="recommendReason" class="muted"></p>
@@ -80,6 +81,17 @@
         </div>
       </section>
 
+      <section id="allRoleRecsCard" class="card hidden">
+        <div class="analysis-head">
+          <div>
+            <p class="eyebrow">PICK OPTIONS</p>
+            <h2>Öppna roller</h2>
+          </div>
+          <div class="badge">Klicka roll → välj</div>
+        </div>
+        <div id="allRoleRecommendations" class="role-rec-grid"></div>
+      </section>
+
       <section class="card live-coach-card">
         <div class="analysis-head">
           <div>
@@ -90,6 +102,7 @@
         </div>
         <div class="live-call-grid">
           <div><span class="mini-label">PLAN</span><p id="planCall">Safe/flex först. Se vad enemy visar.</p></div>
+          <div><span class="mini-label">WINCON</span><p id="winconCall">Bygg en comp med tydlig engage, frontline och damage.</p></div>
           <div><span class="mini-label">WATCH</span><p id="watchCall">Spara counters och niche-picks till senare.</p></div>
           <div><span class="mini-label">JUNGLE PATH</span><p id="pathCall">Låses när jungle + lanes börjar synas.</p></div>
         </div>
@@ -98,11 +111,12 @@
       <section class="card">
         <div class="analysis-head">
           <div>
-            <p class="eyebrow">ERA PICKS</p>
-            <h2>Rollstatus</h2>
+            <p class="eyebrow">COMP CHECK</p>
+            <h2>Vad saknas?</h2>
           </div>
           <div id="needsBadge" class="badge">5 roller kvar</div>
         </div>
+        <div id="compChecks" class="check-grid"></div>
         <div id="roleStatus" class="role-status"></div>
       </section>
     </section>
@@ -113,7 +127,7 @@
         <article><h3>Early Skirmish</h3><p>Renekton · Xin Zhao · Ahri · Ashe · Nautilus</p></article>
         <article><h3>PRESS R</h3><p>Malphite · Jarvan IV · Annie · Jinx · Leona</p></article>
         <article><h3>Objective Control</h3><p>Mordekaiser · Udyr · Taliyah · Varus · Maokai</p></article>
-        <article><h3>Jungle Carry</h3><p>Shen · Viego/Kindred · Taliyah · Ashe · Nautilus</p></article>
+        <article><h3>Jungle Carry</h3><p>Shen · Viego/Kindred/Graves · Taliyah/Ahri · Ashe · Nautilus</p></article>
       </div>
     </section>
   </main>
