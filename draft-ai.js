@@ -68,7 +68,7 @@ function aiCompFitForMap(map,name){
     s+=n.zone*1.8+n.objective*1.1+p.melee*1.8+p.tanks*1.2;
     if(p.poke>=2)s-=2;
   }else if(name==="JUNGLE CARRY"){
-    if(["Viego","Kindred","Graves"].includes(map.jungle))s+=9;
+    if(["Viego","Kindred","Graves","Lillia"].includes(map.jungle))s+=9;
     if(["Shen","Malphite","Sion"].includes(map.top))s+=3;
     if(["Taliyah","Ahri","Hwei"].includes(map.mid))s+=3;
     if(["Nautilus","Maokai","Leona"].includes(map.support))s+=3;
@@ -207,6 +207,15 @@ function aiRisk(champ,role,map){
   if(n.count>=3&&n.ap>=3&&n.ad===0){risk+=2;reasons.push("för AP-tungt");}
   if(n.count>=4&&n.engage===0){risk+=2;reasons.push("saknar GO-knapp");}
   if(enemyProfile().tanks>=2&&n.count>=4&&n.antiTank===0){risk+=2;reasons.push("svagt mot tanks");}
+
+  const dep=window.RiftAdvanced?.pickDependency?.(champ,role);
+  if(dep?.penalty>=4){
+    risk+=2;
+    if(dep.deps?.[0]?.label)reasons.push(dep.deps[0].label);
+  }else if(dep?.penalty>=2){
+    risk+=1;
+    if(dep.deps?.[0]?.label)reasons.push(dep.deps[0].label);
+  }
 
   return {value:risk,label:risk>=5?"HÖG":risk>=3?"MEDEL":"LÅG",reasons};
 }
