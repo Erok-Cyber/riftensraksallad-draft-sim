@@ -9,8 +9,10 @@
 .role-wrap label,.center>label{display:block;margin:14px 0 6px;color:var(--muted);font-size:13px;font-weight:700}
 .role-buttons{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
 .role-buttons button{border:1px solid var(--border);background:var(--card2);color:var(--text);border-radius:9px;padding:8px;font-weight:800;cursor:pointer}
-.role-buttons button.active{border-color:var(--accent);background:#3a321d;color:#ffe38c}
+.role-buttons button.active{border-color:var(--blue);background:#173653;color:#d9ecff;box-shadow:0 0 0 1px rgba(78,161,255,.25)}
+.role-buttons button.suggested:not(.active){border-color:var(--accent);background:#3a321d;color:#ffe38c;box-shadow:0 0 16px rgba(240,199,94,.28)}
 .role-buttons button.locked{opacity:.35;pointer-events:none}
+.suggested-role-text{margin:4px 0 8px;color:#ffe38c;font-size:12px;font-weight:850}
 .enemy-role{color:var(--muted)!important}
 .recommendation{margin-top:14px;background:#0d1526;border:1px solid #5b4d21;border-left:4px solid var(--accent);padding:14px;border-radius:12px}
 .big-picks{font-weight:900;font-size:20px;margin:7px 0}.muted{color:var(--muted)}
@@ -27,6 +29,8 @@
 .role-rec-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
 .role-rec{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:12px;cursor:pointer}
 .role-rec:hover{border-color:var(--accent)}
+.role-rec.recommended{border-color:var(--accent);background:#2f2919;box-shadow:0 0 18px rgba(240,199,94,.18)}
+.role-rec.recommended span::after{content:" · REK";color:#ffe38c}
 .role-rec span{color:var(--accent);font-size:11px;font-weight:900}
 .role-rec strong{display:block;margin-top:7px;line-height:1.45}
 .check-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
