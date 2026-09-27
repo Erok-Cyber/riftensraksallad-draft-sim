@@ -15,10 +15,11 @@ En enkel picks-only 5v5 draftsimulator för att träna lagdraft.
 - Snabba calls under draft
 - Enkel slutcheck för engage, frontline, damage och early
 
-## Starta
-Öppna `index.html` direkt i webbläsaren.
+## Kör online
+Projektet är förberett för GitHub Pages via GitHub Actions. När Pages är aktiverat publiceras `main` automatiskt.
 
-Ingen installation behövs.
+## Kör lokalt
+Öppna `index.html` direkt i webbläsaren. Ingen installation behövs.
 
 ## Tanke
 Simulatorn är ett träningsverktyg, inte en automatisk "optimal draft"-motor. Den ska hjälpa laget att snabbt känna igen comp-identitet, pivot-lägen och vad som saknas i draften.
