@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Riftensräksallad Draft Trainer</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-trainer3" />
+  <link rel="stylesheet" href="styles.css?v=20260928-design3" />
 </head>
 <body>
   <main class="app">
@@ -12,25 +12,34 @@
       <div class="brand-head"><img class="team-logo" alt="Riftens Räksallad" hidden><div>
         <p class="eyebrow">RIFTENSRÄKSALLAD</p>
         <h1>Draft Trainer</h1>
-        <p class="sub">Träna draft eller använd Live Draft Coach under matchkväll.</p>
         </div></div>
-      <button id="resetBtn" class="secondary">Starta om</button>
+      <div class="header-actions">
+        <button id="homeBtn" class="secondary nav-action hidden">← Hem</button>
+        <button id="undoBtn" class="secondary nav-action hidden">↶ Undo</button>
+        <button id="resetBtn" class="secondary">↻ Starta om</button>
+      </div>
     </header>
 
     <section id="modeSelect" class="card">
       <h2>Välj läge</h2>
       <div class="mode-grid">
-        <button id="simModeBtn" class="mode-btn">
+        <button id="simModeBtn" class="mode-btn sim-mode">
+          <span class="mode-icon">⚔</span>
           <strong>Draft Sim</strong>
-          <span>Fri draft mot rollkorrekt enemy (TOP/JG/MID/ADC/SUP)</span>
+          <span>Fri draft mot rollkorrekt motståndarlag</span>
+          <span class="mode-arrow">→</span>
         </button>
-        <button id="testModeBtn" class="mode-btn featured">
+        <button id="testModeBtn" class="mode-btn test-mode">
+          <span class="mode-icon">▤</span>
           <strong>Draft Test</strong>
-          <span>Scenario + automatisk enemy + betyg + facit</span>
+          <span>Scenario + automatisk motståndare + facit</span>
+          <span class="mode-arrow">→</span>
         </button>
         <a href="live.html" class="mode-btn live-mode">
-          <strong>Draft Brain</strong>
-          <span>Live draft + Hybrid AI + kort gameplan</span>
+          <span class="mode-icon">◉</span>
+          <strong>Live Draft Coach</strong>
+          <span>Hybrid AI + live calls under vår draft</span>
+          <span class="mode-arrow">→</span>
         </a>
       </div>
     </section>
@@ -103,7 +112,7 @@
       <div class="analysis-head">
         <div>
           <p class="eyebrow">RESULTAT</p>
-          <h2 id="resultTitle">Efter draften</h2>
+          <h2 id="resultTitle">Eftvår draften</h2>
         </div>
         <div id="testGrade" class="grade hidden">—</div>
       </div>
@@ -125,17 +134,17 @@
     </section>
 
     <section class="card comps">
-      <h2>Era 4 standardcomps</h2>
+      <h2>Våra standardcomps</h2>
       <div class="comp-list">
-        <article><h3>Early Skirmish</h3><p>Renekton · Xin Zhao · Ahri · Ashe · Nautilus</p></article>
-        <article><h3>PRESS R</h3><p>Malphite · Jarvan IV · Annie · Jinx · Leona</p></article>
-        <article><h3>Objective Control</h3><p>Mordekaiser · Udyr/Lillia · Taliyah · Varus · Maokai</p></article>
-        <article><h3>Jungle Carry</h3><p>Shen · Viego/Kindred/Graves/Lillia · Taliyah/Ahri · Ashe · Nautilus</p></article>
+        <article class="comp-card early-comp"><span class="comp-icon">⚔</span><div><h3>Early Skirmish</h3><p>Renekton · Xin Zhao · Ahri · Ashe · Nautilus</p></div><span class="comp-arrow">→</span></article>
+        <article class="comp-card press-comp"><span class="comp-icon">✦</span><div><h3>PRESS R</h3><p>Malphite · Jarvan IV · Annie · Jinx · Leona</p></div><span class="comp-arrow">→</span></article>
+        <article class="comp-card objective-comp"><span class="comp-icon">◆</span><div><h3>Objective Control</h3><p>Mordekaiser · Udyr/Lillia · Taliyah · Varus · Maokai</p></div><span class="comp-arrow">→</span></article>
+        <article class="comp-card jungle-comp"><span class="comp-icon">▲</span><div><h3>Jungle Carry</h3><p>Shen · Viego/Kindred/Graves/Lillia · Taliyah/Ahri · Ashe · Nautilus</p></div><span class="comp-arrow">→</span></article>
       </div>
     </section>
   </main>
 
-  <script src="brand.js?v=20260928-trainer3"></script>
-  <script src="app.js?v=20260928-trainer3"></script>
+  <script src="brand.js?v=20260928-design3"></script>
+  <script src="app.js?v=20260928-design3"></script>
 </body>
 </html>
