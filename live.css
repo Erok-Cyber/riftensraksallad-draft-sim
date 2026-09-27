@@ -109,7 +109,7 @@
 .inferred-pick[title]{cursor:help}
 
 .auto-read-card{margin-top:16px;border-color:#35506f;background:linear-gradient(180deg,rgba(22,31,48,.98),rgba(15,23,38,.98))}
-.auto-read-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.auto-read-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
 .auto-read-grid>div{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:13px}
 .auto-read-grid p{margin:6px 0 0;font-weight:760;line-height:1.42}
 #autoRiskBadge.low{color:#9ee6b0;border:1px solid #345b43}
