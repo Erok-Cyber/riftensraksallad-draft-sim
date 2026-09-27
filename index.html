@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Riftensräksallad Draft Sim</title>
+  <title>Riftensräksallad Draft Trainer</title>
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -11,19 +11,43 @@
     <header>
       <div>
         <p class="eyebrow">RIFTENSRÄKSALLAD</p>
-        <h1>Draft Sim</h1>
-        <p class="sub">Träna picks-only draft. Inga bans. Fokus på comp, pivot och snabba beslut.</p>
+        <h1>Draft Trainer</h1>
+        <p class="sub">Träna picks-only draft, comp-identitet och pivots.</p>
       </div>
-      <button id="resetBtn" class="secondary">Ny draft</button>
+      <button id="resetBtn" class="secondary">Starta om</button>
     </header>
 
-    <section class="setup card" id="setup">
-      <h2>1. Välj sida</h2>
+    <section id="modeSelect" class="card">
+      <h2>Välj läge</h2>
+      <div class="mode-grid">
+        <button id="simModeBtn" class="mode-btn">
+          <strong>Draft Sim</strong>
+          <span>Fri draft mot slumpad enemy</span>
+        </button>
+        <button id="testModeBtn" class="mode-btn featured">
+          <strong>Draft Test</strong>
+          <span>Scenario + betyg + facit efteråt</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="setup card hidden" id="setup">
+      <h2 id="setupTitle">Välj sida</h2>
       <div class="side-buttons">
         <button class="side-btn" data-side="blue">Blue side</button>
         <button class="side-btn" data-side="red">Red side</button>
       </div>
       <p class="hint">Pickordning: B1 → R1/R2 → B2/B3 → R3/R4 → B4/B5 → R5.</p>
+    </section>
+
+    <section class="card hidden test-brief" id="testBrief">
+      <p class="eyebrow">DRAFT TEST</p>
+      <h2 id="scenarioTitle"></h2>
+      <p id="scenarioBrief"></p>
+      <div class="scenario-meta">
+        <span id="scenarioGoal"></span>
+        <span id="scenarioDifficulty"></span>
+      </div>
     </section>
 
     <section class="draft-grid hidden" id="draftArea">
@@ -42,9 +66,9 @@
         <input id="championSearch" list="champions" placeholder="Skriv champion..." autocomplete="off" />
         <datalist id="champions"></datalist>
         <button id="lockBtn" class="primary">Lås pick</button>
-        <button id="randomEnemyBtn" class="secondary">Slumpa enemy pick</button>
+        <button id="randomEnemyBtn" class="secondary full">Slumpa enemy pick</button>
 
-        <div class="coach">
+        <div class="coach" id="coachBox">
           <h3>Draft call</h3>
           <p id="coachCall">Börja med ett flexibelt safe pick.</p>
         </div>
@@ -65,23 +89,20 @@
         <div id="confidence" class="badge">Öppen draft</div>
       </div>
       <div class="analysis-grid">
-        <div>
-          <h3>Varför?</h3>
-          <p id="compWhy"></p>
-        </div>
-        <div>
-          <h3>Nästa fokus</h3>
-          <p id="nextFocus"></p>
-        </div>
-        <div>
-          <h3>Watch</h3>
-          <p id="watch"></p>
-        </div>
+        <div><h3>Varför?</h3><p id="compWhy"></p></div>
+        <div><h3>Nästa fokus</h3><p id="nextFocus"></p></div>
+        <div><h3>Watch</h3><p id="watch"></p></div>
       </div>
     </section>
 
     <section class="card hidden" id="scoreCard">
-      <h2>Efter draften</h2>
+      <div class="analysis-head">
+        <div>
+          <p class="eyebrow">RESULTAT</p>
+          <h2 id="resultTitle">Efter draften</h2>
+        </div>
+        <div id="testGrade" class="grade hidden">—</div>
+      </div>
       <div class="score-grid">
         <div><span>Engage</span><strong id="engageScore">0/3</strong></div>
         <div><span>Frontline</span><strong id="frontScore">0/3</strong></div>
@@ -89,6 +110,14 @@
         <div><span>Early</span><strong id="earlyScore">0/3</strong></div>
       </div>
       <p id="finalPlan" class="final-plan"></p>
+
+      <div id="testFeedback" class="test-feedback hidden">
+        <h3>Facit & feedback</h3>
+        <p><strong>Bästa riktning:</strong> <span id="idealComp"></span></p>
+        <p><strong>Vad du gjorde bra:</strong> <span id="goodFeedback"></span></p>
+        <p><strong>Vad du kunde gjort bättre:</strong> <span id="improveFeedback"></span></p>
+        <p><strong>Rekommenderade picks:</strong> <span id="recommendedPicks"></span></p>
+      </div>
     </section>
 
     <section class="card comps">
@@ -97,7 +126,7 @@
         <article><h3>Early Skirmish</h3><p>Renekton · Xin Zhao · Ahri · Ashe · Nautilus</p></article>
         <article><h3>PRESS R</h3><p>Malphite · Jarvan IV · Annie · Jinx · Leona</p></article>
         <article><h3>Objective Control</h3><p>Mordekaiser · Udyr · Taliyah · Varus · Maokai</p></article>
-        <article><h3>Jungle Carry</h3><p>Shen · Kindred · Taliyah · Ashe · Nautilus</p></article>
+        <article><h3>Jungle Carry</h3><p>Shen · Kindred/Viego · Taliyah · Ashe · Nautilus</p></article>
       </div>
     </section>
   </main>
