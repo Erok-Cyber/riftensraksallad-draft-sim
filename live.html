@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Riftensräksallad Draft Brain</title>
   <link rel="stylesheet" href="styles.css?v=20260928-3" />
-  <link rel="stylesheet" href="live.css?v=20260928-3" />
+  <link rel="stylesheet" href="live.css?v=20260928-matchsave1" />
 </head>
 <body>
   <main class="app">
@@ -29,7 +29,7 @@
         <button class="side-btn" data-side="blue">Blue side · First pick</button>
         <button class="side-btn" data-side="red">Red side</button>
       </div>
-      <p class="hint">Blue = laget med first pick. Vanliga drafts autosparas. 🧪 TEST MODE sparar inte draft, recent picks eller learning-data.</p>
+      <p class="hint">Blue = laget med first pick. Riktiga matcher sparas först när Win/Loss + matchtyp registrerats. 🧪 TEST MODE sparar ingenting.</p>
       <div class="stats-bar">
         <div><span class="mini-label">META-PROFIL</span><strong>Gold / Gold+ · EUW-fokus</strong></div>
         <div><span class="mini-label">EXTERN META</span><span id="statsStatus" class="stats-status">Laddar…</span></div>
@@ -231,6 +231,37 @@
         </div>
       </section>
 
+      <section id="matchSaveCard" class="card match-save-card hidden">
+        <div class="analysis-head">
+          <div>
+            <p class="eyebrow">MATCHRESULTAT</p>
+            <h2 id="matchSaveTitle">Registrera innan matchen sparas</h2>
+          </div>
+          <div id="matchSaveStatus" class="badge">EJ SPARAD</div>
+        </div>
+        <p class="match-save-help">När matchen är färdig: välj resultat och matchtyp. Först därefter räknas den i vår Analys och team learning.</p>
+
+        <div class="match-save-options">
+          <div>
+            <span class="mini-label">RESULTAT</span>
+            <div class="choice-row">
+              <button class="result-choice win-choice" data-result="win">✓ WIN</button>
+              <button class="result-choice loss-choice" data-result="loss">✕ LOSS</button>
+            </div>
+          </div>
+          <div>
+            <span class="mini-label">MATCHTYP</span>
+            <div class="choice-row">
+              <button class="type-choice" data-match-type="league">LIGAMATCH</button>
+              <button class="type-choice" data-match-type="flex">FLEX / 5V5</button>
+            </div>
+          </div>
+        </div>
+
+        <button id="saveMatchBtn" class="primary save-match-btn" disabled>Spara match</button>
+        <p id="matchSaveHint" class="hint">Välj både Win/Loss och Liga/Flex.</p>
+      </section>
+
       <section id="compCheckCard" class="card">
         <div class="analysis-head">
           <div>
@@ -245,7 +276,7 @@
     </section>
 
     <section class="card comps">
-      <h2>Era 4 standardcomps</h2>
+      <h2>Våra standardcomps</h2>
       <div class="comp-list">
         <article><h3>Early Skirmish</h3><p>Renekton · Xin Zhao · Ahri · Ashe · Nautilus</p></article>
         <article><h3>PRESS R</h3><p>Malphite · Jarvan IV · Annie · Jinx · Leona</p></article>
@@ -254,10 +285,10 @@
       </div>
     </section>
   </main>
-  <script src="brand.js?v=20260928-3"></script>
-  <script src="stats-engine.js?v=20260928-3"></script>
-  <script src="live.js?v=20260928-3"></script>
-  <script src="advanced-engine.js?v=20260928-3"></script>
-  <script src="draft-ai.js?v=20260928-3"></script>
+  <script src="brand.js?v=20260928-matchsave1"></script>
+  <script src="stats-engine.js?v=20260928-matchsave1"></script>
+  <script src="live.js?v=20260928-matchsave1"></script>
+  <script src="advanced-engine.js?v=20260928-matchsave1"></script>
+  <script src="draft-ai.js?v=20260928-matchsave1"></script>
 </body>
 </html>
