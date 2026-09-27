@@ -76,3 +76,11 @@
 @media (max-width:560px){
   .ai-grid{grid-template-columns:1fr}
 }
+
+.stats-bar{margin-top:16px;display:flex;gap:12px;flex-wrap:wrap;align-items:end}
+.stats-bar>div{background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:10px 12px;min-width:210px}
+.stats-bar .mini-label{display:block;margin-bottom:6px}
+#statsProfile{width:100%;background:#0b1222;color:var(--text);border:1px solid var(--border);border-radius:9px;padding:8px 10px;font-weight:800}
+.stats-status{display:block;font-weight:850;color:var(--muted)}
+.stats-status.live{color:#9ee6b0}
+.stats-status.waiting{color:#ffe38c}
