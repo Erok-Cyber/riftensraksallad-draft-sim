@@ -280,7 +280,7 @@ function advSideVision(){
 
 function advCooldownPlan(){
   const big=ours().filter(e=>ADV_BIG_ULT.has(e.champ)).map(e=>e.champ);
-  if(big.length>=3)return {label:"HÖG ULT-DEPENDENCY",detail:"Fighta när "+big.slice(0,3).join("/")+" har R. Saknas flera ults → tradea hellre än forcea."};
+  if(big.length>=3)return {label:"HÖG ULT-DEPENDENCY",detail:"Fighta när "+big.slice(0,3).join("/")+" har R. Saknas flvåra ults → tradea hellre än forcea."};
   if(big.length===2)return {label:"MEDEL",detail:"Synka "+big.join(" + ")+" inför större objective; ni kan fortfarande skirmisha utan allt."};
   return {label:"LÅG",detail:"Ni är mindre bundna till stora ult-cycles och kan spela mer kontinuerligt tempo."};
 }
