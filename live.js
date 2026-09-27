@@ -222,7 +222,7 @@ $("lockBtn").addEventListener("click",lockCurrent);
 $("championInput").addEventListener("keydown",e=>{if(e.key==="Enter")lockCurrent()});
 $("undoBtn").addEventListener("click",()=>{
   if(!events.length)return;
-  events.pop();step=Math.max(0,step-1);selectedRole=null;historySaved=false;saveState();render();
+  events.pop();enemyInferenceCache={key:null,value:null};enemyProfileCache={key:null,value:null};step=Math.max(0,step-1);selectedRole=null;historySaved=false;saveState();render();
 });
 $("resetBtn").addEventListener("click",()=>{
   if(confirm("Starta en helt ny draft?")){clearState();location.reload()}
@@ -269,6 +269,7 @@ function lockCurrent(){
     role=selectedRole;
   }
   events.push({...turn,champ,role});
+  enemyInferenceCache={key:null,value:null};enemyProfileCache={key:null,value:null};
   step++;selectedRole=null;$("championInput").value="";
   document.querySelectorAll(".role-buttons button").forEach(b=>b.classList.remove("active"));
   saveState();render();
@@ -900,6 +901,14 @@ function hasSmartTrait(champ,set,tag){
 }
 
 const enemyRolePriors = {
+  "Braum":{support:.995},
+  "Alistar":{support:.995},
+  "Leona":{support:.995},
+  "Lulu":{support:.995},
+  "Milio":{support:.995},
+  "Nami":{support:.995},
+  "Renata Glasc":{support:.995},
+  "Thresh":{support:.995},
   "Poppy":{top:.15,jungle:.43,support:.42},
   "Maokai":{top:.04,jungle:.38,support:.58},
   "Gragas":{top:.50,jungle:.44,mid:.04,support:.02},
@@ -973,9 +982,16 @@ function normalizedRolePriors(champ){
   return out;
 }
 
+let enemyInferenceCache={key:null,value:null};
+function enemyInferenceKey(){
+  return enemies().map(p=>p.champ+"@"+(p.role||"unknown")).join("|");
+}
+
 function inferEnemyRoles(){
   const picks=enemies();
   if(!picks.length)return {map:{},byChamp:{},assignments:[]};
+  const cacheKey=enemyInferenceKey();
+  if(enemyInferenceCache.key===cacheKey&&enemyInferenceCache.value)return enemyInferenceCache.value;
 
   const probs=picks.map(p=>{
     if(p.role&&p.role!=="unknown"){
@@ -1028,7 +1044,9 @@ function inferEnemyRoles(){
       explicit:!!(p.role&&p.role!=="unknown")
     };
   });
-  return {map,byChamp,assignments};
+  const result={map,byChamp,assignments};
+  enemyInferenceCache={key:cacheKey,value:result};
+  return result;
 }
 
 function enemyRoleCandidates(champ){
@@ -1038,6 +1056,7 @@ function enemyRoleCandidates(champ){
       .filter(x=>x.role&&x.role!=="unknown"&&x.p>=.08)
       .map(x=>x.role);
     if(candidates.length)return [...new Set(candidates)];
+    if(inf.role&&inf.role!=="unknown")return [inf.role];
   }
   const priors=normalizedRolePriors(champ);
   return roles.filter(r=>priors[r]>=.08);
@@ -1047,9 +1066,12 @@ function enemyRoleMap(){
   return inferEnemyRoles().map;
 }
 
+let enemyProfileCache={key:null,value:null};
 function enemyProfile(){
+  const key=enemyInferenceKey();
+  if(enemyProfileCache.key===key&&enemyProfileCache.value)return enemyProfileCache.value;
   const enemy=enemies();
-  return {
+  const value={
     dive:countTrait(enemy,traits.dive),
     melee:countTrait(enemy,traits.melee),
     poke:countTrait(enemy,traits.poke),
@@ -1063,6 +1085,8 @@ function enemyProfile(){
     earlyJungle:enemy.some(e=>enemyRoleCandidates(e.champ).includes("jungle")&&traits.earlyJungle.has(e.champ)),
     scalingJungle:enemy.some(e=>enemyRoleCandidates(e.champ).includes("jungle")&&traits.scalingJungle.has(e.champ))
   };
+  enemyProfileCache={key,value};
+  return value;
 }
 
 function currentNeeds(){
