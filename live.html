@@ -17,6 +17,7 @@
         </div></div>
       <div class="header-actions">
         <a href="index.html" class="secondary link-btn">← Trainer</a>
+        <button id="testModeBtn" class="secondary test-mode-btn" type="button">🧪 TEST MODE: AV</button>
         <button id="undoBtn" class="secondary">↶ Undo</button>
         <button id="resetBtn" class="danger-btn">Ny draft</button>
       </div>
@@ -28,7 +29,7 @@
         <button class="side-btn" data-side="blue">Blue side · First pick</button>
         <button class="side-btn" data-side="red">Red side</button>
       </div>
-      <p class="hint">Blue = laget med first pick. Draften autosparas i webbläsaren.</p>
+      <p class="hint">Blue = laget med first pick. Vanliga drafts autosparas. 🧪 TEST MODE sparar inte draft, recent picks eller learning-data.</p>
       <div class="stats-bar">
         <div><span class="mini-label">META-PROFIL</span><strong>Gold / Gold+ · EUW-fokus</strong></div>
         <div><span class="mini-label">EXTERN META</span><span id="statsStatus" class="stats-status">Laddar…</span></div>
@@ -157,6 +158,14 @@
           <div><span class="mini-label">EXECUTION</span><p id="autoExecution">Bedöms automatiskt.</p></div>
           <div><span class="mini-label">NÄSTA PICK BEHOV</span><p id="autoNextNeed">Beräknas automatiskt.</p></div>
         </div>
+        <div class="advanced-auto-grid">
+          <div><span class="mini-label">COMP HEALTH</span><p id="advHealth">—</p></div>
+          <div><span class="mini-label">DAMAGE PROFILE</span><p id="advDamage">—</p></div>
+          <div><span class="mini-label">ROLE RESPONSIBILITY</span><p id="advResponsibility">—</p></div>
+          <div><span class="mini-label">OBJECTIVE STYLE</span><p id="advObjectiveStyle">—</p></div>
+          <div><span class="mini-label">SIDE / VISION</span><p id="advSideVision">—</p></div>
+          <div><span class="mini-label">TEAM PATTERN</span><p id="advTeamPattern">Ingen riktig draft sparad ännu.</p></div>
+        </div>
       </section>
 
 
@@ -190,6 +199,11 @@
           <div><span class="mini-label">FIRST NEUTRAL</span><p id="gpFirstObjective">—</p></div>
           <div><span class="mini-label">FIGHT JOBS</span><p id="gpFightJobs">—</p></div>
         </div>
+        <div class="advanced-final-grid">
+          <div><span class="mini-label">FIGHT STYLE</span><p id="gpFightStyle">—</p></div>
+          <div><span class="mini-label">COOLDOWN PLAN</span><p id="gpCooldowns">—</p></div>
+          <div><span class="mini-label">SIDE LANE</span><p id="gpSideLane">—</p></div>
+        </div>
         <div class="golden-rule">
           <span class="mini-label">GOLDEN RULE</span>
           <strong id="gpRule">—</strong>
@@ -222,6 +236,7 @@
   <script src="brand.js"></script>
   <script src="stats-engine.js"></script>
   <script src="live.js"></script>
+  <script src="advanced-engine.js"></script>
   <script src="draft-ai.js"></script>
 </body>
 </html>
