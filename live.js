@@ -881,7 +881,7 @@ function scoreCandidateDetails(champ,role,compName){
   if(riotStat?.available){
     s+=riotStat.points;
     if(Math.abs(riotStat.points)>=1.5){
-      reasons.push({pts:riotStat.points,label:"Riot-data "+(riotStat.points>=0?"+":"")+riotStat.points.toFixed(1)});
+      reasons.push({pts:riotStat.points,label:"LoLalytics "+(riotStat.points>=0?"+":"")+riotStat.points.toFixed(1)});
     }
     for(const rr of (riotStat.reasons||[]).slice(0,2)){
       reasons.push({pts:Math.max(1,Math.abs(riotStat.points)/2),label:rr});
@@ -959,28 +959,35 @@ function banScore(champ){
 }
 
 function renderRecommendation(){
-  const t=current(),box=$("recommendationBox");
-  if(!t||t.side!==userSide){box.classList.add("hidden");return}
+  const t=current(),box=$("recommendationBox"),breakdown=$("scoreBreakdown");
+  if(!t||t.side!==userSide){box.classList.add("hidden");if(breakdown)breakdown.innerHTML="";return}
 
   if(t.type==="ban"){
     const bans=banRecommendations();box.classList.remove("hidden");
     $("recommendEyebrow").textContent="BANFÖRSLAG";$("recommendRole").textContent="BAN:";
     $("recommendPicks").textContent=bans.join(" / ");
     $("recommendReason").textContent="Hot mot er comp + deny-synergy + phase-2 rollvärde. Undviker i möjligaste mån bans på redan fyllda roller.";
+    if(breakdown)breakdown.innerHTML="";
     return;
   }
 
   const autoRole=recommendedNextRole();
   const role=selectedRole||autoRole;
-  if(!role){box.classList.add("hidden");return}
+  if(!role){box.classList.add("hidden");if(breakdown)breakdown.innerHTML="";return}
   const details=topRecommendationDetails(role);
   box.classList.remove("hidden");
   $("recommendEyebrow").textContent=selectedRole?"PICKFÖRSLAG":"REKOMMENDERAD NÄSTA ROLL";
   $("recommendRole").textContent=roleNames[role]+":";
-  $("recommendPicks").textContent=details.length?details.map(x=>x.ch).join(" / "):"Inga tillgängliga picks i team-poolen";
+  $("recommendPicks").textContent=details.length?details.map(x=>x.ch+" "+Math.round(x.score)).join(" / "):"Inga tillgängliga picks i team-poolen";
   const top=details[0];
   const why=top?top.reasons.filter(x=>x.pts>0).slice(0,3).map(x=>x.label).join(" · "):"";
   $("recommendReason").textContent=(selectedRole?"Manuellt vald roll. ":"Draft Brain väljer även roll. ")+"Riktning: "+desiredComp()+" · confidence "+compConfidence()+(why?" · "+top.ch+": "+why:"");
+  if(breakdown){
+    breakdown.innerHTML=details.map(x=>{
+      const r=x.reasons.slice(0,3).map(y=>y.label).join(" · ")||"comfort + draft fit";
+      return '<div class="score-row"><strong>'+x.ch+'</strong><span class="score-num">'+Math.round(x.score)+'</span><span class="score-why">'+r+'</span></div>';
+    }).join("");
+  }
 }
 
 function renderCompChecks(){
@@ -1072,30 +1079,23 @@ function buildPath(){
 
 function renderStatsStatus(){
   const status=window.RiftStats?.getStatus?.();
-  const el=$("statsStatus"), select=$("statsProfile");
+  const el=$("statsStatus");
   if(!el||!status)return;
-  if(select&&select.value!==status.profileKey)select.value=status.profileKey;
   el.className="stats-status";
   if(status.hasData){
     el.classList.add("live");
-    el.textContent="LIVE · "+status.matches+" matcher · "+(status.patch||"aktuell patch");
-    el.title="Riot Games API · "+(status.generatedAt||"");
+    el.textContent=status.source+" · patch "+(status.patch||"?")+" · "+status.coverage+" pool-picks";
+    el.title=(status.bracket||"Gold/Gold+")+" · "+(status.region||"")+" · snapshot "+(status.updated||"");
   }else if(status.state==="loading"){
-    el.classList.add("waiting");
-    el.textContent="Laddar…";
+    el.classList.add("waiting");el.textContent="Laddar…";
   }else{
-    el.classList.add("waiting");
-    el.textContent="Redo · API-nyckel saknas";
-    el.title="Team/comp/matchup-motorn används fullt ut; Riot-delen aktiveras när en riktig stats-snapshot finns.";
+    el.classList.add("waiting");el.textContent="Meta snapshot offline";
   }
 }
 
 document.addEventListener("riftstats:change",()=>{
   renderStatsStatus();
   if(userSide)render();
-});
-$("statsProfile")?.addEventListener("change",e=>{
-  window.RiftStats?.setProfile?.(e.target.value);
 });
 
 loadChampionRoster();
