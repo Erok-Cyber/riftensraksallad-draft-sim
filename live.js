@@ -144,6 +144,7 @@ const banBase = {
 };
 
 let userSide=null, step=0, events=[], selectedRole=null, historySaved=false;
+let pendingMatchResult=null,pendingMatchType=null;
 let testMode=(new URLSearchParams(location.search).get("test")==="1")||localStorage.getItem("rs_test_mode")==="1";
 let draftIsTest=testMode;
 const roles=["top","jungle","mid","adc","support"];
@@ -188,7 +189,7 @@ function recentPicks(){try{return JSON.parse(localStorage.getItem("rs_recent_pic
 
 function saveState(){
   if(testMode||draftIsTest)return;
-  localStorage.setItem("rs_draft_state",JSON.stringify({userSide,step,events,historySaved}));
+  localStorage.setItem("rs_draft_state",JSON.stringify({userSide,step,events,historySaved,pendingMatchResult,pendingMatchType}));
 }
 function restoreState(){
   if(testMode)return false;
@@ -202,10 +203,10 @@ function restoreState(){
   }catch{}
   return false;
 }
-function clearState(){localStorage.removeItem("rs_draft_state")}
+function clearState(){localStorage.removeItem("rs_draft_state");pendingMatchResult=null;pendingMatchType=null}
 
 document.querySelectorAll(".side-btn").forEach(btn=>btn.addEventListener("click",()=>{
-  userSide=btn.dataset.side;step=0;events=[];selectedRole=null;historySaved=false;draftIsTest=testMode;
+  userSide=btn.dataset.side;step=0;events=[];selectedRole=null;historySaved=false;pendingMatchResult=null;pendingMatchType=null;draftIsTest=testMode;
   $("startCard").classList.add("hidden");$("liveArea").classList.remove("hidden");
   saveState();render();
 }));
@@ -221,11 +222,20 @@ document.querySelectorAll(".role-buttons button").forEach(btn=>btn.addEventListe
 $("lockBtn").addEventListener("click",lockCurrent);
 $("championInput").addEventListener("keydown",e=>{if(e.key==="Enter")lockCurrent()});
 $("undoBtn").addEventListener("click",()=>{
-  if(!events.length)return;
-  events.pop();enemyInferenceCache={key:null,value:null};enemyProfileCache={key:null,value:null};finalAnalysisCache={key:null,value:null};step=Math.max(0,step-1);selectedRole=null;historySaved=false;saveState();render();
+  if(historySaved&&step>=draftOrder.length){
+    alert("Matchen är redan sparad. Starta en ny draft eller radera matchen från Analys om registreringen blev fel.");
+    return;
+  }
+  if(step===0)return;
+  events.pop();enemyInferenceCache={key:null,value:null};enemyProfileCache={key:null,value:null};finalAnalysisCache={key:null,value:null};
+  step=Math.max(0,step-1);selectedRole=null;historySaved=false;pendingMatchResult=null;pendingMatchType=null;saveState();render();
 });
 $("resetBtn").addEventListener("click",()=>{
-  if(confirm("Starta en helt ny draft?")){clearState();location.reload()}
+  const unsaved=step>=draftOrder.length&&!historySaved&&!testMode&&!draftIsTest;
+  const msg=unsaved
+    ?"Den färdiga matchen är inte sparad ännu. Starta ny draft ändå?"
+    :"Starta en helt ny draft?";
+  if(confirm(msg)){clearState();location.reload()}
 });
 
 function renderTestMode(){
@@ -326,7 +336,7 @@ function render(){
 
   if(done){
     renderFinalGameplan();
-    saveRecentDraft();
+    renderMatchSave();
     return;
   }
 
@@ -688,13 +698,13 @@ function buildPowerCurvePlan(){
     earlyNeedDetail="Ni behöver inte stomp, men vill gå in i 15–20 min med tempo/objectives.";
   }else if(comp==="EARLY SKIRMISH" && lateDiff<0.25){
     earlyNeed="HELST · VINN TEMPO";
-    earlyNeedDetail="Er comp betalar mest när ni konverterar early till starkt midgame.";
+    earlyNeedDetail="Vår comp betalar mest när ni konverterar early till starkt midgame.";
   }else if(lateDiff>=0.55){
     earlyNeed="NEJ · INGEN PANIK";
     earlyNeedDetail="Spela stabilt. Ni behöver inte coinflippa early för att vinna.";
   }else{
     earlyNeed="NEJ · MEN GE INTE GRATIS";
-    earlyNeedDetail="Jämn kurva: håll matchen kontrollerad och spela för era spikes.";
+    earlyNeedDetail="Jämn kurva: håll matchen kontrollerad och spela för våra spikes.";
   }
 
   const phases=[
@@ -726,7 +736,7 @@ function buildPowerCurvePlan(){
   else p010="Spela disciplinerat. Fullclear/farm där det behövs och ge inte gratis deaths för river.";
 
   if(comp==="OBJECTIVE CONTROL")p1025="Detta är setup-fasen: push → reset → vision 45–60s före objective → tvinga dem in i er.";
-  else if(comp==="PRESS R")p1025="Gruppera runt era R-cooldowns. En tydlig GO-call → kill → objective.";
+  else if(comp==="PRESS R")p1025="Gruppera runt våra R-cooldowns. En tydlig GO-call → kill → objective.";
   else if(comp==="JUNGLE CARRY")p1025="Lanes enablear jungle. Ta river/enemy camps och spela runt carryns tempo.";
   else p1025="Spela mid/jg/sup tillsammans. Pick eller prio ska direkt konverteras till tower/objective.";
 
@@ -757,7 +767,7 @@ function buildFinalGameplan(){
     objective="Kom först, få vision och tvinga fight med prio.";
     rule="VINN TEMPO → KONVERTERA. Chasa inte efter extra kill.";
   }else if(comp==="PRESS R"){
-    early="Spela stabilt tills era engage-tools är online.";
+    early="Spela stabilt tills våra engage-tools är online.";
     mid="Gruppera 4–5 och leta tydliga engage-fönster.";
     fight="En GO-call. Chain CC samma target och följ direkt.";
     objective="Tvinga fights i chokes där engage blir enkelt.";
@@ -927,35 +937,102 @@ function renderFinalGameplan(){
   $("gpRule").textContent=gp.rule||"—";
 }
 
-function saveRecentDraft(){
-  if(testMode||draftIsTest){historySaved=true;return;}
-  if(historySaved)return;
-  const picks=ours().map(e=>e.champ);
+function matchHistoryData(){
+  try{return JSON.parse(localStorage.getItem("rs_match_history")||"[]")}catch{return[]}
+}
+
+function renderMatchSave(){
+  const card=$("matchSaveCard");
+  if(!card)return;
+  if(step<draftOrder.length){card.classList.add("hidden");return}
+  card.classList.remove("hidden");
+
+  if(testMode||draftIsTest){
+    card.classList.remove("saved");
+    $("matchSaveTitle").textContent="TEST MODE — matchen sparas inte";
+    $("matchSaveStatus").textContent="TEST";
+    document.querySelectorAll(".result-choice,.type-choice").forEach(b=>b.disabled=true);
+    $("saveMatchBtn").disabled=true;
+    $("matchSaveHint").textContent="Testdrafts påverkar inte vår statistik eller team learning.";
+    return;
+  }
+
+  const saved=historySaved;
+  card.classList.toggle("saved",saved);
+  $("matchSaveTitle").textContent=saved?"Matchen är sparad":"Registrera innan matchen sparas";
+  $("matchSaveStatus").textContent=saved?"SPARAD":"EJ SPARAD";
+  document.querySelectorAll(".result-choice").forEach(b=>{
+    b.disabled=saved;b.classList.toggle("active",b.dataset.result===pendingMatchResult);
+  });
+  document.querySelectorAll(".type-choice").forEach(b=>{
+    b.disabled=saved;b.classList.toggle("active",b.dataset.matchType===pendingMatchType);
+  });
+  $("saveMatchBtn").disabled=saved||!pendingMatchResult||!pendingMatchType;
+  $("saveMatchBtn").textContent=saved?"Match sparad ✓":"Spara match";
+  $("matchSaveHint").textContent=saved
+    ?"Matchen räknas nu i Analys och team learning."
+    :(!pendingMatchResult||!pendingMatchType?"Välj både Win/Loss och Liga/Flex.":"Redo att spara.");
+}
+
+function buildMatchRecord(){
+  const inferred=inferEnemyRoles();
+  const final=getFinalAnalysis();
+  return {
+    id:(crypto?.randomUUID?.()||("match-"+Date.now()+"-"+Math.random().toString(16).slice(2))),
+    savedAt:new Date().toISOString(),
+    patch:"26.19",
+    result:pendingMatchResult,
+    matchType:pendingMatchType,
+    side:userSide,
+    ourPicks:ours().map(e=>({champ:e.champ,role:e.role})),
+    enemyPicks:enemies().map(e=>({champ:e.champ,inferredRole:inferred.byChamp[e.champ]?.role||e.role||"unknown"})),
+    ourBans:events.filter(e=>e.side===userSide&&e.type==="ban").map(e=>e.champ),
+    enemyBans:events.filter(e=>e.side!==userSide&&e.type==="ban").map(e=>e.champ),
+    comp:final.comp||desiredComp(),
+    scaling:final.scaling||null,
+    bestWindow:final.window||null,
+    topRisk:draftRiskEngine()[0]?.text||null,
+    fightStyle:final.advFightStyle||null,
+    objectiveStyle:final.advObjectiveStyle||null,
+    loadingCall:shortLoadingPlan(final).call||null
+  };
+}
+
+function saveCompletedMatch(){
+  if(testMode||draftIsTest||historySaved||!pendingMatchResult||!pendingMatchType)return;
   try{
+    const record=buildMatchRecord();
+    const matches=matchHistoryData();
+    localStorage.setItem("rs_match_history",JSON.stringify([...matches,record].slice(-250)));
+
     const old=recentPicks();
-    localStorage.setItem("rs_recent_picks",JSON.stringify([...old,...picks].slice(-20)));
+    const current=ours().map(e=>e.champ);
+    localStorage.setItem("rs_recent_picks",JSON.stringify([...old,...current].slice(-20)));
 
     const archive=JSON.parse(localStorage.getItem("rs_draft_archive")||"[]");
-    const inferred=inferEnemyRoles();
-    const final=getFinalAnalysis();
-    const record={
-      savedAt:new Date().toISOString(),
-      side:userSide,
-      ourPicks:ours().map(e=>({champ:e.champ,role:e.role})),
-      enemyPicks:enemies().map(e=>({champ:e.champ,inferredRole:inferred.byChamp[e.champ]?.role||e.role||"unknown"})),
-      ourBans:events.filter(e=>e.side===userSide&&e.type==="ban").map(e=>e.champ),
-      enemyBans:events.filter(e=>e.side!==userSide&&e.type==="ban").map(e=>e.champ),
-      comp:final.comp||desiredComp(),
-      scaling:final.scaling||null,
-      bestWindow:final.window||null,
-      topRisk:draftRiskEngine()[0]?.text||null,
-      fightStyle:final.advFightStyle||null,
-      objectiveStyle:final.advObjectiveStyle||null
-    };
     localStorage.setItem("rs_draft_archive",JSON.stringify([...archive,record].slice(-50)));
-  }catch{}
-  historySaved=true;saveState();
+
+    historySaved=true;
+    saveState();
+    renderMatchSave();
+  }catch(err){
+    console.error("Could not save match:",err);
+    $("matchSaveHint").textContent="Kunde inte spara matchen lokalt.";
+  }
 }
+
+document.querySelectorAll(".result-choice").forEach(btn=>btn.addEventListener("click",()=>{
+  if(historySaved)return;
+  pendingMatchResult=btn.dataset.result;
+  renderMatchSave();
+}));
+document.querySelectorAll(".type-choice").forEach(btn=>btn.addEventListener("click",()=>{
+  if(historySaved)return;
+  pendingMatchType=btn.dataset.matchType;
+  renderMatchSave();
+}));
+$("saveMatchBtn")?.addEventListener("click",saveCompletedMatch);
+
 
 /* ============================================================
    DRAFT BRAIN v2
