@@ -1,6 +1,6 @@
 const champions = [
 "Ahri","Amumu","Anivia","Annie","Ashe","Darius","Galio","Garen","Graves","Heimerdinger","Hwei","Jarvan IV","Jinx","Kindred","Leona","Malphite","Maokai","Mordekaiser","Nautilus","Olaf","Renekton","Senna","Shen","Sion","Sylas","Taliyah","Trundle","Udyr","Varus","Vex","Vi","Viego","Viktor","Volibear","Wukong","Xayah","Xin Zhao",
-"Aatrox","Akali","Alistar","Ambessa","Aphelios","Aurora","Azir","Braum","Caitlyn","Camille","Cassiopeia","Ezreal","Fiora","Gnar","Gragas","Ivern","Jax","Jayce","Kai'Sa","Kalista","Kennen","K'Sante","Lee Sin","Lucian","Lulu","Nami","Nocturne","Orianna","Ornn","Poppy","Rakan","Rell","Rumble","Ryze","Sejuani","Skarner","Smolder","Syndra","Tahm Kench","Tristana","Twisted Fate","Yone","Yunara","Zac","Zeri"
+"Aatrox","Akali","Alistar","Ambessa","Aphelios","Aurora","Azir","Braum","Caitlyn","Camille","Cassiopeia","Ezreal","Fiora","Gnar","Gragas","Ivern","Jax","Jayce","Kai'Sa","Kalista","Kennen","K'Sante","Lee Sin","Lucian","Lulu","Milio","Miss Fortune","Nami","Nocturne","Orianna","Ornn","Poppy","Rakan","Rell","Rumble","Ryze","Sejuani","Skarner","Smolder","Syndra","Tahm Kench","Tristana","Tryndamere","Twisted Fate","Yone","Yunara","Zac","Zeri"
 ].sort();
 
 const order = [
@@ -13,7 +13,7 @@ const order = [
 const comps = {
   "EARLY SKIRMISH":{
     core:["Renekton","Xin Zhao","Ahri","Ashe","Nautilus"],
-    alts:["Garen","Darius","Mordekaiser","Olaf","Trundle","Viego","Wukong","Volibear","Taliyah","Vex","Sylas","Varus","Xayah","Leona","Maokai"],
+    alts:["Darius","Mordekaiser","Olaf","Trundle","Viego","Wukong","Volibear","Taliyah","Vex","Sylas","Varus","Xayah","Leona","Maokai"],
     why:"Prio + starka 2v2/3v3. Vill fightas tidigt och spela för första objectives.",
     focus:"Prio först. Fighta inte river om lanes sitter fast under tower.",
     call:"PRIO → FIGHT → OBJECTIVE. Chasa inte nästa kill."
@@ -22,8 +22,8 @@ const comps = {
     core:["Malphite","Jarvan IV","Annie","Jinx","Leona"],
     alts:["Galio","Mordekaiser","Shen","Sion","Xin Zhao","Vi","Wukong","Viego","Vex","Hwei","Taliyah","Viktor","Ashe","Xayah","Nautilus","Maokai"],
     why:"Enkel 5v5. Flera tydliga GO-knappar och bra chain CC.",
-    focus:"Håll engage-cooldowns. Jinx ska inte starta fighten.",
-    call:"HITTA CARRY → PRESS R → CHAIN CC → JINX RESET."
+    focus:"Håll engage-cooldowns. Carry ska inte starta fighten.",
+    call:"HITTA CARRY → PRESS R → CHAIN CC → RESET."
   },
   "OBJECTIVE CONTROL":{
     core:["Mordekaiser","Udyr","Taliyah","Varus","Maokai"],
@@ -33,49 +33,135 @@ const comps = {
     call:"PUSH → RESET → RIVER → HÅLL CHOKES → TURNA."
   },
   "JUNGLE CARRY":{
-    core:["Shen","Kindred","Taliyah","Ashe","Nautilus"],
-    alts:["Malphite","Sion","Mordekaiser","Graves","Viego","Ahri","Hwei","Viktor","Varus","Senna","Xayah","Leona","Maokai"],
-    why:"Lanes ska enablea jungle med prio, setup och vision.",
-    focus:"Kindred kräver prio. Ingen prio = byt till Viego eller annan comp.",
+    core:["Shen","Kindred","Viego","Taliyah","Ashe","Nautilus"],
+    alts:["Malphite","Sion","Mordekaiser","Graves","Ahri","Hwei","Viktor","Varus","Senna","Xayah","Leona","Maokai"],
+    why:"Lanes enablear jungle med prio, setup och vision.",
+    focus:"Kindred kräver prio. Ingen prio = Viego eller byt comp.",
     call:"LANES FÅR PRIO → JG TAR RIVER/ENEMY CAMPS → SPELA RUNT JG."
   }
 };
+
+const scenarios = [
+  {
+    title:"Dive-komp mot er",
+    brief:"Enemy vill gå hårt på backline och har tydlig engage.",
+    difficulty:"Medel",
+    goal:"Bygg en comp som överlever dive men fortfarande kan fighta objectives.",
+    enemy:["Malphite","Vi","Vex","Kai'Sa","Rakan"],
+    ideal:"PRESS R",
+    recommended:["Xayah","Taliyah","Nautilus","Jarvan IV","Mordekaiser"],
+    key:["Xayah","Taliyah","Nautilus","Maokai","Mordekaiser","Malphite","Jarvan IV"],
+    avoid:["Kindred","Senna"]
+  },
+  {
+    title:"Kort range / melee",
+    brief:"Enemy måste gå in i er för att göra damage.",
+    difficulty:"Lätt",
+    goal:"Straffa deras korta range och äg objective-zoner.",
+    enemy:["Darius","Wukong","Sylas","Samira","Leona"],
+    ideal:"OBJECTIVE CONTROL",
+    recommended:["Udyr","Taliyah","Varus","Maokai","Heimerdinger"],
+    key:["Udyr","Taliyah","Varus","Maokai","Heimerdinger","Mordekaiser","Wukong"],
+    avoid:["Kindred"]
+  },
+  {
+    title:"Svag enemy early jungle",
+    brief:"Enemy skalar och vill undvika tidiga 2v2/3v3.",
+    difficulty:"Lätt",
+    goal:"Drafta för att vinna river och snowballa innan deras scaling.",
+    enemy:["Kayle","Kayn","Viktor","Sivir","Milio"],
+    ideal:"EARLY SKIRMISH",
+    recommended:["Renekton","Xin Zhao","Ahri","Ashe","Nautilus"],
+    key:["Renekton","Xin Zhao","Ahri","Ashe","Nautilus","Varus","Leona"],
+    avoid:["Kindred","Senna"]
+  },
+  {
+    title:"Jungle carry-fönster",
+    brief:"Enemy lanes är relativt passiva och er jungle kan få mycket space.",
+    difficulty:"Svår",
+    goal:"Ge junglern prio och setup utan att göra resten av compen för svag.",
+    enemy:["Sion","Sejuani","Viktor","Ezreal","Braum"],
+    ideal:"JUNGLE CARRY",
+    recommended:["Shen","Viego","Taliyah","Ashe","Nautilus"],
+    key:["Shen","Viego","Kindred","Taliyah","Ashe","Nautilus","Maokai"],
+    avoid:["Darius","Olaf"]
+  },
+  {
+    title:"Poke och disengage",
+    brief:"Enemy vill spela långt bort och kitea engage.",
+    difficulty:"Svår",
+    goal:"Hitta pålitlig engage/target access istället för att långsamt bli pokade.",
+    enemy:["Jayce","Graves","Syndra","Ezreal","Janna"],
+    ideal:"PRESS R",
+    recommended:["Malphite","Jarvan IV","Annie","Ashe","Leona"],
+    key:["Malphite","Jarvan IV","Annie","Vi","Leona","Nautilus","Ashe"],
+    avoid:["Udyr","Kindred"]
+  }
+];
 
 const engage = new Set(["Malphite","Jarvan IV","Annie","Leona","Nautilus","Maokai","Vi","Wukong","Amumu","Sion","Rakan","Rell","Sejuani","Zac"]);
 const frontline = new Set(["Malphite","Jarvan IV","Leona","Nautilus","Maokai","Mordekaiser","Udyr","Volibear","Sion","Shen","Galio","Renekton","Xin Zhao","Wukong","Vi","Poppy","Ornn","Sejuani","Zac"]);
 const damage = new Set(["Jinx","Varus","Xayah","Ashe","Viego","Kindred","Graves","Taliyah","Hwei","Viktor","Ahri","Annie","Darius","Olaf","Mordekaiser","Xin Zhao","Yone","Caitlyn","Kai'Sa","Lucian","Zeri","Syndra","Orianna"]);
 const early = new Set(["Renekton","Xin Zhao","Ahri","Ashe","Nautilus","Leona","Jarvan IV","Volibear","Darius","Olaf","Taliyah","Varus","Vi","Wukong","Poppy","Lee Sin","Lucian","Caitlyn"]);
 
-let userSide = null;
-let picks = [];
-let step = 0;
+let mode=null,userSide=null,picks=[],step=0,currentScenario=null;
 
-const $ = id => document.getElementById(id);
+const $=id=>document.getElementById(id);
 champions.forEach(c=>{const o=document.createElement("option");o.value=c;$("champions").appendChild(o)});
+
+$("simModeBtn").addEventListener("click",()=>selectMode("sim"));
+$("testModeBtn").addEventListener("click",()=>selectMode("test"));
+$("resetBtn").addEventListener("click",()=>location.reload());
+$("lockBtn").addEventListener("click",()=>lockPick(false));
+$("randomEnemyBtn").addEventListener("click",()=>lockPick(true));
+$("championSearch").addEventListener("keydown",e=>{if(e.key==="Enter")lockPick(false)});
 
 document.querySelectorAll(".side-btn").forEach(btn=>btn.addEventListener("click",()=>{
   userSide=btn.dataset.side;
   $("setup").classList.add("hidden");
   $("draftArea").classList.remove("hidden");
-  $("analysis").classList.remove("hidden");
+  if(mode==="sim") $("analysis").classList.remove("hidden");
+  if(mode==="test") seedScenarioEnemyPicks();
   render();
 }));
 
-$("lockBtn").addEventListener("click",()=>lockPick(false));
-$("randomEnemyBtn").addEventListener("click",()=>lockPick(true));
-$("resetBtn").addEventListener("click",()=>location.reload());
-$("championSearch").addEventListener("keydown",e=>{if(e.key==="Enter")lockPick(false)});
+function selectMode(m){
+  mode=m;
+  $("modeSelect").classList.add("hidden");
+  $("setup").classList.remove("hidden");
+  $("setupTitle").textContent=m==="test"?"Draft Test — välj sida":"Draft Sim — välj sida";
+  if(m==="test"){
+    currentScenario=scenarios[Math.floor(Math.random()*scenarios.length)];
+    $("testBrief").classList.remove("hidden");
+    $("scenarioTitle").textContent=currentScenario.title;
+    $("scenarioBrief").textContent=currentScenario.brief;
+    $("scenarioGoal").textContent="Mål: "+currentScenario.goal;
+    $("scenarioDifficulty").textContent="Svårighet: "+currentScenario.difficulty;
+  }
+}
+
+function seedScenarioEnemyPicks(){
+  picks=[];step=0;
+  render();
+}
 
 function lockPick(randomEnemy){
-  if(step>=order.length) return;
+  if(step>=order.length)return;
   const turn=order[step];
   const used=new Set(picks.map(p=>p.champ));
   let champ=$("championSearch").value.trim();
 
-  if(randomEnemy){
-    if(turn.side===userSide){$("coachCall").textContent="Det är er tur — välj champion själv.";return;}
-    const pool=champions.filter(c=>!used.has(c));
-    champ=pool[Math.floor(Math.random()*pool.length)];
+  if(turn.side!==userSide){
+    if(mode==="test"){
+      const enemyIndex=picks.filter(p=>p.side!==userSide).length;
+      champ=currentScenario.enemy[enemyIndex];
+    }else if(randomEnemy){
+      const pool=champions.filter(c=>!used.has(c));
+      champ=pool[Math.floor(Math.random()*pool.length)];
+    }else{
+      $("coachCall").textContent="Slumpa enemy pick.";
+      return;
+    }
   }
 
   if(!champions.includes(champ)){$("coachCall").textContent="Välj en champion från listan.";return;}
@@ -85,68 +171,83 @@ function lockPick(randomEnemy){
   step++;
   $("championSearch").value="";
   render();
+
+  if(mode==="test") autoEnemy();
+}
+
+function autoEnemy(){
+  while(step<order.length && order[step].side!==userSide){
+    const enemyIndex=picks.filter(p=>p.side!==userSide).length;
+    const champ=currentScenario.enemy[enemyIndex];
+    picks.push({...order[step],champ});
+    step++;
+  }
+  render();
 }
 
 function render(){
-  renderSide("blue","bluePicks");
-  renderSide("red","redPicks");
+  renderSide("blue","bluePicks"); renderSide("red","redPicks");
 
   if(step<order.length){
     const t=order[step];
-    $("turnLabel").textContent=`${t.slot} · ${t.side.toUpperCase()}`;
+    $("turnLabel").textContent=t.slot+" · "+t.side.toUpperCase();
     const enemyTurn=t.side!==userSide;
-    $("randomEnemyBtn").style.display=enemyTurn?"block":"none";
+    $("randomEnemyBtn").style.display=(mode==="sim"&&enemyTurn)?"block":"none";
     $("lockBtn").style.display=enemyTurn?"none":"block";
-  } else {
+    $("championSearch").style.display=enemyTurn?"none":"block";
+    document.querySelector('label[for="championSearch"]').style.display=enemyTurn?"none":"block";
+    if(mode==="test") $("coachBox").classList.add("hidden");
+    else $("coachBox").classList.remove("hidden");
+  }else{
     $("turnLabel").textContent="DRAFT KLAR";
     $("lockBtn").style.display="none";
     $("randomEnemyBtn").style.display="none";
+    $("championSearch").style.display="none";
+    document.querySelector('label[for="championSearch"]').style.display="none";
     $("scoreCard").classList.remove("hidden");
+    if(mode==="test") finishTest();
   }
 
-  updateCoach();
+  if(mode==="sim") updateCoach();
   if(step>=order.length) updateScore();
 }
 
 function renderSide(side,id){
-  const list=$(id); list.innerHTML="";
-  ["1","2","3","4","5"].forEach((_,i)=>{
+  const list=$(id);list.innerHTML="";
+  [0,1,2,3,4].forEach(i=>{
     const p=picks.filter(x=>x.side===side)[i];
     const div=document.createElement("div");div.className="pick";
-    div.innerHTML=`<span class="slot">${side==="blue"?"B":"R"}${i+1}</span><span class="champ">${p?p.champ:"—"}</span>`;
+    div.innerHTML='<span class="slot">'+(side==="blue"?"B":"R")+(i+1)+'</span><span class="champ">'+(p?p.champ:"—")+'</span>';
     list.appendChild(div);
   });
+}
+
+function bestComp(ours){
+  let bestName=null,best=-1;
+  Object.entries(comps).forEach(([name,c])=>{
+    const score=ours.reduce((s,ch)=>s+(c.core.includes(ch)?3:c.alts.includes(ch)?1:0),0);
+    if(score>best){best=score;bestName=name}
+  });
+  return {name:bestName,score:best};
 }
 
 function updateCoach(){
   const ours=picks.filter(p=>p.side===userSide).map(p=>p.champ);
   const enemies=picks.filter(p=>p.side!==userSide).map(p=>p.champ);
-
-  let bestName=null,best=-1;
-  Object.entries(comps).forEach(([name,c])=>{
-    const score=ours.reduce((s,ch)=>s+(c.core.includes(ch)?3:c.alts.includes(ch)?1:0),0);
-    if(score>best){best=score;bestName=name;}
-  });
-
   if(!ours.length){
-    $("compName").textContent="Comp: Öppen";
-    $("confidence").textContent="Öppen draft";
+    $("compName").textContent="Comp: Öppen";$("confidence").textContent="Öppen draft";
     $("compWhy").textContent="Börja med safe/flex: Ashe, Ahri, Taliyah, Nautilus eller Maokai.";
-    $("nextFocus").textContent="Se enemy 2–3 picks innan ni låser hela identiteten.";
+    $("nextFocus").textContent="Se enemy 2–3 picks innan ni låser identiteten.";
     $("watch").textContent="Spara niche/counters till senare.";
-    $("coachCall").textContent="SAFE PICK FÖRST. Håll 2 comps öppna.";
-    return;
+    $("coachCall").textContent="SAFE PICK FÖRST. Håll 2 comps öppna.";return;
   }
-
-  const c=comps[bestName];
-  $("compName").textContent="Comp: "+bestName;
-  $("confidence").textContent=best>=7?"Tydlig riktning":best>=3?"Lutar hit":"Öppen";
-  $("compWhy").textContent=c.why;
-  $("nextFocus").textContent=c.focus;
-
-  const enemyDive=enemies.filter(ch=>["Vi","Jarvan IV","Wukong","Malphite","Leona","Nocturne","Zac","Rakan","Rell"].includes(ch)).length;
-  const enemyMelee=enemies.filter(ch=>["Darius","Garen","Renekton","Mordekaiser","Shen","Sion","Malphite","Jarvan IV","Vi","Wukong","Xin Zhao","Udyr","Volibear","Nautilus","Leona","Maokai"].includes(ch)).length;
-  $("watch").textContent=enemyDive>=2?"Mycket dive → Xayah/Vex/Taliyah upp i prio.":enemyMelee>=3?"Mycket melee → Control/Wukong blir bättre.":"Kolla damage split + frontline innan sista picks.";
+  const best=bestComp(ours),c=comps[best.name];
+  $("compName").textContent="Comp: "+best.name;
+  $("confidence").textContent=best.score>=7?"Tydlig riktning":best.score>=3?"Lutar hit":"Öppen";
+  $("compWhy").textContent=c.why;$("nextFocus").textContent=c.focus;
+  const dive=enemies.filter(ch=>["Vi","Jarvan IV","Wukong","Malphite","Leona","Nocturne","Zac","Rakan","Rell"].includes(ch)).length;
+  const melee=enemies.filter(ch=>["Darius","Garen","Renekton","Mordekaiser","Shen","Sion","Malphite","Jarvan IV","Vi","Wukong","Xin Zhao","Udyr","Volibear","Nautilus","Leona","Maokai"].includes(ch)).length;
+  $("watch").textContent=dive>=2?"Mycket dive → Xayah/Vex/Taliyah upp i prio.":melee>=3?"Mycket melee → Control/Wukong blir bättre.":"Kolla damage split + frontline innan sista picks.";
   $("coachCall").textContent=c.call;
 }
 
@@ -155,10 +256,27 @@ function updateScore(){
   const ours=picks.filter(p=>p.side===userSide).map(p=>p.champ);
   const e=scoreSet(engage,ours),f=scoreSet(frontline,ours),d=scoreSet(damage,ours),er=scoreSet(early,ours);
   $("engageScore").textContent=e+"/3";$("frontScore").textContent=f+"/3";$("damageScore").textContent=d+"/3";$("earlyScore").textContent=er+"/3";
-  const issues=[];
-  if(e<1)issues.push("lite engage");
-  if(f<1)issues.push("ingen tydlig frontline");
-  if(d<2)issues.push("kan sakna damage");
-  if(er<2)issues.push("svagare early");
-  $("finalPlan").textContent=issues.length?"WATCH: "+issues.join(" · "):"Bra grund. Spela efter comp-identiteten och konvertera picks/fights till objectives.";
+  const issues=[];if(e<1)issues.push("lite engage");if(f<1)issues.push("ingen tydlig frontline");if(d<2)issues.push("kan sakna damage");if(er<2)issues.push("svagare early");
+  $("finalPlan").textContent=issues.length?"WATCH: "+issues.join(" · "):"Bra grund. Spela efter comp-identiteten och konvertera fights till objectives.";
+}
+
+function finishTest(){
+  const ours=picks.filter(p=>p.side===userSide).map(p=>p.champ);
+  const best=bestComp(ours);
+  let score=0;
+  ours.forEach(ch=>{if(currentScenario.key.includes(ch))score+=12;if(currentScenario.recommended.includes(ch))score+=6;if(currentScenario.avoid.includes(ch))score-=10;});
+  if(best.name===currentScenario.ideal)score+=20;
+  if(score<0)score=0;if(score>100)score=100;
+
+  const grade=score>=85?"S":score>=70?"A":score>=55?"B":score>=40?"C":"D";
+  $("testGrade").classList.remove("hidden");$("testGrade").textContent=grade;
+  $("resultTitle").textContent="Draft Test: "+score+"/100";
+  $("testFeedback").classList.remove("hidden");
+  $("idealComp").textContent=currentScenario.ideal;
+  $("recommendedPicks").textContent=currentScenario.recommended.join(" / ");
+
+  const good=ours.filter(ch=>currentScenario.key.includes(ch));
+  const bad=ours.filter(ch=>currentScenario.avoid.includes(ch));
+  $("goodFeedback").textContent=good.length?good.join(", ")+" passade scenariot bra.":"Du hittade inte riktigt scenario-picksen den här gången.";
+  $("improveFeedback").textContent=bad.length?"Undvik helst "+bad.join(", ")+" i just detta scenario.":"Titta främst på om din comp-riktning matchade "+currentScenario.ideal+".";
 }
