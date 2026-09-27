@@ -84,3 +84,10 @@
 .stats-status{display:block;font-weight:850;color:var(--muted)}
 .stats-status.live{color:#9ee6b0}
 .stats-status.waiting{color:#ffe38c}
+
+.meta-source-link{align-self:center;color:#9fc9ff;text-decoration:none;font-weight:800;padding:10px 12px;border:1px solid #31547d;border-radius:10px;background:#101b2d}
+.meta-source-link:hover{filter:brightness(1.15)}
+.score-breakdown{display:grid;gap:7px;margin-top:10px}
+.score-row{display:grid;grid-template-columns:minmax(100px,.8fr) 54px 2fr;gap:8px;align-items:center;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.06);border-radius:9px;padding:8px 10px}
+.score-row strong{font-size:13px}.score-num{font-weight:900;color:#ffe38c;text-align:right}.score-why{color:var(--muted);font-size:12px}
+@media(max-width:600px){.score-row{grid-template-columns:1fr auto}.score-why{grid-column:1/-1}}
