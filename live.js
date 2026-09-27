@@ -1471,6 +1471,22 @@ function fightJobs(){
   return jobs.join(" → ")||"Bestäm en starter och en carry innan fighten.";
 }
 
+function executionRead(){
+  const comp=desiredComp(), own=ours(), n=currentNeeds();
+  let score=0, reasons=[];
+  if(comp==="PRESS R"){score-=2;reasons.push("tydlig engage");}
+  if(comp==="EARLY SKIRMISH"){score+=1;reasons.push("kräver tempo/prio");}
+  if(comp==="OBJECTIVE CONTROL"){score+=1;reasons.push("setup/disciplin");}
+  if(comp==="JUNGLE CARRY"){score+=3;reasons.push("resurs- och tempo-beroende");}
+  const engageCount=own.filter(e=>reliableEngageSet.has(e.champ)).length;
+  if(engageCount>=2){score-=1;reasons.push("flera GO-knappar");}
+  if(own.length>=4&&engageCount===0){score+=2;reasons.push("otydlig start");}
+  if(n.front===0&&own.length>=4){score+=1;reasons.push("svårare spacing");}
+  if(own.filter(e=>mobilityThreats.has(e.champ)).length>=2){score+=1;reasons.push("mer mekanik");}
+  const label=score<=-1?"LÄTT":score<=2?"MEDEL":"SVÅR";
+  return {label,detail:reasons.slice(0,3).join(" · ")||"normal execution"};
+}
+
 function renderAutoRead(){
   const risks=draftRiskEngine(), top=risks[0], lr=laneRead(), jg=jungleAutoPlan();
   const badge=$("autoRiskBadge");
@@ -1482,6 +1498,9 @@ function renderAutoRead(){
   $("autoPrio").textContent="TOP "+lr.top.label+" · MID "+lr.mid.label+" · BOT "+lr.bot.label;
   $("autoJungle").textContent=jg.focus+(jg.reason?" — "+jg.reason:"");
   $("autoDraftOrder").textContent=counterpickAutoRead();
+  const obj=objectiveAutoPlan(), exec=executionRead();
+  $("autoObjective").textContent=obj.call+" — "+obj.detail;
+  $("autoExecution").textContent=exec.label+" — "+exec.detail;
   $("autoReadTitle").textContent=ours().length<2?"Draften läses automatiskt":"AUTO: "+desiredComp()+" · "+compConfidence()+" confidence";
 }
 
