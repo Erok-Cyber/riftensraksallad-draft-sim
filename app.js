@@ -181,16 +181,20 @@ let mode=null,userSide=null,picks=[],step=0,currentScenario=null;
 const $=id=>document.getElementById(id);
 champions.forEach(c=>{const o=document.createElement("option");o.value=c;$("champions").appendChild(o)});
 loadChampionRoster();
+setTrainerNav(false);
 
 $("simModeBtn").addEventListener("click",()=>selectMode("sim"));
 $("testModeBtn").addEventListener("click",()=>selectMode("test"));
 $("resetBtn").addEventListener("click",()=>location.reload());
+$("homeBtn").addEventListener("click",goHome);
+$("undoBtn").addEventListener("click",undoPick);
 $("lockBtn").addEventListener("click",()=>lockPick(false));
 $("randomEnemyBtn").addEventListener("click",()=>lockPick(true));
 $("championSearch").addEventListener("keydown",e=>{if(e.key==="Enter")lockPick(false)});
 
 document.querySelectorAll(".side-btn").forEach(btn=>btn.addEventListener("click",()=>{
   userSide=btn.dataset.side;
+  setTrainerNav(true);
   $("setup").classList.add("hidden");
   $("draftArea").classList.remove("hidden");
   if(mode==="sim") $("analysis").classList.remove("hidden");
@@ -199,8 +203,58 @@ document.querySelectorAll(".side-btn").forEach(btn=>btn.addEventListener("click"
   else render();
 }));
 
+function setTrainerNav(active){
+  $("homeBtn").classList.toggle("hidden",!active);
+  $("undoBtn").classList.toggle("hidden",!active);
+  $("resetBtn").classList.toggle("hidden",!active);
+}
+
+function goHome(){
+  mode=null;userSide=null;picks=[];step=0;currentScenario=null;
+  enemyRoleOrder=[];scenarioEnemyPlan=[];
+  $("modeSelect").classList.remove("hidden");
+  $("setup").classList.add("hidden");
+  $("testBrief").classList.add("hidden");
+  $("draftArea").classList.add("hidden");
+  $("analysis").classList.add("hidden");
+  $("scoreCard").classList.add("hidden");
+  $("testFeedback").classList.add("hidden");
+  $("testGrade").classList.add("hidden");
+  $("championSearch").value="";
+  setTrainerNav(false);
+}
+
+function undoPick(){
+  if(!userSide||!picks.length)return;
+
+  if(mode==="test"){
+    let foundOwn=false;
+    while(picks.length){
+      const last=picks[picks.length-1];
+      picks.pop();
+      if(last.side===userSide){foundOwn=true;break;}
+    }
+    // On red side B1 is auto-seeded before the user's first decision.
+    if(!foundOwn){
+      prepareEnemyPlan();
+      picks=[];step=0;autoEnemy();
+      return;
+    }
+  }else{
+    picks.pop();
+  }
+
+  step=picks.length;
+  $("scoreCard").classList.add("hidden");
+  $("testFeedback").classList.add("hidden");
+  $("testGrade").classList.add("hidden");
+  if(mode==="sim")$("analysis").classList.remove("hidden");
+  render();
+}
+
 function selectMode(m){
   mode=m;
+  setTrainerNav(true);
   $("modeSelect").classList.add("hidden");
   $("setup").classList.remove("hidden");
   $("setupTitle").textContent=m==="test"?"Draft Test — välj sida":"Draft Sim — välj sida";
@@ -260,6 +314,12 @@ function autoEnemy(){
 
 function render(){
   renderSide("blue","bluePicks"); renderSide("red","redPicks");
+  const canUndo=mode==="test"
+    ? picks.some(p=>p.side===userSide)
+    : picks.length>0;
+  $("undoBtn").disabled=!canUndo;
+  $("undoBtn").style.opacity=canUndo?"1":".45";
+  $("undoBtn").style.cursor=canUndo?"pointer":"not-allowed";
 
   if(step<order.length){
     const t=order[step];
