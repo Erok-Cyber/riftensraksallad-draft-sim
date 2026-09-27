@@ -121,7 +121,8 @@ const early = new Set(["Renekton","Xin Zhao","Ahri","Ashe","Nautilus","Leona","J
 let mode=null,userSide=null,picks=[],step=0,currentScenario=null;
 
 const $=id=>document.getElementById(id);
-champions.forEach(c=>{const o=document.createElement("option");o.value=c;$("champions").appendChild(o)});\nloadChampionRoster();
+champions.forEach(c=>{const o=document.createElement("option");o.value=c;$("champions").appendChild(o)});
+loadChampionRoster();
 
 $("simModeBtn").addEventListener("click",()=>selectMode("sim"));
 $("testModeBtn").addEventListener("click",()=>selectMode("test"));
