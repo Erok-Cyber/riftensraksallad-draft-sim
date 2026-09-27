@@ -222,7 +222,7 @@ $("lockBtn").addEventListener("click",lockCurrent);
 $("championInput").addEventListener("keydown",e=>{if(e.key==="Enter")lockCurrent()});
 $("undoBtn").addEventListener("click",()=>{
   if(!events.length)return;
-  events.pop();enemyInferenceCache={key:null,value:null};enemyProfileCache={key:null,value:null};step=Math.max(0,step-1);selectedRole=null;historySaved=false;saveState();render();
+  events.pop();enemyInferenceCache={key:null,value:null};enemyProfileCache={key:null,value:null};finalAnalysisCache={key:null,value:null};step=Math.max(0,step-1);selectedRole=null;historySaved=false;saveState();render();
 });
 $("resetBtn").addEventListener("click",()=>{
   if(confirm("Starta en helt ny draft?")){clearState();location.reload()}
@@ -269,7 +269,7 @@ function lockCurrent(){
     role=selectedRole;
   }
   events.push({...turn,champ,role});
-  enemyInferenceCache={key:null,value:null};enemyProfileCache={key:null,value:null};
+  enemyInferenceCache={key:null,value:null};enemyProfileCache={key:null,value:null};finalAnalysisCache={key:null,value:null};
   step++;selectedRole=null;$("championInput").value="";
   document.querySelectorAll(".role-buttons button").forEach(b=>b.classList.remove("active"));
   saveState();render();
@@ -813,8 +813,20 @@ function buildFinalGameplan(){
   return {comp,early,mid,fight,objective,rule,firstObjective,fightJobText,...power};
 }
 
-function shortLoadingPlan(){
-  const comp=desiredComp(), map=ownRoleMap(), p=enemyProfile();
+let finalAnalysisCache={key:null,value:null};
+function finalAnalysisKey(){
+  return events.map(e=>e.type+"@"+e.side+"@"+e.champ+"@"+(e.role||"")).join("|");
+}
+function getFinalAnalysis(){
+  const key=finalAnalysisKey();
+  if(finalAnalysisCache.key===key&&finalAnalysisCache.value)return finalAnalysisCache.value;
+  const value=buildFinalGameplan();
+  finalAnalysisCache={key,value};
+  return value;
+}
+
+function shortLoadingPlan(gp){
+  const comp=gp.comp||desiredComp(), map=ownRoleMap();
   let plan,objective,fight,watch;
 
   if(comp==="EARLY SKIRMISH"){
@@ -831,20 +843,22 @@ function shortLoadingPlan(){
     fight="Junglern ska följa/cleana, inte vara första sacrifice.";
   }
 
-  const obj=objectiveAutoPlan();
+  const obj=gp.firstObjective||objectiveAutoPlan();
   if(obj.call==="BOTSIDE NEUTRAL")objective="Spela första setup botside med mid/bot-prio.";
   else if(obj.call==="TOPSIDE NEUTRAL")objective="Spela första setup topside med top/mid-prio.";
   else if(obj.call==="TRADEA FÖRSTA")objective="Coinflippa inte första objective — crossmap/tradea.";
   else objective="Låt lane-prio avgöra första objective. Forcea inte utan move.";
 
-  const jobs=fightJobs();
+  const jobs=gp.fightJobText||fightJobs();
   if(jobs&&jobs.length<150)fight+=" "+jobs;
 
   const risk=draftRiskEngine()[0];
   watch=risk?.severity>=2?risk.text:buildWatch();
   if(watch.length>125)watch=watch.split(".")[0]+".";
 
-  let jungle=buildPath();
+  let jungle=gp.early||buildPath();
+  const directPath=buildPath();
+  if(directPath&&!directPath.startsWith("Låses"))jungle=directPath;
   if(jungle.length>135)jungle=jungle.split(".").slice(0,2).join(".")+".";
   if(!map.jungle)jungle="Spela mot sidan som faktiskt har prio.";
 
@@ -855,15 +869,45 @@ function shortLoadingPlan(){
 function renderFinalGameplan(){
   const card=$("finalGameplanCard");
   if(step<draftOrder.length){card.classList.add("hidden");return}
-  const gp=shortLoadingPlan();
+
+  const gp=getFinalAnalysis();
+  const call=shortLoadingPlan(gp);
   card.classList.remove("hidden");
-  $("finalCompBadge").textContent=gp.comp;
-  $("gpCallPlan").textContent=gp.plan;
-  $("gpCallJungle").textContent=gp.jungle;
-  $("gpCallObjective").textContent=gp.objective;
-  $("gpCallFight").textContent=gp.fight;
-  $("gpCallWatch").textContent=gp.watch;
-  $("gpLoadingCall").textContent=gp.call;
+
+  $("finalCompBadge").textContent=call.comp;
+  $("gpLoadingCall").textContent=call.call;
+  $("gpCallPlan").textContent=call.plan;
+  $("gpCallJungle").textContent=call.jungle;
+  $("gpCallObjective").textContent=call.objective;
+  $("gpCallFight").textContent=call.fight;
+  $("gpCallWatch").textContent=call.watch;
+
+  $("gpScaling").textContent=gp.scaling||"—";
+  $("gpScalingDetail").textContent=gp.scalingDetail||"—";
+  $("gpEarlyNeed").textContent=gp.earlyNeed||"—";
+  $("gpEarlyNeedDetail").textContent=gp.earlyNeedDetail||"—";
+  $("gpWindow").textContent=gp.window||"—";
+  $("gpWindowDetail").textContent=gp.windowDetail||"—";
+  $("gpBehind").textContent=gp.behind||"—";
+  $("gpBehindDetail").textContent=gp.behindDetail||"—";
+
+  $("gp010").textContent=gp.p010||"—";
+  $("gp1025").textContent=gp.p1025||"—";
+  $("gp25").textContent=gp.p25||"—";
+
+  $("gpEarly").textContent=gp.early||"—";
+  $("gpMid").textContent=gp.mid||"—";
+  $("gpFight").textContent=gp.fight||"—";
+  $("gpObjective").textContent=gp.objective||"—";
+  $("gpFirstObjective").textContent=gp.firstObjective
+    ? gp.firstObjective.call+" — "+gp.firstObjective.detail
+    : "—";
+  $("gpFightJobs").textContent=gp.fightJobText||"—";
+
+  $("gpFightStyle").textContent=gp.advFightStyle||"—";
+  $("gpCooldowns").textContent=gp.advCooldowns||"—";
+  $("gpSideLane").textContent=gp.advSideLane||"—";
+  $("gpRule").textContent=gp.rule||"—";
 }
 
 function saveRecentDraft(){
@@ -876,6 +920,7 @@ function saveRecentDraft(){
 
     const archive=JSON.parse(localStorage.getItem("rs_draft_archive")||"[]");
     const inferred=inferEnemyRoles();
+    const final=getFinalAnalysis();
     const record={
       savedAt:new Date().toISOString(),
       side:userSide,
@@ -883,8 +928,12 @@ function saveRecentDraft(){
       enemyPicks:enemies().map(e=>({champ:e.champ,inferredRole:inferred.byChamp[e.champ]?.role||e.role||"unknown"})),
       ourBans:events.filter(e=>e.side===userSide&&e.type==="ban").map(e=>e.champ),
       enemyBans:events.filter(e=>e.side!==userSide&&e.type==="ban").map(e=>e.champ),
-      comp:desiredComp(),
-      topRisk:draftRiskEngine()[0]?.text||null
+      comp:final.comp||desiredComp(),
+      scaling:final.scaling||null,
+      bestWindow:final.window||null,
+      topRisk:draftRiskEngine()[0]?.text||null,
+      fightStyle:final.advFightStyle||null,
+      objectiveStyle:final.advObjectiveStyle||null
     };
     localStorage.setItem("rs_draft_archive",JSON.stringify([...archive,record].slice(-50)));
   }catch{}
