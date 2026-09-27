@@ -818,9 +818,26 @@ function finalAnalysisKey(){
   return events.map(e=>e.type+"@"+e.side+"@"+e.champ+"@"+(e.role||"")).join("|");
 }
 function getFinalAnalysis(){
-  const key=finalAnalysisKey();
+  const key=(window.RIFT_ENGINE_VERSION||"base")+"::"+finalAnalysisKey();
   if(finalAnalysisCache.key===key&&finalAnalysisCache.value)return finalAnalysisCache.value;
-  const value=buildFinalGameplan();
+
+  let value=buildFinalGameplan()||{};
+  const power=buildPowerCurvePlan();
+
+  // Self-healing fallback: never leave the explanation grid blank.
+  value={
+    ...power,
+    ...value,
+    comp:value.comp||desiredComp(),
+    early:value.early||buildPath(),
+    mid:value.mid||"Spela runt prio, resets och nästa objective.",
+    fight:value.fight||"Ta en tydlig fight på samma target och spela era cooldowns tillsammans.",
+    objective:value.objective||"Prio → reset → vision → objective.",
+    rule:value.rule||"Spela samma plan tillsammans — jaga inte efter extra kills.",
+    firstObjective:value.firstObjective||objectiveAutoPlan(),
+    fightJobText:value.fightJobText||fightJobs()
+  };
+
   finalAnalysisCache={key,value};
   return value;
 }
