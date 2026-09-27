@@ -37,3 +37,6 @@ input{width:100%;padding:13px 14px;border-radius:12px;border:1px solid var(--bor
 .test-feedback{margin-top:16px;background:#0d1526;border:1px solid var(--border);border-radius:14px;padding:16px}
 .test-feedback p{margin:8px 0}
 @media(max-width:900px){.draft-grid{grid-template-columns:1fr}.analysis-grid,.score-grid,.comp-list,.mode-grid{grid-template-columns:1fr}header{flex-direction:column}h1{font-size:34px}}
+.brand-head{display:flex;align-items:center;gap:14px}
+.team-logo{width:72px;height:72px;object-fit:contain;filter:drop-shadow(0 6px 16px rgba(0,0,0,.35));flex:0 0 auto}
+@media(max-width:600px){.team-logo{width:58px;height:58px}.brand-head{align-items:flex-start}}
