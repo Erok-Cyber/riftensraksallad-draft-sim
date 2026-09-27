@@ -4,7 +4,7 @@
       label: "Gold/Plat team",
       roleWeights: {
         default: {GOLD: 0.70, PLATINUM: 0.25, EMERALD: 0.05},
-        jungle:  {GOLD: 0.45, PLATINUM: 0.35, EMERALD: 0.20}
+        jungle:  {GOLD: 0.35, PLATINUM: 0.30, EMERALD: 0.20, DIAMOND: 0.15}
       }
     },
     gold: {
@@ -17,7 +17,7 @@
     },
     emerald_plus: {
       label: "Emerald+",
-      roleWeights: {default: {EMERALD: 1.00}}
+      roleWeights: {default: {EMERALD: 0.65, DIAMOND: 0.35}}
     }
   };
 
