@@ -947,8 +947,30 @@ function renderLiveDbStatus(s=window.RiftSharedData?.getState?.()||{mode:"local"
   if(!el)return;
   el.className="live-db-status"+(["shared","offline","locked"].includes(s.mode)?" "+s.mode:"");
   el.textContent=s.status||"Lokal lagring";
+  const configured=!!window.RiftSharedData?.configured?.();
+  const connected=!!window.RiftSharedData?.hasTeamKey?.();
+  $("liveDbConnectBtn")?.classList.toggle("hidden",!configured||connected);
+  $("liveDbSyncBtn")?.classList.toggle("hidden",!configured||!connected);
 }
 window.RiftSharedData?.subscribe?.(renderLiveDbStatus);
+$("liveDbConnectBtn")?.addEventListener("click",async()=>{
+  const code=prompt("Ange Riftensräksallads lagkod. Den sparas bara på den här enheten.");
+  if(!code)return;
+  try{
+    const matches=await window.RiftSharedData.connect(code);
+    const synced=await window.RiftSharedData.sync();
+    localStorage.setItem("rs_draft_archive",JSON.stringify((synced||[]).slice(-50)));
+    renderLiveDbStatus();
+    renderMatchSave();
+  }catch{
+    alert("Lagkoden kunde inte verifieras.");
+  }
+});
+$("liveDbSyncBtn")?.addEventListener("click",async()=>{
+  const matches=await window.RiftSharedData?.sync?.();
+  localStorage.setItem("rs_draft_archive",JSON.stringify((matches||[]).slice(-50)));
+  renderLiveDbStatus();
+});
 if(window.RiftSharedData?.hasTeamKey?.()){
   window.RiftSharedData.sync().then(matches=>{
     const archive=(matches||[]).slice(-50).map(m=>({...m}));
@@ -1022,7 +1044,8 @@ async function saveCompletedMatch(){
   try{
     const record=buildMatchRecord();
 
-    if(window.RiftSharedData)await window.RiftSharedData.saveMatch(record);
+    let sharedSave=null;
+    if(window.RiftSharedData)sharedSave=await window.RiftSharedData.saveMatch(record);
     else{
       const matches=matchHistoryData();
       localStorage.setItem("rs_match_history",JSON.stringify([...matches,record].slice(-250)));
@@ -1040,7 +1063,8 @@ async function saveCompletedMatch(){
     renderMatchSave();
 
     const db=window.RiftSharedData?.getState?.();
-    if(db?.mode==="shared")$("matchSaveHint").textContent="Sparad i lagets delade databas.";
+    if(sharedSave?.cloud||db?.mode==="shared")$("matchSaveHint").textContent="Sparad i lagets delade databas.";
+    else if(window.RiftSharedData?.configured?.()&&!window.RiftSharedData?.hasTeamKey?.())$("matchSaveHint").textContent="Sparad lokalt. Tryck Anslut lagdatabas för att dela den med laget.";
     else if(window.RiftSharedData?.configured?.())$("matchSaveHint").textContent="Sparad lokalt. Synkas automatiskt när databasen är tillgänglig.";
   }catch(err){
     console.error("Could not save match:",err);
