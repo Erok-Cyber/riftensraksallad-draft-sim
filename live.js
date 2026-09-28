@@ -953,6 +953,7 @@ function renderMatchSave(){
     $("matchSaveStatus").textContent="TEST";
     document.querySelectorAll(".result-choice,.type-choice").forEach(b=>b.disabled=true);
     $("saveMatchBtn").disabled=true;
+    $("openAnalysisBtn")?.classList.add("hidden");
     $("matchSaveHint").textContent="Testdrafts påverkar inte vår statistik eller team learning.";
     return;
   }
@@ -969,6 +970,7 @@ function renderMatchSave(){
   });
   $("saveMatchBtn").disabled=saved||!pendingMatchResult||!pendingMatchType;
   $("saveMatchBtn").textContent=saved?"Match sparad ✓":"Spara match";
+  $("openAnalysisBtn")?.classList.toggle("hidden",!saved);
   $("matchSaveHint").textContent=saved
     ?"Matchen räknas nu i Analys och team learning."
     :(!pendingMatchResult||!pendingMatchType?"Välj både Win/Loss och Liga/Flex.":"Redo att spara.");
@@ -978,7 +980,7 @@ function buildMatchRecord(){
   const inferred=inferEnemyRoles();
   const final=getFinalAnalysis();
   return {
-    id:(crypto?.randomUUID?.()||("match-"+Date.now()+"-"+Math.random().toString(16).slice(2))),
+    id:(window.crypto?.randomUUID?.()||("match-"+Date.now()+"-"+Math.random().toString(16).slice(2))),
     savedAt:new Date().toISOString(),
     patch:"26.19",
     result:pendingMatchResult,
