@@ -52,6 +52,91 @@ const comps = {
     focus:"Kindred kräver prio. Ingen prio = Viego eller byt comp.",
     call:"LANES FÅR PRIO → JG TAR RIVER/ENEMY CAMPS → SPELA RUNT JG."
   }
+
+};
+
+const compGuides = {
+  "EARLY SKIRMISH":{
+    title:"Early Skirmish",
+    identity:"Vinn prio, ta första move och använd stark 2v2/3v3 för att konvertera till objectives.",
+    roles:{
+      top:["Renekton","Darius","Olaf","Mordekaiser"],
+      jungle:["Xin Zhao","Volibear","Jarvan IV","Wukong"],
+      mid:["Ahri","Taliyah","Vex"],
+      adc:["Ashe","Varus","Xayah"],
+      support:["Nautilus","Leona","Maokai"]
+    },
+    variants:[
+      {name:"Standard",tag:"BALANS",picks:["Renekton","Xin Zhao","Ahri","Ashe","Nautilus"],why:"Mest komplett early/midgame-version: prio, setup, engage och pick."},
+      {name:"Hard engage",tag:"FORCE",picks:["Renekton","Jarvan IV","Vex","Ashe","Leona"],why:"När enemy har squishy/immobile carries och vi vill starta fights själva."},
+      {name:"Anti-melee",tag:"CONTROL",picks:["Mordekaiser","Xin Zhao","Taliyah","Varus","Maokai"],why:"Behåller early pressure men ger mer zone/control när enemy måste gå in i oss."}
+    ],
+    goodInto:["Scaling jungle som vill fullcleara","Lanes vi kan få prio i","Enemy carries som kan straffas av tidiga moves","Comps som behöver tid innan första 1–2 items"],
+    watch:["Fighta inte river utan lane-prio","Chasa inte kills efter vunnen skirmish — ta objective","För många losing lanes dödar compens identitet"],
+    plan:{early:"Skapa push/prio → jungle möter lanes i river.",mid:"Spela Herald/Drake på tempo och attackera innan enemy stabiliserar.",late:"Sök picks/flanks; undvik att spela som ren scaling-comp."},
+    rule:"Behåll minst två av: lane-prio, stark tidig jungle, säker engage/setup."
+  },
+  "PRESS R":{
+    title:"PRESS R",
+    identity:"Enkel execution: tydlig GO-knapp, samma target och chain CC innan enemy hinner spela fighten.",
+    roles:{
+      top:["Malphite","Shen","Sion","Mordekaiser"],
+      jungle:["Jarvan IV","Vi","Wukong","Xin Zhao"],
+      mid:["Annie","Vex","Hwei","Taliyah"],
+      adc:["Jinx","Ashe","Xayah"],
+      support:["Leona","Nautilus","Maokai"]
+    },
+    variants:[
+      {name:"Standard",tag:"5V5",picks:["Malphite","Jarvan IV","Annie","Jinx","Leona"],why:"Maximal enkel engage + resetpotential för Jinx."},
+      {name:"Carry access",tag:"PICK",picks:["Malphite","Vi","Vex","Ashe","Nautilus"],why:"Bättre när en specifik enemy carry måste dö och front-to-back är svårt."},
+      {name:"Anti-dive",tag:"COUNTER",picks:["Shen","Jarvan IV","Taliyah","Xayah","Maokai"],why:"Enemy får gå in först; vi överlever commit och vänder med counter-engage."}
+    ],
+    goodInto:["Immobile carries","Poke som måste respektera hård engage","Hypercarry + enchanter","Comps utan stark disengage efter första engage"],
+    watch:["Bränn inte alla engage-ults på frontline","Jinx/ADC ska följa — inte starta","Om enemy har mycket disengage behöver flank eller target access"],
+    plan:{early:"Spela stabilt och samla ult-levels utan onödiga coinflips.",mid:"Forcea runt objectives när flera R är uppe.",late:"En bra engage kan avsluta matchen — synka cooldowns och target."},
+    rule:"Behåll minst en pålitlig primär engage + en sekundär CC/engage. Annars är det inte längre PRESS R."
+  },
+  "OBJECTIVE CONTROL":{
+    title:"Objective Control",
+    identity:"Kom först till river, kontrollera chokes och tvinga enemy att gå genom vår zone för att nå objective.",
+    roles:{
+      top:["Mordekaiser","Sion","Shen","Heimerdinger"],
+      jungle:["Udyr","Lillia","Volibear","Xin Zhao"],
+      mid:["Taliyah","Hwei","Anivia","Viktor","Ahri"],
+      adc:["Varus","Ashe","Xayah"],
+      support:["Maokai","Nautilus","Leona"]
+    },
+    variants:[
+      {name:"Standard",tag:"ZONE",picks:["Mordekaiser","Udyr","Taliyah","Varus","Maokai"],why:"Starkaste rena choke/objective-identiteten."},
+      {name:"AP tempo",tag:"SKIRMISH",picks:["Shen","Lillia","Ahri","Varus","Nautilus"],why:"Mer rörlig version med pick och skirmish utan att tappa objective setup."},
+      {name:"Anti-dive",tag:"PEEL",picks:["Sion","Udyr","Hwei","Xayah","Maokai"],why:"Mer defensiv setup när enemy har flera divers och vi vill låta dem gå in."}
+    ],
+    goodInto:["3+ melee / kort range","Enemy som måste facechecka","Comps med begränsad long-range poke","Matcher där drakar/Herald blir naturliga fightpunkter"],
+    watch:["Kommer vi sent till objective tappar compen mycket värde","Jaga inte ut ur vår zone efter första killen","För lite waveclear gör resets/setup svårare"],
+    plan:{early:"Säkra waves och planera reset före första objective.",mid:"Var först i river → vision → håll chokes → turna tillsammans.",late:"Skydda entrances och tvinga enemy ta dåliga vägar in i området."},
+    rule:"Behåll zone/control + frontline. Byter vi bort båda blir compen bara en vanlig 5v5."
+  },
+  "JUNGLE CARRY":{
+    title:"Jungle Carry",
+    identity:"Lanes ger prio/setup så junglern får river, camps, resets och utrymme att bli matchens starkaste resurs.",
+    roles:{
+      top:["Shen","Malphite","Sion","Mordekaiser"],
+      jungle:["Viego","Kindred","Graves","Lillia"],
+      mid:["Taliyah","Ahri","Hwei","Viktor"],
+      adc:["Ashe","Varus","Senna","Xayah"],
+      support:["Nautilus","Maokai","Leona"]
+    },
+    variants:[
+      {name:"Viego reset",tag:"RESET",picks:["Shen","Viego","Taliyah","Ashe","Nautilus"],why:"Mycket setup/CC så Viego får första reset och kan ta över fighten."},
+      {name:"Kindred prio",tag:"MARKS",picks:["Shen","Kindred","Taliyah","Ashe","Nautilus"],why:"Maximerar river access och mark-kontroll; kräver att lanes faktiskt kan röra sig."},
+      {name:"Graves tempo",tag:"ECONOMY",picks:["Malphite","Graves","Ahri","Ashe","Maokai"],why:"Lanes skapar picks/space medan Graves spelar camps, invade och itemtempo."},
+      {name:"Lillia teamfight",tag:"AP CARRY",picks:["Sion","Lillia","Hwei","Varus","Nautilus"],why:"Frontline + range + setup ger Lillia tid att stacka och hitta sleep."}
+    ],
+    goodInto:["Enemy jungle som inte kan straffa våra lanes tidigt","Lanes med prio eller stark setup","Draft där vår jungle har bra matchup/invade-fönster","Enemy comp där resets/kiting får hög value"],
+    watch:["Kindred/Graves utan lane-prio blir mycket svårare","Lanes får inte ta all jungle-tempo för egna coinflip fights","Om junglern blir neutraliserad måste compen fortfarande ha frontline/engage"],
+    plan:{early:"Planera clear efter vilka lanes som faktiskt kan movea. Ta river/camps med prio.",mid:"Spela vision och fights runt junglerns power spike; lanes enablear.",late:"Jungle är en primär carry — frontline/setup måste köpa tid och space."},
+    rule:"Minst två lanes måste bidra med prio, setup eller global hjälp. Annars välj Viego/Lillia eller byt comp."
+  }
 };
 
 const scenarios = [
@@ -238,6 +323,68 @@ document.querySelectorAll(".side-btn").forEach(btn=>btn.addEventListener("click"
   if(mode==="test") seedScenarioEnemyPicks();
   else render();
 }));
+
+
+const compGuideRoles=["top","jungle","mid","adc","support"];
+const compGuideRoleNames={top:"TOP",jungle:"JUNGLE",mid:"MID",adc:"ADC",support:"SUPPORT"};
+
+function compGuideEscape(value){
+  return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
+}
+function openCompGuide(name){
+  const g=compGuides[name],base=comps[name];
+  if(!g||!base)return;
+  $("compGuideEyebrow").textContent="COMP GUIDE · "+name;
+  $("compGuideTitle").textContent=g.title;
+  $("compGuideIdentity").textContent=g.identity;
+  $("compGuideCall").textContent=base.call;
+
+  $("compGuideCore").innerHTML=base.core.map((ch,i)=>
+    '<div class="comp-core-slot"><span>'+compGuideRoleNames[compGuideRoles[i]]+'</span><strong>'+compGuideEscape(ch)+'</strong></div>'
+  ).join("");
+
+  $("compGuideRoleAlts").innerHTML=compGuideRoles.map(role=>
+    '<div class="comp-role-alt"><span>'+compGuideRoleNames[role]+'</span><div>'+
+      (g.roles[role]||[]).map((ch,i)=>'<b class="'+(i===0?"primary":"")+'">'+compGuideEscape(ch)+'</b>').join("")+
+    '</div></div>'
+  ).join("");
+
+  $("compGuideVariants").innerHTML=g.variants.map(v=>
+    '<article class="comp-variant">'+
+      '<div class="comp-variant-head"><strong>'+compGuideEscape(v.name)+'</strong><span>'+compGuideEscape(v.tag)+'</span></div>'+
+      '<div class="comp-variant-picks">'+v.picks.map((ch,i)=>'<span><small>'+compGuideRoleNames[compGuideRoles[i]]+'</small>'+compGuideEscape(ch)+'</span>').join("")+'</div>'+
+      '<p>'+compGuideEscape(v.why)+'</p>'+
+    '</article>'
+  ).join("");
+
+  $("compGuideGoodInto").innerHTML=g.goodInto.map(x=>'<p>'+compGuideEscape(x)+'</p>').join("");
+  $("compGuideWatch").innerHTML=g.watch.map(x=>'<p>'+compGuideEscape(x)+'</p>').join("");
+  $("compGuidePlan").innerHTML=[
+    ["EARLY",g.plan.early],["MIDGAME",g.plan.mid],["LATE",g.plan.late]
+  ].map(([phase,text])=>'<div><span>'+phase+'</span><p>'+compGuideEscape(text)+'</p></div>').join("");
+  $("compGuideRule").textContent=g.rule;
+
+  const overlay=$("compGuideOverlay");
+  overlay.classList.remove("hidden");
+  overlay.setAttribute("aria-hidden","false");
+  document.body.classList.add("comp-guide-open");
+}
+function closeCompGuide(){
+  const overlay=$("compGuideOverlay");
+  if(!overlay)return;
+  overlay.classList.add("hidden");
+  overlay.setAttribute("aria-hidden","true");
+  document.body.classList.remove("comp-guide-open");
+}
+document.querySelectorAll("[data-comp-guide]").forEach(card=>{
+  card.addEventListener("click",()=>openCompGuide(card.dataset.compGuide));
+  card.addEventListener("keydown",e=>{
+    if(e.key==="Enter"||e.key===" "){e.preventDefault();openCompGuide(card.dataset.compGuide)}
+  });
+});
+$("closeCompGuide")?.addEventListener("click",closeCompGuide);
+$("compGuideOverlay")?.addEventListener("click",e=>{if(e.target===$("compGuideOverlay"))closeCompGuide()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!$("compGuideOverlay")?.classList.contains("hidden"))closeCompGuide()});
 
 let currentAnalysisFilter="all";
 let currentAnalysisPatch="all";
