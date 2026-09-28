@@ -162,3 +162,9 @@ body.draft-complete .comps{display:none!important}
 .save-match-btn{margin-top:14px}.save-match-btn:disabled{opacity:.45;cursor:not-allowed}
 .match-save-card.saved{border-color:#3f6b4a}.match-save-card.saved #matchSaveStatus{color:#a8e4b4;border:1px solid #3f6b4a}
 @media(max-width:700px){.match-save-options{grid-template-columns:1fr}.choice-row{flex-direction:column}}
+
+.live-db-status{display:inline-flex;align-items:center;margin:0 0 14px;padding:6px 9px;border-radius:999px;background:#0b1525;border:1px solid var(--border);color:var(--muted);font-size:11px;font-weight:900}
+.live-db-status.shared{color:#a8e4b4;border-color:#3f6b4a}
+.live-db-status.offline{color:#ffd29a;border-color:#73562f}
+.live-db-status.locked{color:#d8b6ff;border-color:#60427d}
+.match-analysis-link{display:inline-block;margin-top:10px;text-decoration:none}
