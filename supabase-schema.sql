@@ -1,5 +1,6 @@
--- Riftensräksallad shared match database
--- Run once in Supabase SQL editor (or provision via the Supabase ChatGPT integration).
+-- Riftensräksallad shared match database (Supabase)
+-- Browser clients never receive direct table permissions.
+-- All reads/writes go through security-definer RPC functions that verify the team code.
 
 create extension if not exists pgcrypto;
 create schema if not exists app_private;
@@ -26,62 +27,125 @@ create table if not exists app_private.team_access (
 );
 
 alter table public.team_matches enable row level security;
+revoke all on public.team_matches from anon, authenticated;
 
-create or replace function public.rift_team_key_ok(p_team_slug text)
+create or replace function app_private.rift_key_ok(p_team_slug text, p_team_key text)
 returns boolean
 language sql
 stable
 security definer
-set search_path = public, app_private
+set search_path = app_private, public
 as $$
   select exists (
     select 1
     from app_private.team_access a
     where a.team_slug = p_team_slug
-      and coalesce(
-        current_setting('request.headers', true)::json ->> 'x-team-key',
-        ''
-      ) <> ''
-      and a.key_hash = crypt(
-        current_setting('request.headers', true)::json ->> 'x-team-key',
-        a.key_hash
-      )
+      and coalesce(p_team_key,'') <> ''
+      and a.key_hash = crypt(p_team_key, a.key_hash)
   );
 $$;
 
-revoke all on function public.rift_team_key_ok(text) from public;
-grant execute on function public.rift_team_key_ok(text) to anon, authenticated;
+revoke all on function app_private.rift_key_ok(text,text) from public;
 
-drop policy if exists team_matches_select on public.team_matches;
-drop policy if exists team_matches_insert on public.team_matches;
-drop policy if exists team_matches_update on public.team_matches;
-drop policy if exists team_matches_delete on public.team_matches;
+create or replace function public.rift_list_matches(
+  p_team_slug text,
+  p_team_key text
+)
+returns table (
+  id text,
+  saved_at timestamptz,
+  result text,
+  match_type text,
+  side text,
+  comp text,
+  payload jsonb
+)
+language plpgsql
+security definer
+set search_path = public, app_private
+as $$
+begin
+  if not app_private.rift_key_ok(p_team_slug,p_team_key) then
+    raise exception 'invalid team code' using errcode='28000';
+  end if;
 
-create policy team_matches_select
-on public.team_matches for select
-to anon, authenticated
-using (public.rift_team_key_ok(team_slug));
+  return query
+  select m.id,m.saved_at,m.result,m.match_type,m.side,m.comp,m.payload
+  from public.team_matches m
+  where m.team_slug=p_team_slug
+  order by m.saved_at asc
+  limit 250;
+end;
+$$;
 
-create policy team_matches_insert
-on public.team_matches for insert
-to anon, authenticated
-with check (public.rift_team_key_ok(team_slug));
+create or replace function public.rift_upsert_match(
+  p_team_slug text,
+  p_team_key text,
+  p_match jsonb
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, app_private
+as $$
+declare
+  v_result text := p_match->>'result';
+  v_type text := p_match->>'matchType';
+  v_side text := p_match->>'side';
+begin
+  if not app_private.rift_key_ok(p_team_slug,p_team_key) then
+    raise exception 'invalid team code' using errcode='28000';
+  end if;
+  if v_result not in ('win','loss') or v_type not in ('league','flex') or v_side not in ('blue','red') then
+    raise exception 'invalid match payload';
+  end if;
 
-create policy team_matches_update
-on public.team_matches for update
-to anon, authenticated
-using (public.rift_team_key_ok(team_slug))
-with check (public.rift_team_key_ok(team_slug));
+  insert into public.team_matches(id,team_slug,saved_at,result,match_type,side,comp,payload)
+  values (
+    p_match->>'id',
+    p_team_slug,
+    coalesce((p_match->>'savedAt')::timestamptz,now()),
+    v_result,v_type,v_side,p_match->>'comp',p_match
+  )
+  on conflict(id) do update set
+    saved_at=excluded.saved_at,
+    result=excluded.result,
+    match_type=excluded.match_type,
+    side=excluded.side,
+    comp=excluded.comp,
+    payload=excluded.payload;
+end;
+$$;
 
-create policy team_matches_delete
-on public.team_matches for delete
-to anon, authenticated
-using (public.rift_team_key_ok(team_slug));
+create or replace function public.rift_delete_match(
+  p_team_slug text,
+  p_team_key text,
+  p_match_id text
+)
+returns void
+language plpgsql
+security definer
+set search_path = public, app_private
+as $$
+begin
+  if not app_private.rift_key_ok(p_team_slug,p_team_key) then
+    raise exception 'invalid team code' using errcode='28000';
+  end if;
+  delete from public.team_matches
+  where team_slug=p_team_slug and id=p_match_id;
+end;
+$$;
 
-grant select, insert, update, delete on public.team_matches to anon, authenticated;
+revoke all on function public.rift_list_matches(text,text) from public;
+revoke all on function public.rift_upsert_match(text,text,jsonb) from public;
+revoke all on function public.rift_delete_match(text,text,text) from public;
 
--- Provision the team access code separately; do NOT commit the real code.
--- Example (replace CHANGE_ME in the Supabase SQL editor only):
+grant execute on function public.rift_list_matches(text,text) to anon, authenticated;
+grant execute on function public.rift_upsert_match(text,text,jsonb) to anon, authenticated;
+grant execute on function public.rift_delete_match(text,text,text) to anon, authenticated;
+
+-- Provision the real team code only inside Supabase; never commit it.
+-- Example:
 -- insert into app_private.team_access(team_slug,key_hash)
 -- values ('riftensraksallad', crypt('CHANGE_ME', gen_salt('bf')))
 -- on conflict(team_slug) do update
