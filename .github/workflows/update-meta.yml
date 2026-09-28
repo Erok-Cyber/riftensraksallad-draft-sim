@@ -1,0 +1,52 @@
+name: Update Draft Brain Meta
+
+on:
+  schedule:
+    - cron: "17 */6 * * *"
+  workflow_dispatch:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/update-meta.yml"
+      - "scripts/update_meta.py"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: "meta-updater"
+  cancel-in-progress: true
+
+jobs:
+  update-meta:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install scraper dependencies
+        run: python -m pip install --disable-pip-version-check requests==2.32.3 lxml==5.3.0
+
+      - name: Update latest two patch snapshots
+        run: python scripts/update_meta.py
+
+      - name: Validate JSON
+        run: python -m json.tool external-meta.json > /dev/null
+
+      - name: Commit fresh meta when changed
+        run: |
+          if git diff --quiet -- external-meta.json; then
+            echo "No meta update needed."
+            exit 0
+          fi
+          git config user.name "riftensraksallad-meta-bot"
+          git config user.email "actions@users.noreply.github.com"
+          git add external-meta.json
+          git commit -m "Auto-update Draft Brain meta snapshots"
+          git push
