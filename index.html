@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Riftensräksallad Draft Trainer</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-compguide1" />
+  <link rel="stylesheet" href="styles.css?v=20260928-banplanner1" />
 </head>
 <body>
   <main class="app">
@@ -17,6 +17,7 @@
         <div id="homeTabs" class="top-tabs">
           <button id="startTabBtn" class="top-tab active">Start</button>
           <button id="analysisTabBtn" class="top-tab">Analys</button>
+          <button id="plannerTabBtn" class="top-tab">Ban Planner</button>
         </div>
         <button id="homeBtn" class="secondary nav-action hidden">← Hem</button>
         <button id="undoBtn" class="secondary nav-action hidden">↶ Undo</button>
@@ -45,6 +46,39 @@
           <span>Hybrid AI + live calls under vår draft</span>
           <span class="mode-arrow">→</span>
         </a>
+      </div>
+    </section>
+
+    <section id="banPlannerDashboard" class="ban-planner-dashboard hidden">
+      <div class="planner-dashboard-head">
+        <div>
+          <p class="eyebrow">BO3 PREP</p>
+          <h2>Ban Planner</h2>
+          <p>Planera target bans, comp-bans, fallback-picks och serienotes innan match.</p>
+        </div>
+        <div class="planner-head-actions">
+          <span id="plannerDbBadge" class="planner-db-badge">Delad · läsning</span>
+          <button id="plannerNewMatchBtn" class="secondary" type="button">+ Ny match</button>
+        </div>
+      </div>
+
+      <div class="planner-layout">
+        <aside class="planner-sidebar card">
+          <div class="planner-sidebar-head">
+            <h3>Matcher</h3>
+            <span id="plannerMatchCount" class="analysis-note">0</span>
+          </div>
+          <div id="plannerMatchList" class="planner-match-list">
+            <div class="planner-loading">Laddar matcher…</div>
+          </div>
+        </aside>
+
+        <section id="plannerDetail" class="planner-detail card">
+          <div class="planner-empty">
+            <strong>Välj en match</strong>
+            <p>Banplan, scouting och BO3-anteckningar visas här.</p>
+          </div>
+        </section>
       </div>
     </section>
 
@@ -323,6 +357,7 @@
   <script src="brand.js?v=20260928-publicread3"></script>
   <script src="db-config.js?v=20260928-publicread3"></script>
   <script src="shared-data.js?v=20260928-publicread3"></script>
-  <script src="app.js?v=20260928-compguide1"></script>
+  <script src="planner.js?v=20260928-banplanner1"></script>
+  <script src="app.js?v=20260928-banplanner1"></script>
 </body>
 </html>
