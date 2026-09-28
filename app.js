@@ -368,7 +368,7 @@ function renderDbStatus(s=window.RiftSharedData?.getState?.()||{mode:"local",sta
 }
 window.RiftSharedData?.subscribe?.(s=>{
   renderDbStatus(s);
-  if(s.mode==="shared"){
+  if(s.mode==="shared"||s.mode==="readonly"){
     syncDraftArchiveFromMatches(matchHistoryData());
     if(!$("analysisDashboard").classList.contains("hidden"))renderAnalysis();
   }
