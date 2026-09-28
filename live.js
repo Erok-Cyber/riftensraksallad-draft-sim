@@ -221,6 +221,38 @@ document.querySelectorAll(".role-buttons button").forEach(btn=>btn.addEventListe
 
 $("lockBtn").addEventListener("click",lockCurrent);
 $("championInput").addEventListener("keydown",e=>{if(e.key==="Enter")lockCurrent()});
+$("championInput").addEventListener("input",()=>{
+  const value=$("championInput").value.trim();
+  $("lockBtn").textContent=value?"Lås "+value:"Lås";
+  $("championInput").classList.toggle("suggestion-selected",false);
+});
+
+function chooseSuggestedChampion(champ,role=null){
+  const turn=current();
+  if(!turn||turn.side!==userSide||!champ)return;
+  if(unavailable().has(champ.toLowerCase()))return;
+
+  $("championInput").value=champ;
+  $("championInput").classList.add("suggestion-selected");
+
+  if(turn.type==="pick"&&role){
+    selectedRole=role;
+    document.querySelectorAll(".role-buttons button").forEach(b=>b.classList.toggle("active",b.dataset.role===role));
+    renderTurn();
+  }
+
+  $("lockBtn").textContent="Lås "+champ;
+}
+
+document.addEventListener("click",e=>{
+  const btn=e.target.closest("[data-suggest-champ]");
+  if(!btn)return;
+  e.preventDefault();
+  e.stopPropagation();
+  const champ=decodeURIComponent(btn.dataset.suggestChamp||"");
+  const role=btn.dataset.suggestRole||null;
+  chooseSuggestedChampion(champ,role);
+});
 $("undoBtn").addEventListener("click",()=>{
   if(historySaved&&step>=draftOrder.length){
     alert("Matchen är redan sparad. Starta en ny draft eller radera matchen från Analys om registreringen blev fel.");
@@ -386,6 +418,8 @@ function renderTurn(){
     $("phaseLabel").textContent="KLAR";$("turnLabel").textContent="DRAFT KLAR";$("lockBtn").style.display="none";$("roleWrap").classList.add("hidden");return;
   }
   $("lockBtn").style.display="block";
+  const inputValue=$("championInput").value.trim();
+  $("lockBtn").textContent=inputValue?"Lås "+inputValue:"Lås";
   $("phaseLabel").textContent=t.type==="ban"?"BAN":"PICK";
   $("turnLabel").textContent=t.label+" · "+(t.side===userSide?"NI":"ENEMY");
   $("roleWrap").classList.toggle("hidden",t.type!=="pick");
@@ -547,7 +581,8 @@ function renderAllRoleRecommendations(){
   const map=ownRoleMap(),suggested=recommendedNextRole();
   roles.filter(r=>!map[r]).forEach(role=>{
     const recs=topRecommendations(role),div=document.createElement("div");div.className="role-rec"+(role===suggested?" recommended":"");
-    div.innerHTML="<span>"+roleNames[role]+"</span><strong>"+(recs.join(" / ")||"—")+"</strong>";
+    const buttons=recs.map(ch=>'<button type="button" class="champ-suggestion compact" data-suggest-champ="'+encodeURIComponent(ch)+'" data-suggest-role="'+role+'">'+ch+'</button>').join("");
+    div.innerHTML="<span>"+roleNames[role]+"</span><div class=\"role-rec-picks\">"+(buttons||"—")+"</div>";
     div.addEventListener("click",()=>{
       selectedRole=role;
       document.querySelectorAll(".role-buttons button").forEach(b=>b.classList.toggle("active",b.dataset.role===role));
@@ -1565,8 +1600,8 @@ function renderRecommendation(){
   if(t.type==="ban"){
     const bans=banRecommendations();box.classList.remove("hidden");
     $("recommendEyebrow").textContent="BANFÖRSLAG";$("recommendRole").textContent="BAN:";
-    $("recommendPicks").textContent=bans.join(" / ");
-    $("recommendReason").textContent="Hot mot er comp + deny-synergy + phase-2 rollvärde. Undviker i möjligaste mån bans på redan fyllda roller.";
+    $("recommendPicks").innerHTML=bans.map(ch=>'<button type="button" class="champ-suggestion" data-suggest-champ="'+encodeURIComponent(ch)+'">'+ch+'</button>').join("");
+    $("recommendReason").textContent="Klicka ett namn för att fylla i direkt. Hot mot er comp + deny-synergy + phase-2 rollvärde.";
     if(breakdown)breakdown.innerHTML="";
     return;
   }
@@ -1578,14 +1613,16 @@ function renderRecommendation(){
   box.classList.remove("hidden");
   $("recommendEyebrow").textContent=selectedRole?"PICKFÖRSLAG":"REKOMMENDERAD NÄSTA ROLL";
   $("recommendRole").textContent=roleNames[role]+":";
-  $("recommendPicks").textContent=details.length?details.map(x=>x.ch+" "+Math.round(x.score)).join(" / "):"Inga tillgängliga picks i team-poolen";
+  $("recommendPicks").innerHTML=details.length
+    ?details.map(x=>'<button type="button" class="champ-suggestion" data-suggest-champ="'+encodeURIComponent(x.ch)+'" data-suggest-role="'+role+'">'+x.ch+' <span>'+Math.round(x.score)+'</span></button>').join("")
+    :"Inga tillgängliga picks i team-poolen";
   const top=details[0];
   const why=top?top.reasons.filter(x=>x.pts>0).slice(0,3).map(x=>x.label).join(" · "):"";
   $("recommendReason").textContent=(selectedRole?"Manuellt vald roll. ":"Draft Brain väljer även roll. ")+"Riktning: "+desiredComp()+" · confidence "+compConfidence()+(why?" · "+top.ch+": "+why:"");
   if(breakdown){
     breakdown.innerHTML=details.map(x=>{
       const r=x.reasons.slice(0,3).map(y=>y.label).join(" · ")||"comfort + draft fit";
-      return '<div class="score-row"><strong>'+x.ch+'</strong><span class="score-num">'+Math.round(x.score)+'</span><span class="score-why">'+r+'</span></div>';
+      return '<div class="score-row"><button type="button" class="score-champ-btn" data-suggest-champ="'+encodeURIComponent(x.ch)+'" data-suggest-role="'+role+'">'+x.ch+'</button><span class="score-num">'+Math.round(x.score)+'</span><span class="score-why">'+r+'</span></div>';
     }).join("");
   }
 }
