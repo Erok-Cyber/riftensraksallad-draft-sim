@@ -1020,7 +1020,7 @@ function buildMatchRecord(){
   return {
     id:(window.crypto?.randomUUID?.()||("match-"+Date.now()+"-"+Math.random().toString(16).slice(2))),
     savedAt:new Date().toISOString(),
-    patch:"26.19",
+    patch:window.RiftStats?.getStatus?.()?.patch||"26.19",
     result:pendingMatchResult,
     matchType:pendingMatchType,
     side:userSide,
@@ -1858,8 +1858,10 @@ function renderStatsStatus(){
   el.className="stats-status";
   if(status.hasData){
     el.classList.add("live");
-    el.textContent=status.source+" · patch "+(status.patch||"?")+" · "+status.coverage+" pool-picks";
-    el.title=(status.bracket||"Gold/Gold+")+" · "+(status.region||"")+" · snapshot "+(status.updated||"");
+    const confidence=String(status.confidence||"").toUpperCase();
+    const fallback=status.fallback?" · FALLBACK":"";
+    el.textContent=status.source+" · "+(status.patch||"?")+" · "+confidence+fallback;
+    el.title=(status.bracket||"Gold+")+" · "+(status.region||"")+" · "+status.coverage+" pool-picks · "+(status.blendText||"")+" · snapshot "+(status.updated||"");
   }else if(status.state==="loading"){
     el.classList.add("waiting");el.textContent="Laddar…";
   }else{
