@@ -472,3 +472,22 @@ body.planner-modal-open{overflow:hidden}
   .planner-new-footer{align-items:stretch;flex-direction:column}
   .planner-new-footer>div{display:grid;grid-template-columns:1fr 1fr}
 }
+
+/* Ban Planner destructive action */
+.planner-delete-btn{
+  border:1px solid #6e3943;
+  background:#24131a;
+  color:#ffb1bd;
+  border-radius:9px;
+  padding:8px 10px;
+  font-weight:850;
+  cursor:pointer;
+  font-size:12px;
+  white-space:nowrap;
+}
+.planner-delete-btn:hover,.planner-delete-btn:focus-visible{
+  border-color:#b95062;
+  background:#321820;
+  color:#ffd0d7;
+  outline:none;
+}
