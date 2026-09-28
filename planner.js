@@ -417,6 +417,7 @@
       plans=sortPlans(plans);
       writeCache(plans);
       render();
+      queueMicrotask(queueAutoScout);
       return true;
     }catch(err){
       console.error("Ban Planner autoscout failed:",err);
