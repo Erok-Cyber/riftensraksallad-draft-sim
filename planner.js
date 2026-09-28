@@ -1,0 +1,357 @@
+/* Shared Ban Planner for Riftensräksallad. */
+(function(){
+  const CACHE_KEY="rs_ban_plans_cache";
+  const TEAM_KEY_STORAGE="rs_team_access_key";
+  let plans=[];
+  let selectedId=null;
+  let editing=false;
+  let loading=false;
+
+  const $=id=>document.getElementById(id);
+  const cfg=()=>window.RIFT_DB_CONFIG||{};
+  const esc=value=>String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
+  const nl=value=>esc(value||"").replace(/\n/g,"<br>");
+  const teamKey=()=>localStorage.getItem(TEAM_KEY_STORAGE)||"";
+  const hasKey=()=>!!teamKey();
+
+  function endpoint(query=""){
+    return String(cfg().plannerFunctionUrl||"").replace(/\/$/,"")+query;
+  }
+  function headers(){
+    const h={"Content-Type":"application/json"};
+    if(teamKey())h["x-team-key"]=teamKey();
+    return h;
+  }
+  async function request(method,query="",body=null){
+    const res=await fetch(endpoint(query),{
+      method,
+      headers:headers(),
+      body:body==null?undefined:JSON.stringify(body)
+    });
+    const txt=await res.text().catch(()=>"");
+    let data={};
+    try{data=txt?JSON.parse(txt):{}}catch{data={error:txt}}
+    if(!res.ok)throw new Error(data.error||("Planner "+res.status));
+    return data;
+  }
+  function rowToPlan(row){
+    const p=row.payload||{};
+    return {...p,id:row.id||p.id,opponent:row.opponent||p.opponent,scheduledAt:row.scheduled_at||p.scheduledAt,status:row.status||p.status,updatedAt:row.updated_at||p.updatedAt};
+  }
+  function cache(){
+    try{return JSON.parse(localStorage.getItem(CACHE_KEY)||"[]")}catch{return[]}
+  }
+  function writeCache(list){
+    localStorage.setItem(CACHE_KEY,JSON.stringify(list));
+  }
+  function normalize(plan){
+    return {
+      id:plan.id,
+      opponent:plan.opponent||"Motståndare",
+      scheduledAt:plan.scheduledAt||new Date().toISOString(),
+      status:plan.status||"upcoming",
+      bestOf:Number(plan.bestOf)||3,
+      opggUrl:plan.opggUrl||"",
+      scoutingConfidence:plan.scoutingConfidence||"preliminary",
+      scoutingUpdatedAt:plan.scoutingUpdatedAt||"",
+      players:Array.isArray(plan.players)?plan.players:[],
+      banPriority:Array.isArray(plan.banPriority)?plan.banPriority:[],
+      phase1Plan:plan.phase1Plan||{b1:"",b2:"",b3:"",note:""},
+      conditionalBans:Array.isArray(plan.conditionalBans)?plan.conditionalBans:[],
+      ourFallbacks:Array.isArray(plan.ourFallbacks)?plan.ourFallbacks:[],
+      gameNotes:plan.gameNotes||{preSeries:"",game1:"",game2:"",general:""}
+    };
+  }
+  function current(){
+    return normalize(plans.find(p=>p.id===selectedId)||plans[0]||{});
+  }
+  function sortPlans(list){
+    return [...list].sort((a,b)=>new Date(a.scheduledAt)-new Date(b.scheduledAt));
+  }
+  function dateText(iso){
+    const d=new Date(iso);
+    if(isNaN(d))return iso||"—";
+    return d.toLocaleString("sv-SE",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  }
+  function toLocalInput(iso){
+    const d=new Date(iso);
+    if(isNaN(d))return "";
+    const local=new Date(d.getTime()-d.getTimezoneOffset()*60000);
+    return local.toISOString().slice(0,16);
+  }
+  function updateDbBadge(){
+    const el=$("plannerDbBadge");
+    if(!el)return;
+    el.classList.toggle("write",hasKey());
+    el.textContent=hasKey()?"Delad · skrivning":"Delad · läsning";
+  }
+  async function ensureWrite(){
+    if(hasKey())return true;
+    const code=prompt("Lagkoden behövs för att ändra Ban Planner:");
+    if(!code)return false;
+    try{
+      if(window.RiftSharedData?.connect)await window.RiftSharedData.connect(code);
+      else localStorage.setItem(TEAM_KEY_STORAGE,code.trim());
+      updateDbBadge();
+      return true;
+    }catch{
+      alert("Fel lagkod.");
+      return false;
+    }
+  }
+  async function load(){
+    if(loading)return;
+    loading=true;
+    const cached=cache().map(normalize);
+    if(cached.length){
+      plans=sortPlans(cached);
+      if(!selectedId)selectedId=plans.find(p=>p.status==="upcoming")?.id||plans[0]?.id;
+      render();
+    }
+    try{
+      const data=await request("GET");
+      plans=sortPlans((data.plans||[]).map(rowToPlan).map(normalize));
+      writeCache(plans);
+      if(!selectedId||!plans.some(p=>p.id===selectedId))selectedId=plans.find(p=>p.status==="upcoming")?.id||plans[0]?.id||null;
+      render();
+    }catch(err){
+      console.warn("Ban Planner sync failed; using cache.",err);
+      if(!plans.length)renderError("Kunde inte läsa den delade Ban Planner-databasen.");
+    }finally{
+      loading=false;
+    }
+  }
+  function renderError(message){
+    const list=$("plannerMatchList"),detail=$("plannerDetail");
+    if(list)list.innerHTML='<div class="planner-loading">'+esc(message)+'</div>';
+    if(detail)detail.innerHTML='<div class="planner-empty"><strong>Planner offline</strong><p>'+esc(message)+'</p></div>';
+  }
+  function renderList(){
+    const list=$("plannerMatchList");
+    if(!list)return;
+    $("plannerMatchCount").textContent=plans.length+" matcher";
+    if(!plans.length){
+      list.innerHTML='<div class="planner-loading">Inga planerade matcher ännu.</div>';
+      return;
+    }
+    list.innerHTML=plans.map(p=>{
+      const status=p.status==="completed"?"KLAR":p.status==="cancelled"?"INSTÄLLD":"KOMMANDE";
+      return '<button type="button" class="planner-match-card '+(p.id===selectedId?"active":"")+'" data-plan-id="'+esc(p.id)+'">'+
+        '<span class="top"><strong>'+esc(p.opponent)+'</strong><span class="status '+esc(p.status)+'">'+status+'</span></span>'+
+        '<span class="date">'+esc(dateText(p.scheduledAt))+' · BO'+esc(p.bestOf||3)+'</span>'+
+        '<small>'+esc((p.phase1Plan?.b1||"—")+" / "+(p.phase1Plan?.b2||"—")+" / "+(p.phase1Plan?.b3||"—"))+'</small>'+
+      '</button>';
+    }).join("");
+  }
+  function renderRead(plan){
+    const detail=$("plannerDetail");
+    const bans=(plan.banPriority||[]).slice(0,5);
+    const conditionals=plan.conditionalBans||[];
+    const fallbacks=plan.ourFallbacks||[];
+    const notes=plan.gameNotes||{};
+    detail.innerHTML=
+      '<div class="planner-detail-head">'+
+        '<div><p class="eyebrow">KOMMANDE MATCH</p><h2>'+esc(plan.opponent)+'</h2>'+
+          '<div class="planner-meta">'+esc(dateText(plan.scheduledAt))+' · BO'+esc(plan.bestOf)+' · '+esc(plan.status.toUpperCase())+'</div></div>'+
+        '<div class="planner-detail-actions">'+
+          (plan.opggUrl?'<a class="planner-link" href="'+esc(plan.opggUrl)+'" target="_blank" rel="noopener">OP.GG ↗</a>':'')+
+          '<button type="button" class="planner-edit-btn" data-planner-action="edit">Redigera plan</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="planner-phase1">'+
+        ['b1','b2','b3'].map((k,i)=>'<div class="planner-ban-call"><span>B'+(i+1)+'</span><strong>'+esc(plan.phase1Plan?.[k]||"Öppen")+'</strong></div>').join("")+
+      '</div>'+
+      '<p class="planner-ban-note">'+esc(plan.phase1Plan?.note||"")+'</p>'+
+      '<section class="planner-section">'+
+        '<div class="planner-section-head"><h3>Scouting</h3><span class="planner-scout-badge">'+esc((plan.scoutingConfidence||"preliminary").toUpperCase())+'</span></div>'+
+        '<div class="planner-player-grid">'+(plan.players||[]).map(x=>'<span class="planner-player">'+esc(x)+'</span>').join("")+'</div>'+
+      '</section>'+
+      '<section class="planner-section">'+
+        '<div class="planner-section-head"><h3>Ban-prioritet</h3><span class="analysis-note">3–5 champs</span></div>'+
+        '<div class="planner-ban-list">'+(bans.length?bans.map((b,i)=>'<div class="planner-ban-row">'+
+          '<span class="planner-ban-num">'+(i+1)+'</span>'+
+          '<strong class="planner-ban-champ">'+esc(b.champ||"—")+'</strong>'+
+          '<span class="planner-ban-type '+esc(b.type||"watch")+'">'+esc(b.type||"watch")+'</span>'+
+          '<span class="planner-ban-why">'+esc(b.why||"")+'</span>'+
+        '</div>').join(""):'<span class="analysis-note">Ingen banlista ännu.</span>')+'</div>'+
+      '</section>'+
+      '<div class="planner-two-col">'+
+        '<section class="planner-section"><div class="planner-section-head"><h3>Comp-bans</h3><span class="analysis-note">om vi visar X</span></div>'+
+          '<div class="planner-condition-list">'+(conditionals.length?conditionals.map(c=>'<div class="planner-condition"><strong>'+esc(c.condition||"")+'</strong><span class="bans">'+esc((c.bans||[]).join(" / "))+'</span><p>'+esc(c.why||"")+'</p></div>').join(""):'<span class="analysis-note">Inga conditional bans.</span>')+'</div>'+
+        '</section>'+
+        '<section class="planner-section"><div class="planner-section-head"><h3>Om våra picks bannas</h3><span class="analysis-note">fallback</span></div>'+
+          '<div class="planner-fallback-list">'+(fallbacks.length?fallbacks.map(f=>'<div class="planner-fallback"><strong>'+esc(f.champ||"")+'</strong><span class="options">→ '+esc((f.options||[]).join(" / "))+'</span></div>').join(""):'<span class="analysis-note">Inga fallbacks.</span>')+'</div>'+
+        '</section>'+
+      '</div>'+
+      '<section class="planner-section">'+
+        '<div class="planner-section-head"><h3>BO3 notes</h3><span class="analysis-note">uppdatera mellan games</span></div>'+
+        '<div class="planner-note-grid">'+
+          noteBlock("INFÖR SERIEN",notes.preSeries)+noteBlock("GAME 1",notes.game1)+noteBlock("GAME 2",notes.game2)+noteBlock("ÖVRIGT",notes.general)+
+        '</div>'+
+      '</section>';
+  }
+  function noteBlock(label,text){
+    return '<div class="planner-note"><span>'+esc(label)+'</span><p>'+(text?nl(text):'<em>Tomt</em>')+'</p></div>';
+  }
+  function field(label,input){
+    return '<div class="planner-field"><label>'+esc(label)+'</label>'+input+'</div>';
+  }
+  function renderEdit(plan){
+    const detail=$("plannerDetail");
+    const bans=[...(plan.banPriority||[])];
+    while(bans.length<5)bans.push({champ:"",type:"watch",priority:bans.length+1,why:""});
+    const conditionals=[...(plan.conditionalBans||[])];
+    while(conditionals.length<3)conditionals.push({condition:"",bans:[],why:""});
+    const fallbacks=[...(plan.ourFallbacks||[])];
+    while(fallbacks.length<6)fallbacks.push({champ:"",options:[]});
+    const notes=plan.gameNotes||{};
+    detail.innerHTML=
+      '<div class="planner-detail-head"><div><p class="eyebrow">REDIGERA PLAN</p><h2>'+esc(plan.opponent)+'</h2></div>'+
+        '<div class="planner-detail-actions"><span id="plannerSaveStatus" class="planner-save-status"></span>'+
+          '<button type="button" class="planner-cancel-btn" data-planner-action="cancel">Avbryt</button>'+
+          '<button type="button" class="planner-save-btn" data-planner-action="save">Spara</button></div></div>'+
+      '<div class="planner-two-col">'+
+        '<section class="planner-section planner-edit-grid">'+
+          '<h3>Match</h3>'+
+          field("Motståndare",'<input id="peOpponent" value="'+esc(plan.opponent)+'">')+
+          field("Datum / tid",'<input id="peScheduled" type="datetime-local" value="'+esc(toLocalInput(plan.scheduledAt))+'">')+
+          field("Status",'<select id="peStatus"><option value="upcoming" '+(plan.status==="upcoming"?"selected":"")+'>Kommande</option><option value="completed" '+(plan.status==="completed"?"selected":"")+'>Klar</option><option value="cancelled" '+(plan.status==="cancelled"?"selected":"")+'>Inställd</option></select>')+
+          field("Best of",'<select id="peBestOf"><option value="3" '+(plan.bestOf===3?"selected":"")+'>BO3</option><option value="5" '+(plan.bestOf===5?"selected":"")+'>BO5</option></select>')+
+          field("OP.GG",'<input id="peOpgg" value="'+esc(plan.opggUrl||'')+'">')+
+          field("Spelare · en per rad",'<textarea id="pePlayers">'+esc((plan.players||[]).join("\n"))+'</textarea>')+
+        '</section>'+
+        '<section class="planner-section planner-edit-grid">'+
+          '<h3>Phase 1</h3>'+
+          field("B1",'<input id="peB1" value="'+esc(plan.phase1Plan?.b1||'')+'">')+
+          field("B2",'<input id="peB2" value="'+esc(plan.phase1Plan?.b2||'')+'">')+
+          field("B3",'<input id="peB3" value="'+esc(plan.phase1Plan?.b3||'')+'">')+
+          field("Phase 1-note",'<textarea id="pePhaseNote">'+esc(plan.phase1Plan?.note||'')+'</textarea>')+
+          field("Scouting confidence",'<select id="peConfidence"><option value="preliminary" '+(plan.scoutingConfidence==="preliminary"?"selected":"")+'>Preliminär</option><option value="medium" '+(plan.scoutingConfidence==="medium"?"selected":"")+'>Medium</option><option value="high" '+(plan.scoutingConfidence==="high"?"selected":"")+'>High</option></select>')+
+        '</section>'+
+      '</div>'+
+      '<section class="planner-section"><div class="planner-section-head"><h3>Ban-prioritet</h3><span class="analysis-note">1 = högst</span></div>'+
+        '<div class="planner-edit-grid">'+bans.map((b,i)=>'<div class="planner-edit-ban" data-edit-ban="'+i+'">'+
+          '<input data-field="champ" placeholder="Champion" value="'+esc(b.champ||'')+'">'+
+          '<select data-field="type"><option value="target" '+(b.type==="target"?"selected":"")+'>Target</option><option value="comp" '+(b.type==="comp"?"selected":"")+'>Comp</option><option value="watch" '+(b.type==="watch"?"selected":"")+'>Watch</option></select>'+
+          '<textarea data-field="why" placeholder="Varför?">'+esc(b.why||'')+'</textarea>'+
+        '</div>').join("")+'</div>'+
+      '</section>'+
+      '<div class="planner-two-col">'+
+        '<section class="planner-section"><div class="planner-section-head"><h3>Conditional bans</h3></div><div class="planner-edit-grid">'+conditionals.map((c,i)=>'<div class="planner-edit-conditional" data-edit-conditional="'+i+'">'+
+          '<input data-field="condition" placeholder="Om vi spelar..." value="'+esc(c.condition||'')+'">'+
+          '<input data-field="bans" placeholder="Poppy, Vi" value="'+esc((c.bans||[]).join(", "))+'">'+
+          '<input data-field="why" placeholder="Varför?" value="'+esc(c.why||'')+'">'+
+        '</div>').join("")+'</div></section>'+
+        '<section class="planner-section"><div class="planner-section-head"><h3>Våra fallbacks</h3></div><div class="planner-edit-grid">'+fallbacks.map((f,i)=>'<div class="planner-edit-fallback" data-edit-fallback="'+i+'">'+
+          '<input data-field="champ" placeholder="Jarvan IV" value="'+esc(f.champ||'')+'">'+
+          '<input data-field="options" placeholder="Wukong, Vi" value="'+esc((f.options||[]).join(", "))+'">'+
+        '</div>').join("")+'</div></section>'+
+      '</div>'+
+      '<section class="planner-section"><div class="planner-section-head"><h3>BO3 notes</h3></div><div class="planner-note-grid">'+
+        field("Inför serien",'<textarea id="pePreSeries">'+esc(notes.preSeries||'')+'</textarea>')+
+        field("Game 1",'<textarea id="peGame1">'+esc(notes.game1||'')+'</textarea>')+
+        field("Game 2",'<textarea id="peGame2">'+esc(notes.game2||'')+'</textarea>')+
+        field("Övrigt",'<textarea id="peGeneral">'+esc(notes.general||'')+'</textarea>')+
+      '</div></section>';
+  }
+  function collect(plan){
+    const val=id=>$(id)?.value?.trim()||"";
+    const dt=val("peScheduled");
+    const out={...plan};
+    out.opponent=val("peOpponent")||plan.opponent;
+    out.scheduledAt=dt?new Date(dt).toISOString():plan.scheduledAt;
+    out.status=$("peStatus")?.value||"upcoming";
+    out.bestOf=Number($("peBestOf")?.value)||3;
+    out.opggUrl=val("peOpgg");
+    out.players=val("pePlayers").split(/\n+/).map(x=>x.trim()).filter(Boolean);
+    out.phase1Plan={b1:val("peB1"),b2:val("peB2"),b3:val("peB3"),note:val("pePhaseNote")};
+    out.scoutingConfidence=$("peConfidence")?.value||"preliminary";
+    out.scoutingUpdatedAt=new Date().toISOString().slice(0,10);
+    out.banPriority=[...document.querySelectorAll("[data-edit-ban]")].map((row,i)=>({
+      champ:row.querySelector('[data-field="champ"]').value.trim(),
+      type:row.querySelector('[data-field="type"]').value,
+      priority:i+1,
+      why:row.querySelector('[data-field="why"]').value.trim()
+    })).filter(x=>x.champ);
+    out.conditionalBans=[...document.querySelectorAll("[data-edit-conditional]")].map(row=>({
+      condition:row.querySelector('[data-field="condition"]').value.trim(),
+      bans:row.querySelector('[data-field="bans"]').value.split(",").map(x=>x.trim()).filter(Boolean),
+      why:row.querySelector('[data-field="why"]').value.trim()
+    })).filter(x=>x.condition||x.bans.length);
+    out.ourFallbacks=[...document.querySelectorAll("[data-edit-fallback]")].map(row=>({
+      champ:row.querySelector('[data-field="champ"]').value.trim(),
+      options:row.querySelector('[data-field="options"]').value.split(",").map(x=>x.trim()).filter(Boolean)
+    })).filter(x=>x.champ);
+    out.gameNotes={preSeries:val("pePreSeries"),game1:val("peGame1"),game2:val("peGame2"),general:val("peGeneral")};
+    return normalize(out);
+  }
+  async function saveCurrent(){
+    if(!(await ensureWrite()))return;
+    const plan=collect(current());
+    const status=$("plannerSaveStatus");
+    if(status)status.textContent="Sparar…";
+    try{
+      await request("POST","",{plan});
+      const i=plans.findIndex(p=>p.id===plan.id);
+      if(i>=0)plans[i]=plan;else plans.push(plan);
+      plans=sortPlans(plans);writeCache(plans);
+      editing=false;
+      if(status)status.textContent="Sparad ✓";
+      render();
+      await load();
+    }catch(err){
+      if(status)status.textContent="Kunde inte spara";
+      alert("Kunde inte spara Ban Planner: "+err.message);
+    }
+  }
+  async function createMatch(){
+    if(!(await ensureWrite()))return;
+    const opponent=prompt("Motståndarlag:");
+    if(!opponent?.trim())return;
+    const when=prompt("Datum och tid (YYYY-MM-DD HH:MM):","2026-10-10 19:30");
+    if(!when)return;
+    const d=new Date(when.replace(" ","T"));
+    if(isNaN(d)){alert("Ogiltigt datum.");return}
+    const id=opponent.toLowerCase().replace(/[^a-z0-9åäö]+/gi,"-").replace(/^-|-$/g,"")+"-"+d.toISOString().slice(0,10);
+    const plan=normalize({
+      id,opponent:opponent.trim(),scheduledAt:d.toISOString(),status:"upcoming",bestOf:3,
+      players:[],banPriority:[],phase1Plan:{b1:"",b2:"",b3:"",note:""},
+      conditionalBans:[],ourFallbacks:[],gameNotes:{preSeries:"",game1:"",game2:"",general:""}
+    });
+    await request("POST","",{plan});
+    plans.push(plan);plans=sortPlans(plans);writeCache(plans);selectedId=id;editing=true;render();
+  }
+  function render(){
+    updateDbBadge();
+    renderList();
+    const p=plans.find(x=>x.id===selectedId);
+    if(!p){
+      $("plannerDetail").innerHTML='<div class="planner-empty"><strong>Välj en match</strong><p>Banplan, scouting och BO3-notes visas här.</p></div>';
+      return;
+    }
+    editing?renderEdit(normalize(p)):renderRead(normalize(p));
+  }
+  function show(){
+    updateDbBadge();
+    if(!plans.length)load();else{render();load();}
+  }
+
+  $("plannerMatchList")?.addEventListener("click",e=>{
+    const card=e.target.closest("[data-plan-id]");
+    if(!card)return;
+    selectedId=card.dataset.planId;editing=false;render();
+  });
+  $("plannerDetail")?.addEventListener("click",async e=>{
+    const btn=e.target.closest("[data-planner-action]");
+    if(!btn)return;
+    const action=btn.dataset.plannerAction;
+    if(action==="edit"){if(await ensureWrite()){editing=true;render();}}
+    if(action==="cancel"){editing=false;render();}
+    if(action==="save")await saveCurrent();
+  });
+  $("plannerNewMatchBtn")?.addEventListener("click",createMatch);
+  window.addEventListener("storage",e=>{if(e.key===TEAM_KEY_STORAGE)updateDbBadge()});
+  window.RiftSharedData?.subscribe?.(()=>updateDbBadge());
+
+  window.RiftBanPlanner={show,load,render};
+})();
