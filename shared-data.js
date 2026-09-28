@@ -91,7 +91,7 @@
 
     try{
       await uploadOne(match);
-      setState({mode:"shared",status:"Delad",lastSync:new Date().toISOString(),error:null});
+      setState({mode:"shared",status:"Delad · skrivning",lastSync:new Date().toISOString(),error:null});
       return {cloud:true,match};
     }catch(err){
       console.warn("Shared save failed; local copy kept.",err);
@@ -159,8 +159,7 @@
     if(!value)throw new Error("Tom lagkod.");
     localStorage.setItem(TEAM_KEY_STORAGE,value);
     try{
-      await request("POST","",{match:{id:"__auth_probe__",savedAt:new Date().toISOString(),result:"win",matchType:"flex",side:"blue",comp:"AUTH_PROBE",authProbe:true}});
-      await request("DELETE","?id="+encodeURIComponent("__auth_probe__"));
+      await request("POST","",{verifyOnly:true});
       await sync();
       return true;
     }catch(err){
