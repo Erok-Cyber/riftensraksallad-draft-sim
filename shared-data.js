@@ -33,7 +33,10 @@
     return String(cfg().functionUrl||"").replace(/\/$/,"")+query;
   }
   function edgeHeaders(){
-    return {"Content-Type":"application/json","x-team-key":teamKey()};
+    const h={"Content-Type":"application/json"};
+    const key=teamKey();
+    if(key)h["x-team-key"]=key;
+    return h;
   }
   async function request(method,query="",body=null){
     const res=await fetch(edgeUrl(query),{
@@ -64,7 +67,6 @@
   }
   async function fetchRemote(){
     if(!configured())return localMatches();
-    if(!hasTeamKey())throw new Error("TEAM_KEY_MISSING");
     const data=await request("GET");
     return (data?.matches||[]).map(rowToMatch);
   }
@@ -73,17 +75,19 @@
     return request("POST","",{match});
   }
   async function saveMatch(match){
-    const local=uniqueById([...localMatches(),match]);
-    writeLocal(local);
-
     if(!configured()){
+      const local=uniqueById([...localMatches(),match]);
+      writeLocal(local);
       setState({mode:"local",status:"Lokal · databas ej aktiverad",error:null});
       return {cloud:false,match};
     }
     if(!hasTeamKey()){
-      setState({mode:"locked",status:"Delad DB · anslut lagkod",error:null});
-      return {cloud:false,match};
+      setState({mode:"readonly",status:"Delad · läsning",error:null});
+      throw new Error("WRITE_KEY_REQUIRED");
     }
+
+    const local=uniqueById([...localMatches(),match]);
+    writeLocal(local);
 
     try{
       await uploadOne(match);
@@ -96,9 +100,13 @@
     }
   }
   async function deleteMatch(id){
+    if(configured()&&!hasTeamKey()){
+      setState({mode:"readonly",status:"Delad · läsning",error:null});
+      throw new Error("WRITE_KEY_REQUIRED");
+    }
     const before=localMatches();
     writeLocal(before.filter(m=>m.id!==id));
-    if(!configured()||!hasTeamKey())return {cloud:false};
+    if(!configured())return {cloud:false};
 
     try{
       await request("DELETE","?id="+encodeURIComponent(id));
@@ -117,39 +125,35 @@
       setState({mode:"local",status:"Lokal · databas ej aktiverad",error:null});
       return localMatches();
     }
-    if(!hasTeamKey()){
-      setState({mode:"locked",status:"Delad DB · anslut lagkod",error:null});
-      return localMatches();
-    }
 
     state.syncing=true;
     setState({status:"Synkar…"});
     try{
       const local=localMatches();
       const remote=await fetchRemote();
-      const remoteIds=new Set(remote.map(m=>m.id));
 
-      // Migrate/offline-sync local real matches that the cloud does not have.
-      for(const m of local){
-        if(m?.id&&m?.result&&m?.matchType&&!remoteIds.has(m.id)){
-          await uploadOne(m);
+      if(hasTeamKey()){
+        // Writer devices also upload any real local/offline matches missing in cloud.
+        const remoteIds=new Set(remote.map(m=>m.id));
+        for(const m of local){
+          if(m?.id&&m?.result&&m?.matchType&&!remoteIds.has(m.id)){
+            await uploadOne(m);
+          }
         }
+        const fresh=await fetchRemote();
+        const merged=uniqueById([...local,...fresh]);
+        writeLocal(merged);
+        setState({mode:"shared",status:"Delad · skrivning",lastSync:new Date().toISOString(),error:null});
+        return merged;
       }
 
-      const fresh=await fetchRemote();
-      const merged=uniqueById([...local,...fresh]);
-      writeLocal(merged);
-      setState({mode:"shared",status:"Delad",lastSync:new Date().toISOString(),error:null});
-      return merged;
+      // Read-only visitors always get the current shared database automatically.
+      writeLocal(remote);
+      setState({mode:"readonly",status:"Delad · läsning",lastSync:new Date().toISOString(),error:null});
+      return remote;
     }catch(err){
       console.warn("Shared sync failed; using local cache.",err);
-      const msg=String(err);
-      const locked=msg.includes("TEAM_KEY_MISSING")||msg.toLowerCase().includes("access code")||msg.toLowerCase().includes("invalid team");
-      setState({
-        mode:locked?"locked":"offline",
-        status:locked?"Delad DB · anslut lagkod":"Offline · lokal cache",
-        error:msg
-      });
+      setState({mode:"offline",status:"Offline · lokal cache",error:String(err)});
       return localMatches();
     }finally{
       state.syncing=false;
@@ -161,7 +165,8 @@
     if(!value)throw new Error("Tom lagkod.");
     localStorage.setItem(TEAM_KEY_STORAGE,value);
     try{
-      await fetchRemote(); // Validate before uploading local history.
+      await request("POST","",{match:{id:"__auth_probe__",savedAt:new Date().toISOString(),result:"win",matchType:"flex",side:"blue",comp:"AUTH_PROBE",authProbe:true}});
+      await request("DELETE","?id="+encodeURIComponent("__auth_probe__"));
       await sync();
       return true;
     }catch(err){
@@ -172,18 +177,18 @@
   }
   function disconnect(){
     localStorage.removeItem(TEAM_KEY_STORAGE);
-    setState({mode:configured()?"locked":"local",status:configured()?"Delad DB · anslut lagkod":"Lokal",error:null});
+    setState({mode:configured()?"readonly":"local",status:configured()?"Delad · läsning":"Lokal",error:null});
   }
   function subscribe(fn){listeners.add(fn);fn({...state});return()=>listeners.delete(fn)}
   function getState(){return {...state}}
 
   window.RiftSharedData={configured,hasTeamKey,localMatches,saveMatch,deleteMatch,sync,connect,disconnect,subscribe,getState};
   setState({
-    mode:configured()?(hasTeamKey()?"shared":"locked"):"local",
-    status:configured()?(hasTeamKey()?"Delad · synkar…":"Delad DB · anslut lagkod"):"Lokal · databas ej aktiverad"
+    mode:configured()?(hasTeamKey()?"shared":"readonly"):"local",
+    status:configured()?(hasTeamKey()?"Delad · synkar…":"Delad · läsning"):"Lokal · databas ej aktiverad"
   });
 
-  if(configured()&&hasTeamKey()){
+  if(configured()){
     queueMicrotask(()=>sync().catch(()=>{}));
   }
 })();
