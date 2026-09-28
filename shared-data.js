@@ -1,6 +1,5 @@
 /* Riftensräksallad shared match storage.
-   Cloud-first with local cache/offline fallback.
-   Requires db-config.js + Supabase schema. */
+   Supabase RPC backend + local cache/offline fallback. */
 (function(){
   const LOCAL_MATCHES="rs_match_history";
   const TEAM_KEY_STORAGE="rs_team_access_key";
@@ -30,18 +29,27 @@
     list.forEach(m=>{if(m&&m.id)map.set(m.id,m)});
     return [...map.values()].sort((a,b)=>new Date(a.savedAt)-new Date(b.savedAt));
   }
-  function baseHeaders(){
+  function headers(){
     const c=cfg();
     return {
       "apikey":c.anonKey,
       "Authorization":"Bearer "+c.anonKey,
-      "Content-Type":"application/json",
-      "x-team-key":teamKey()
+      "Content-Type":"application/json"
     };
   }
-  function endpoint(query=""){
+  function rpc(name){
     const c=cfg();
-    return c.url.replace(/\/$/,"")+"/rest/v1/team_matches"+query;
+    return c.url.replace(/\/$/,"")+"/rest/v1/rpc/"+name;
+  }
+  async function call(name,body){
+    const res=await fetch(rpc(name),{method:"POST",headers:headers(),body:JSON.stringify(body)});
+    if(!res.ok){
+      const detail=await res.text().catch(()=>"");
+      throw new Error("Shared DB "+res.status+(detail?": "+detail.slice(0,180):""));
+    }
+    if(res.status===204)return null;
+    const text=await res.text();
+    return text?JSON.parse(text):null;
   }
   function rowToMatch(row){
     const p=row.payload||{};
@@ -55,44 +63,16 @@
       comp:row.comp??p.comp
     };
   }
-  function matchToRow(m){
-    const c=cfg();
-    return {
-      id:m.id,
-      team_slug:c.teamSlug,
-      saved_at:m.savedAt||new Date().toISOString(),
-      result:m.result,
-      match_type:m.matchType,
-      side:m.side,
-      comp:m.comp||null,
-      payload:m
-    };
-  }
-  async function request(url,options={}){
-    const res=await fetch(url,{...options,headers:{...baseHeaders(),...(options.headers||{})}});
-    if(!res.ok){
-      const body=await res.text().catch(()=>"");
-      throw new Error("Shared DB "+res.status+(body?": "+body.slice(0,180):""));
-    }
-    if(res.status===204)return null;
-    const text=await res.text();
-    return text?JSON.parse(text):null;
-  }
   async function fetchRemote(){
     if(!configured())return localMatches();
     if(!hasTeamKey())throw new Error("TEAM_KEY_MISSING");
     const c=cfg();
-    const q="?team_slug=eq."+encodeURIComponent(c.teamSlug)+"&select=id,saved_at,result,match_type,side,comp,payload&order=saved_at.asc&limit=250";
-    const rows=await request(endpoint(q));
+    const rows=await call("rift_list_matches",{p_team_slug:c.teamSlug,p_team_key:teamKey()});
     return (rows||[]).map(rowToMatch);
   }
   async function uploadOne(match){
-    const row=matchToRow(match);
-    return request(endpoint(),{
-      method:"POST",
-      headers:{"Prefer":"resolution=merge-duplicates,return=minimal"},
-      body:JSON.stringify(row)
-    });
+    const c=cfg();
+    return call("rift_upsert_match",{p_team_slug:c.teamSlug,p_team_key:teamKey(),p_match:match});
   }
   async function saveMatch(match){
     const local=uniqueById([...localMatches(),match]);
@@ -116,7 +96,7 @@
     if(!configured()||!hasTeamKey())return {cloud:false};
     const c=cfg();
     try{
-      await request(endpoint("?team_slug=eq."+encodeURIComponent(c.teamSlug)+"&id=eq."+encodeURIComponent(id)),{method:"DELETE"});
+      await call("rift_delete_match",{p_team_slug:c.teamSlug,p_team_key:teamKey(),p_match_id:id});
       setState({mode:"shared",status:"Delad",lastSync:new Date().toISOString(),error:null});
       return {cloud:true};
     }catch(err){
@@ -139,11 +119,8 @@
       const local=localMatches();
       const remote=await fetchRemote();
       const remoteIds=new Set(remote.map(m=>m.id));
-      // One-time/offline migration: upload local-only real matches.
       for(const m of local){
-        if(m?.id&&m?.result&&m?.matchType&&!remoteIds.has(m.id)){
-          await uploadOne(m);
-        }
+        if(m?.id&&m?.result&&m?.matchType&&!remoteIds.has(m.id))await uploadOne(m);
       }
       const fresh=await fetchRemote();
       const merged=uniqueById([...local,...fresh]);
@@ -168,7 +145,7 @@
     if(!value)throw new Error("Tom lagkod.");
     localStorage.setItem(TEAM_KEY_STORAGE,value);
     try{
-      await fetchRemote(); // validate before migration
+      await fetchRemote();
       await sync();
       return true;
     }catch(err){
@@ -184,8 +161,6 @@
   function subscribe(fn){listeners.add(fn);fn({...state});return()=>listeners.delete(fn)}
   function getState(){return {...state}}
 
-  window.RiftSharedData={
-    configured,hasTeamKey,localMatches,saveMatch,deleteMatch,sync,connect,disconnect,subscribe,getState
-  };
+  window.RiftSharedData={configured,hasTeamKey,localMatches,saveMatch,deleteMatch,sync,connect,disconnect,subscribe,getState};
   setState({mode:configured()?(hasTeamKey()?"shared":"locked"):"local",status:configured()?(hasTeamKey()?"Delad · synkar…":"Delad DB · anslut lagkod"):"Lokal · databas ej aktiverad"});
 })();
