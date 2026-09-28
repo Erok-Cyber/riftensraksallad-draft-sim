@@ -145,6 +145,16 @@ def fetch_role(session, source, role):
             found[champ] = {"tier": tm.group(1), "winrate": wr}
             break
 
+    if not found:
+        candidates = []
+        for a in tree.xpath("//a[@href]"):
+            href = a.get("href") or ""
+            if "/lol/" in href:
+                candidates.append((href, compact(a.text_content())[:80]))
+            if len(candidates) >= 25:
+                break
+        print(f"DEBUG {role} {source} candidate links: {candidates}", file=sys.stderr)
+
     return found, sample
 
 def confidence_for(coverage_ratio, role_samples):
