@@ -365,7 +365,13 @@ function renderDbStatus(s=window.RiftSharedData?.getState?.()||{mode:"local",sta
   $("dbConnectBtn").classList.toggle("hidden",!configured||connected);
   $("dbSyncBtn").classList.toggle("hidden",!configured||!connected);
 }
-window.RiftSharedData?.subscribe?.(renderDbStatus);
+window.RiftSharedData?.subscribe?.(s=>{
+  renderDbStatus(s);
+  if(s.mode==="shared"){
+    syncDraftArchiveFromMatches(matchHistoryData());
+    if(!$("analysisDashboard").classList.contains("hidden"))renderAnalysis();
+  }
+});
 $("dbConnectBtn")?.addEventListener("click",async()=>{
   const code=prompt("Ange Riftensräksallads lagkod. Den sparas bara på den här enheten.");
   if(!code)return;
