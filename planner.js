@@ -58,6 +58,10 @@
       scoutingConfidence:plan.scoutingConfidence||"preliminary",
       scoutingUpdatedAt:plan.scoutingUpdatedAt||"",
       scoutingSource:plan.scoutingSource||"",
+      scoutingStatus:plan.scoutingStatus||"",
+      scoutingError:plan.scoutingError||"",
+      scoutingPlayers:Array.isArray(plan.scoutingPlayers)?plan.scoutingPlayers:[],
+      scoutingSummary:plan.scoutingSummary||null,
       scoutingDetails:plan.scoutingDetails||null,
       players:Array.isArray(plan.players)?plan.players:[],
       banPriority:Array.isArray(plan.banPriority)?plan.banPriority:[],
@@ -161,7 +165,7 @@
           '<div class="planner-meta">'+esc(dateText(plan.scheduledAt))+' · BO'+esc(plan.bestOf)+(plan.competition?' · '+esc(plan.competition):'')+' · '+esc(plan.status.toUpperCase())+'</div></div>'+
         '<div class="planner-detail-actions">'+
           (plan.opggUrl?'<a class="planner-link" href="'+esc(plan.opggUrl)+'" target="_blank" rel="noopener">OP.GG ↗</a>':'')+
-          (hasKey()&&plan.opggUrl&&(plan.players||[]).length?'<button type="button" class="planner-edit-btn" data-planner-action="scout" '+(scoutingIds.has(plan.id)?'disabled':'')+'>'+(scoutingIds.has(plan.id)?'Scoutar…':'Scouta om')+'</button>':'')+
+          (hasKey()&&plan.opggUrl&&(plan.players||[]).length?'<button type="button" class="planner-scout-btn" data-planner-action="scout" '+(scoutingIds.has(plan.id)?'disabled':'')+'>'+(scoutingIds.has(plan.id)?'Scoutar…':'Scouta om')+'</button>':'')+
           '<button type="button" class="planner-edit-btn" data-planner-action="edit">Redigera plan</button>'+
           (hasKey()?'<button type="button" class="planner-delete-btn" data-planner-action="delete">Radera match</button>':'')+
         '</div>'+
@@ -171,12 +175,13 @@
       '</div>'+
       '<p class="planner-ban-note">'+esc(plan.phase1Plan?.note||"")+'</p>'+
       '<section class="planner-section">'+
-        '<div class="planner-section-head"><h3>Scouting</h3><span class="planner-scout-badge">'+esc((plan.scoutingConfidence||"preliminary").toUpperCase())+'</span></div>'+
+        '<div class="planner-section-head"><h3>Scouting</h3><span class="planner-scout-badge '+esc(plan.scoutingStatus||"")+'">'+esc((plan.scoutingConfidence||"preliminary").toUpperCase())+'</span></div>'+
         '<div class="planner-player-grid">'+(plan.players||[]).map(x=>'<span class="planner-player">'+esc(x)+'</span>').join("")+'</div>'+
         '<p class="analysis-note" style="margin:9px 0 0">'+
           (scoutingIds.has(plan.id)?'Hämtar champion-volym, winrate och senaste ranked från OP.GG…':
             (plan.scoutingUpdatedAt?esc((plan.scoutingSource||"OP.GG")+' · uppdaterad '+plan.scoutingUpdatedAt):'Riot IDs hittade · scouting väntar'))+
         '</p>'+
+        (plan.scoutingError?'<div class="planner-scout-warning">'+esc(plan.scoutingError)+'</div>':'')+
       '</section>'+
       '<section class="planner-section">'+
         '<div class="planner-section-head"><h3>Ban-prioritet</h3><span class="analysis-note">3–5 champs</span></div>'+
@@ -300,32 +305,6 @@
     out.gameNotes={preSeries:val("pePreSeries"),game1:val("peGame1"),game2:val("peGame2"),general:val("peGeneral")};
     return normalize(out);
   }
-  async function autoScoutPlan(plan,{silent=false}={}){
-    if(!plan?.opggUrl)return;
-    if(!(await ensureWrite()))return;
-    if(autoScoutPlan.running?.has(plan.id))return;
-    autoScoutPlan.running=autoScoutPlan.running||new Set();
-    autoScoutPlan.running.add(plan.id);
-    if(!silent){
-      const btn=document.querySelector('[data-planner-action="scout"]');
-      if(btn){btn.disabled=true;btn.textContent="Scoutar OP.GG…";}
-    }
-    try{
-      const data=await request("POST","",{scout:true,plan});
-      const next=normalize(data.plan||plan);
-      const i=plans.findIndex(p=>p.id===next.id);
-      if(i>=0)plans[i]=next;else plans.push(next);
-      plans=sortPlans(plans);writeCache(plans);
-      editing=false;render();
-    }catch(err){
-      console.error("OP.GG auto-scout failed:",err);
-      if(!silent)alert("Kunde inte auto-scouta OP.GG: "+err.message);
-    }finally{
-      autoScoutPlan.running.delete(plan.id);
-    }
-  }
-  autoScoutPlan.running=new Set();
-
   async function saveCurrent(){
     if(!(await ensureWrite()))return;
     const plan=collect(current());
@@ -431,7 +410,7 @@
     scoutingIds.add(id);
     render();
     try{
-      const data=await request("POST","",{action:"scout",id});
+      const data=await request("POST","",{scout:true,plan});
       const updated=normalize(data.plan||plan);
       const i=plans.findIndex(p=>p.id===id);
       if(i>=0)plans[i]=updated;
@@ -507,7 +486,7 @@
     });
     if(status)status.textContent=opggUrl?"Skapar match & scoutar OP.GG…":"Skapar match…";
     try{
-      const data=await request("POST","",{plan});
+      const data=await request("POST","",{plan,scout:!!opggUrl});
       const savedPlan=normalize(data.plan||plan);
       plans.push(savedPlan);
       plans=sortPlans(plans);
@@ -556,10 +535,6 @@
       return;
     }
     editing?renderEdit(normalize(p)):renderRead(normalize(p));
-    const plan=normalize(p);
-    if(!editing&&hasKey()&&plan.opggUrl&&!plan.banPriority.length&&!plan.scoutingUpdatedAt&&!autoScoutPlan.running.has(plan.id)){
-      queueMicrotask(()=>autoScoutPlan(plan,{silent:true}));
-    }
   }
   function show(){
     updateDbBadge();
