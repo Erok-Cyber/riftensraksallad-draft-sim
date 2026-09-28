@@ -174,3 +174,26 @@ body.draft-complete .comps{display:none!important}
 .live-db-connect{padding:6px 9px;font-size:11px;border-radius:999px}
 
 .live-db-status.readonly{color:#9fcfff;border-color:#3d6388}
+
+/* Fast champion selection */
+.big-picks{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.champ-suggestion{
+  appearance:none;border:1px solid #52698f;background:#122039;color:var(--text);
+  border-radius:9px;padding:8px 11px;font:inherit;font-weight:900;cursor:pointer;
+  transition:border-color .12s ease,transform .12s ease,background .12s ease;
+}
+.champ-suggestion span{color:#ffe38c;font-size:.82em;margin-left:3px}
+.champ-suggestion:hover,.champ-suggestion:focus-visible{border-color:var(--accent);background:#1b2a42;outline:none}
+.champ-suggestion:active{transform:translateY(1px)}
+.champ-suggestion.compact{padding:6px 8px;font-size:12px;text-align:left}
+.role-rec-picks{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.score-champ-btn{
+  appearance:none;background:transparent;border:0;padding:0;color:var(--text);
+  font:inherit;font-size:13px;font-weight:900;text-align:left;cursor:pointer;
+}
+.score-champ-btn:hover,.score-champ-btn:focus-visible{color:#ffe38c;outline:none;text-decoration:underline}
+#championInput.suggestion-selected{border-color:var(--accent);box-shadow:0 0 0 2px rgba(240,199,94,.12)}
+@media(max-width:600px){
+  .champ-suggestion{min-height:40px;padding:9px 11px}
+  .champ-suggestion.compact{min-height:36px}
+}
