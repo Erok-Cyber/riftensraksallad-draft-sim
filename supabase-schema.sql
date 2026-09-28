@@ -46,6 +46,7 @@ as $$
 $$;
 
 revoke all on function public.verify_team_key_service(text,text) from public;
+revoke execute on function public.verify_team_key_service(text,text) from anon, authenticated;
 grant execute on function public.verify_team_key_service(text,text) to service_role;
 
 -- Provision the real team code only in Supabase, never in GitHub:
