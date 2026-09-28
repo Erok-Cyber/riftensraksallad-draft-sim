@@ -172,3 +172,5 @@ body.draft-complete .comps{display:none!important}
 .live-db-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .live-db-row .live-db-status{margin:0}
 .live-db-connect{padding:6px 9px;font-size:11px;border-radius:999px}
+
+.live-db-status.readonly{color:#9fcfff;border-color:#3d6388}
