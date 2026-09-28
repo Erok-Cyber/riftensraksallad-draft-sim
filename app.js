@@ -375,14 +375,17 @@ function renderAnalysis(){
     const d=new Date(m.savedAt);const date=isNaN(d)?m.savedAt:d.toLocaleDateString("sv-SE",{month:"2-digit",day:"2-digit"});
     const picks=(m.ourPicks||[]).map(p=>p.champ||p).join(" · ");
     const matchup=m.matchup?.score!=null?'<span class="matchup-mini">'+m.matchup.score+'/100</span>':'';
+    const canDelete=!!window.RiftSharedData?.hasTeamKey?.();
     return '<div class="match-row">'+
       '<span class="match-result '+m.result+'">'+(m.result==="win"?"WIN":"LOSS")+'</span>'+
       '<span class="match-type">'+(m.matchType==="league"?"LIGA":"FLEX")+'</span>'+
-      '<span>'+date+(m.patch?' · '+m.patch:'')+'</span>'+
+      '<span class="match-date">'+date+(m.patch?' · '+m.patch:'')+'</span>'+
       '<span class="match-comp">'+(m.comp||"—")+' '+matchup+'</span>'+
       '<span class="match-picks">'+picks+'</span>'+
-      '<button class="review-match" data-review-match="'+m.id+'">Review</button>'+
-      (window.RiftSharedData?.hasTeamKey?.()?'<button class="delete-match" data-delete-match="'+m.id+'" title="Radera match">×</button>':'<span></span>')+
+      '<span class="match-actions">'+
+        '<button class="review-match" data-review-match="'+m.id+'">Review</button>'+
+        (canDelete?'<button class="delete-match" data-delete-match="'+m.id+'" title="Radera match">×</button>':'')+
+      '</span>'+
     '</div>';
   }).join("")||'<span class="analysis-note">Ingen data i filtret.</span>';
 }
