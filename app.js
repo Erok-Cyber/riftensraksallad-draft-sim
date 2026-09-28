@@ -267,12 +267,13 @@ const $=id=>document.getElementById(id);
 champions.forEach(c=>{const o=document.createElement("option");o.value=c;$("champions").appendChild(o)});
 loadChampionRoster();
 setTrainerNav(false);
-if(new URLSearchParams(location.search).get("view")==="analysis"){
-  queueMicrotask(()=>showAnalysisView());
-}
+const requestedView=new URLSearchParams(location.search).get("view");
+if(requestedView==="analysis")queueMicrotask(()=>showAnalysisView());
+if(requestedView==="planner")queueMicrotask(()=>showBanPlannerView());
 
 $("startTabBtn").addEventListener("click",()=>showHomeView());
 $("analysisTabBtn").addEventListener("click",()=>showAnalysisView());
+$("plannerTabBtn")?.addEventListener("click",()=>showBanPlannerView());
 document.querySelectorAll(".analysis-filter").forEach(btn=>btn.addEventListener("click",()=>{
   document.querySelectorAll(".analysis-filter").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
@@ -431,16 +432,22 @@ function filteredMatches(){
 function showHomeView(){
   if(mode)return goHome();
   $("analysisDashboard").classList.add("hidden");
+  $("banPlannerDashboard")?.classList.add("hidden");
   $("modeSelect").classList.remove("hidden");
   document.querySelector(".comps").classList.remove("hidden");
-  $("startTabBtn").classList.add("active");$("analysisTabBtn").classList.remove("active");
+  $("startTabBtn").classList.add("active");
+  $("analysisTabBtn").classList.remove("active");
+  $("plannerTabBtn")?.classList.remove("active");
 }
 async function showAnalysisView(){
   if(mode)goHome();
   $("modeSelect").classList.add("hidden");
   document.querySelector(".comps").classList.add("hidden");
+  $("banPlannerDashboard")?.classList.add("hidden");
   $("analysisDashboard").classList.remove("hidden");
-  $("startTabBtn").classList.remove("active");$("analysisTabBtn").classList.add("active");
+  $("startTabBtn").classList.remove("active");
+  $("analysisTabBtn").classList.add("active");
+  $("plannerTabBtn")?.classList.remove("active");
   renderAnalysis();
   if(window.RiftSharedData){
     await window.RiftSharedData.sync();
@@ -448,6 +455,18 @@ async function showAnalysisView(){
     renderAnalysis();
   }
 }
+function showBanPlannerView(){
+  if(mode)goHome();
+  $("modeSelect").classList.add("hidden");
+  $("analysisDashboard").classList.add("hidden");
+  document.querySelector(".comps").classList.add("hidden");
+  $("banPlannerDashboard")?.classList.remove("hidden");
+  $("startTabBtn").classList.remove("active");
+  $("analysisTabBtn").classList.remove("active");
+  $("plannerTabBtn")?.classList.add("active");
+  window.RiftBanPlanner?.show?.();
+}
+
 function renderAnalysis(){
   const all=matchHistoryData().sort((a,b)=>new Date(b.savedAt)-new Date(a.savedAt));
   syncPatchFilter(all);
@@ -741,9 +760,12 @@ function goHome(){
   $("championSearch").value="";
   setTrainerNav(false);
   $("analysisDashboard").classList.add("hidden");
+  $("banPlannerDashboard")?.classList.add("hidden");
   $("modeSelect").classList.remove("hidden");
   document.querySelector(".comps").classList.remove("hidden");
-  $("startTabBtn").classList.add("active");$("analysisTabBtn").classList.remove("active");
+  $("startTabBtn").classList.add("active");
+  $("analysisTabBtn").classList.remove("active");
+  $("plannerTabBtn")?.classList.remove("active");
 }
 
 function undoPick(){
