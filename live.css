@@ -168,3 +168,7 @@ body.draft-complete .comps{display:none!important}
 .live-db-status.offline{color:#ffd29a;border-color:#73562f}
 .live-db-status.locked{color:#d8b6ff;border-color:#60427d}
 .match-analysis-link{display:inline-block;margin-top:10px;text-decoration:none}
+
+.live-db-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.live-db-row .live-db-status{margin:0}
+.live-db-connect{padding:6px 9px;font-size:11px;border-radius:999px}
