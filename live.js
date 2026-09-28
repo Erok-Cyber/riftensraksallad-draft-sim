@@ -583,7 +583,8 @@ function renderAllRoleRecommendations(){
     const recs=topRecommendations(role),div=document.createElement("div");div.className="role-rec"+(role===suggested?" recommended":"");
     const buttons=recs.map(ch=>'<button type="button" class="champ-suggestion compact" data-suggest-champ="'+encodeURIComponent(ch)+'" data-suggest-role="'+role+'">'+ch+'</button>').join("");
     div.innerHTML="<span>"+roleNames[role]+"</span><div class=\"role-rec-picks\">"+(buttons||"—")+"</div>";
-    div.addEventListener("click",()=>{
+    div.addEventListener("click",e=>{
+      if(e.target.closest("[data-suggest-champ]"))return;
       selectedRole=role;
       document.querySelectorAll(".role-buttons button").forEach(b=>b.classList.toggle("active",b.dataset.role===role));
       renderRecommendation();
