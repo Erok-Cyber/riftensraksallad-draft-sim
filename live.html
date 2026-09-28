@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Riftensräksallad Draft Brain</title>
   <link rel="stylesheet" href="styles.css?v=20260928-3" />
-  <link rel="stylesheet" href="live.css?v=20260928-quickpick1" />
+  <link rel="stylesheet" href="live.css?v=20260928-analysispack1" />
 </head>
 <body>
   <main class="app">
@@ -169,6 +169,42 @@
       </section>
 
 
+
+      <section id="draftMatchupCard" class="card draft-matchup-card">
+        <div class="analysis-head">
+          <div>
+            <p class="eyebrow">DRAFT MATCHUP · COUNTERVALUE</p>
+            <h2>Hur bra är vår draft in i deras?</h2>
+          </div>
+          <div id="matchupBadge" class="badge matchup-badge even">VÄNTAR</div>
+        </div>
+
+        <div class="matchup-hero">
+          <div>
+            <span class="mini-label">MATCHUP SCORE</span>
+            <strong id="matchupScore">—</strong>
+            <small id="matchupScoreCaption">Draft matchup score · inte win probability</small>
+          </div>
+          <div>
+            <span class="mini-label">COUNTERVALUE</span>
+            <strong id="matchupCounterValue">—</strong>
+            <small>Champion + comp-interaktioner</small>
+          </div>
+          <div>
+            <span class="mini-label">CONFIDENCE</span>
+            <strong id="matchupConfidence">TIDIG READ</strong>
+            <small>Ökar när fler picks låses</small>
+          </div>
+        </div>
+
+        <div id="matchupDimensions" class="matchup-dim-grid"></div>
+
+        <div class="matchup-explain-grid">
+          <div><span class="mini-label">VARFÖR VI GILLAR MATCHUPEN</span><p id="matchupWhy">Väntar på picks från båda lagen.</p></div>
+          <div><span class="mini-label">STÖRSTA RISKEN</span><p id="matchupRisk">Väntar på picks från båda lagen.</p></div>
+        </div>
+      </section>
+
       <section id="finalGameplanCard" class="card final-gameplan loading-call hidden">
         <div class="analysis-head">
           <div>
@@ -295,7 +331,7 @@
   <script src="db-config.js?v=20260928-publicread3"></script>
   <script src="shared-data.js?v=20260928-publicread3"></script>
   <script src="stats-engine.js?v=20260928-meta2"></script>
-  <script src="live.js?v=20260928-quickpick1"></script>
+  <script src="live.js?v=20260928-analysispack1"></script>
   <script src="advanced-engine.js?v=20260928-meta2"></script>
   <script src="draft-ai.js?v=20260928-meta2"></script>
 </body>
