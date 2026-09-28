@@ -305,7 +305,8 @@ function renderAnalysis(){
   const all=matchHistoryData().sort((a,b)=>new Date(b.savedAt)-new Date(a.savedAt));
   syncPatchFilter(all);
   const list=filteredMatches();
-  const c=resultCounts(list),league=resultCounts(all.filter(m=>m.matchType==="league")),flex=resultCounts(all.filter(m=>m.matchType==="flex"));
+  const patchScoped=currentAnalysisPatch==="all"?all:all.filter(m=>m.patch===currentAnalysisPatch);
+  const c=resultCounts(list),league=resultCounts(patchScoped.filter(m=>m.matchType==="league")),flex=resultCounts(patchScoped.filter(m=>m.matchType==="flex"));
   const recent=list.slice(0,10),rc=resultCounts(recent);
 
   $("statMatches").textContent=c.n;
