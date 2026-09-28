@@ -125,7 +125,6 @@
       setState({mode:"local",status:"Lokal · databas ej aktiverad",error:null});
       return localMatches();
     }
-
     state.syncing=true;
     setState({status:"Synkar…"});
     try{
@@ -133,12 +132,9 @@
       const remote=await fetchRemote();
 
       if(hasTeamKey()){
-        // Writer devices also upload any real local/offline matches missing in cloud.
         const remoteIds=new Set(remote.map(m=>m.id));
         for(const m of local){
-          if(m?.id&&m?.result&&m?.matchType&&!remoteIds.has(m.id)){
-            await uploadOne(m);
-          }
+          if(m?.id&&m?.result&&m?.matchType&&!remoteIds.has(m.id))await uploadOne(m);
         }
         const fresh=await fetchRemote();
         const merged=uniqueById([...local,...fresh]);
@@ -147,7 +143,6 @@
         return merged;
       }
 
-      // Read-only visitors always get the current shared database automatically.
       writeLocal(remote);
       setState({mode:"readonly",status:"Delad · läsning",lastSync:new Date().toISOString(),error:null});
       return remote;
@@ -156,8 +151,7 @@
       setState({mode:"offline",status:"Offline · lokal cache",error:String(err)});
       return localMatches();
     }finally{
-      state.syncing=false;
-      emit();
+      state.syncing=false;emit();
     }
   }
   async function connect(key){
