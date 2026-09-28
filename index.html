@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Riftensräksallad Draft Trainer</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-publicread3" />
+  <link rel="stylesheet" href="styles.css?v=20260928-analysispack1" />
 </head>
 <body>
   <main class="app">
@@ -155,6 +155,10 @@
             <button class="analysis-filter active" data-filter="all">Alla</button>
             <button class="analysis-filter" data-filter="league">Liga</button>
             <button class="analysis-filter" data-filter="flex">Flex / 5v5</button>
+            <label class="patch-filter-wrap">
+              <span>Patch</span>
+              <select id="patchFilter"><option value="all">Alla patchar</option></select>
+            </label>
           </div>
         </div>
       </div>
@@ -190,6 +194,18 @@
         </section>
       </div>
 
+      <section class="analysis-panel team-learning-panel">
+        <div class="panel-head">
+          <div>
+            <h3>Team Learning</h3>
+            <span class="analysis-note">Mönster från våra riktiga matcher · sample-aware</span>
+          </div>
+          <span id="learningConfidence" class="learning-confidence">LOW SAMPLE</span>
+        </div>
+        <div id="learningCards" class="learning-card-grid"></div>
+        <div id="learningInsights" class="learning-insights"></div>
+      </section>
+
       <section class="analysis-panel match-history-panel">
         <div class="panel-head">
           <h3>Matchhistorik</h3>
@@ -203,6 +219,39 @@
         <p>Färdigställ en riktig draft i Draft Brain och välj Win/Loss + Liga/Flex innan du sparar.</p>
       </div>
     </section>
+
+    <div id="draftReviewOverlay" class="draft-review-overlay hidden" aria-hidden="true">
+      <section class="draft-review-modal" role="dialog" aria-modal="true" aria-labelledby="draftReviewTitle">
+        <div class="draft-review-head">
+          <div>
+            <p class="eyebrow">DRAFT REVIEW</p>
+            <h2 id="draftReviewTitle">Match</h2>
+            <p id="draftReviewMeta" class="analysis-note">—</p>
+          </div>
+          <button id="closeDraftReview" class="review-close" type="button" aria-label="Stäng">×</button>
+        </div>
+
+        <div id="draftReviewSummary" class="review-summary-grid"></div>
+
+        <div class="review-section">
+          <div class="panel-head"><h3>Slutdraft</h3><span id="draftReviewMatchup" class="analysis-note">—</span></div>
+          <div class="review-team-grid">
+            <div><span class="mini-label">VI</span><div id="reviewOurPicks" class="review-picks"></div></div>
+            <div><span class="mini-label">ENEMY</span><div id="reviewEnemyPicks" class="review-picks"></div></div>
+          </div>
+        </div>
+
+        <div class="review-section">
+          <div class="panel-head"><h3>Pick / Ban-sekvens</h3><span class="analysis-note">Brain = förslaget innan vårt val</span></div>
+          <div id="draftReviewTimeline" class="review-timeline"></div>
+        </div>
+
+        <div class="review-section">
+          <div class="panel-head"><h3>Gameplan</h3></div>
+          <div id="draftReviewPlan" class="review-plan"></div>
+        </div>
+      </section>
+    </div>
 
     <section class="card comps">
       <h2>Våra standardcomps</h2>
@@ -218,6 +267,6 @@
   <script src="brand.js?v=20260928-publicread3"></script>
   <script src="db-config.js?v=20260928-publicread3"></script>
   <script src="shared-data.js?v=20260928-publicread3"></script>
-  <script src="app.js?v=20260928-publicread3"></script>
+  <script src="app.js?v=20260928-analysispack1"></script>
 </body>
 </html>
