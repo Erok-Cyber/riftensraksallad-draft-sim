@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Riftensräksallad Draft Trainer</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-banplanner1" />
+  <link rel="stylesheet" href="styles.css?v=20260928-plannercreate2" />
 </head>
 <body>
   <main class="app">
@@ -81,6 +81,61 @@
         </section>
       </div>
     </section>
+
+    <div id="plannerNewMatchOverlay" class="planner-new-overlay hidden" aria-hidden="true">
+      <section class="planner-new-modal" role="dialog" aria-modal="true" aria-labelledby="plannerNewMatchTitle">
+        <div class="planner-new-head">
+          <div>
+            <p class="eyebrow">BAN PLANNER</p>
+            <h2 id="plannerNewMatchTitle">Lägg till kommande match</h2>
+            <p>Skapa matchupen nu. Banplanen kan fyllas på direkt efteråt.</p>
+          </div>
+          <button id="plannerNewMatchCancel" class="planner-modal-close" type="button" aria-label="Stäng">×</button>
+        </div>
+
+        <div class="planner-new-grid">
+          <div class="planner-field">
+            <label for="pnOpponent">Motståndarlag</label>
+            <input id="pnOpponent" placeholder="Xenia Esports" autocomplete="off">
+          </div>
+          <div class="planner-field">
+            <label for="pnScheduled">Datum & tid</label>
+            <input id="pnScheduled" type="datetime-local">
+          </div>
+          <div class="planner-field">
+            <label for="pnBestOf">Format</label>
+            <select id="pnBestOf">
+              <option value="1">BO1</option>
+              <option value="3" selected>BO3</option>
+              <option value="5">BO5</option>
+            </select>
+          </div>
+          <div class="planner-field">
+            <label for="pnCompetition">Liga / turnering <span>valfritt</span></label>
+            <input id="pnCompetition" placeholder="Rivals">
+          </div>
+        </div>
+
+        <div class="planner-field planner-opgg-field">
+          <label for="pnOpgg">OP.GG Multisearch <span>valfritt men rekommenderat</span></label>
+          <input id="pnOpgg" placeholder="https://op.gg/lol/multisearch/euw?summoners=...">
+          <div id="pnPlayerPreview" class="planner-player-preview"></div>
+        </div>
+
+        <div class="planner-field">
+          <label for="pnPreNotes">Anteckning inför matchen <span>valfritt</span></label>
+          <textarea id="pnPreNotes" placeholder="T.ex. första matchen i BO3: tracka deras jungle-start, firstpick och banmönster."></textarea>
+        </div>
+
+        <div class="planner-new-footer">
+          <span id="pnCreateStatus" class="planner-create-status"></span>
+          <div>
+            <button id="plannerNewMatchCancelBottom" class="secondary" type="button">Avbryt</button>
+            <button id="plannerNewMatchCreate" class="primary" type="button">Skapa match</button>
+          </div>
+        </div>
+      </section>
+    </div>
 
     <section class="setup card hidden" id="setup">
       <h2 id="setupTitle">Välj sida</h2>
@@ -357,7 +412,7 @@
   <script src="brand.js?v=20260928-publicread3"></script>
   <script src="db-config.js?v=20260928-publicread3"></script>
   <script src="shared-data.js?v=20260928-publicread3"></script>
-  <script src="planner.js?v=20260928-banplanner1"></script>
-  <script src="app.js?v=20260928-banplanner1"></script>
+  <script src="planner.js?v=20260928-plannercreate2"></script>
+  <script src="app.js?v=20260928-plannercreate2"></script>
 </body>
 </html>
