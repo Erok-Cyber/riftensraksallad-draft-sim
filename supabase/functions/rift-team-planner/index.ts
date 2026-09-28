@@ -7,177 +7,239 @@ const corsHeaders={
   "Access-Control-Max-Age":"86400"
 };
 const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,headers:{...corsHeaders,"Content-Type":"application/json","Cache-Control":"no-store"}});
-const OPGG="https://lol-web-api.op.gg/api/v1.0/internal/bypass";
+const TEAM_SLUG="riftensraksallad";
+const SUMMONER_API="https://lol-api-summoner.op.gg/api";
+const CHAMPION_API="https://lol-api-champion.op.gg/api";
 const OPGG_HEADERS={
   "Accept":"application/json,text/plain,*/*",
   "Accept-Language":"en-US,en;q=0.9",
-  "User-Agent":"Mozilla/5.0 (compatible; RiftensraksalladDraftBrain/1.0)"
+  "User-Agent":"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/136 Safari/537.36"
 };
 
-type ChampRow={id:number,name:string};
-type PlayerChamp={championId:number,champ:string,play:number,win:number,lose:number,winrate:number,rank:number};
-type ScoutPlayer={riotId:string,found:boolean,totalGames:number,topChampions:PlayerChamp[],error?:string};
+type AnyRow=Record<string,any>;
+type ChampStat={
+  championId:number;
+  champ:string;
+  seasonGames:number;
+  seasonWins:number;
+  seasonWinrate:number;
+  recentGames:number;
+  recentWins:number;
+  recentWinrate:number;
+  role:string;
+  score:number;
+};
+type ScoutPlayer={
+  riotId:string;
+  found:boolean;
+  tier:string;
+  topChampions:ChampStat[];
+  error?:string;
+};
 
+function clean(value:unknown,max=220){
+  return String(value??"").replace(/[\u0000-\u001f\u007f]/g," ").trim().slice(0,max);
+}
+function same(a:unknown,b:unknown){return String(a||"").trim().toLowerCase()===String(b||"").trim().toLowerCase()}
 function splitRiotId(value:string){
   const raw=String(value||"").trim();
   const idx=raw.lastIndexOf("#");
   if(idx<=0||idx>=raw.length-1)return null;
   return {gameName:raw.slice(0,idx).trim(),tagLine:raw.slice(idx+1).trim()};
 }
-function parsePlayersFromOpgg(urlValue:string){
+function regionFromOpgg(urlValue:unknown){
   try{
     const u=new URL(String(urlValue||""));
-    if(!u.hostname.toLowerCase().endsWith("op.gg"))return [];
+    const parts=u.pathname.split("/").filter(Boolean);
+    const i=parts.findIndex(x=>x.toLowerCase()==="multisearch");
+    const raw=String(i>=0?parts[i+1]:"EUW").toUpperCase();
+    return ["EUW","EUNE","NA","KR","JP","BR","LAN","LAS","OCE","RU","TR"].includes(raw)?raw:"EUW";
+  }catch{return "EUW"}
+}
+function parsePlayersFromOpgg(urlValue:unknown){
+  try{
+    const u=new URL(String(urlValue||""));
+    const host=u.hostname.toLowerCase();
+    if(host!=="op.gg"&&!host.endsWith(".op.gg"))return [];
     const raw=u.searchParams.get("summoners")||"";
     return raw.split(",").map(x=>decodeURIComponent(x).trim()).filter(Boolean).slice(0,10);
   }catch{return []}
 }
-async function opggJson(url:string){
-  const res=await fetch(url,{headers:OPGG_HEADERS});
-  const text=await res.text();
-  if(!res.ok)throw new Error("OP.GG HTTP "+res.status);
-  try{return JSON.parse(text)}catch{throw new Error("OP.GG returned invalid JSON")}
+function pct(wins:number,games:number){return games>0?Math.round(wins/games*100):0}
+
+async function fetchJson(url:string){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),9000);
+  try{
+    const res=await fetch(url,{headers:OPGG_HEADERS,signal:controller.signal});
+    const text=await res.text();
+    if(!res.ok)throw new Error("OP.GG HTTP "+res.status);
+    try{return JSON.parse(text)}catch{throw new Error("OP.GG returned invalid JSON")}
+  }finally{clearTimeout(timer)}
 }
 async function championMap(){
   try{
-    const payload=await opggJson(OPGG+"/meta/champions?hl=en_US");
-    const list=Array.isArray(payload?.data)?payload.data:[];
-    return new Map<number,string>(list.map((x:ChampRow)=>[Number(x.id),String(x.name||x.key||x.id)]));
-  }catch{
-    try{
-      const versions=await (await fetch("https://ddragon.leagueoflegends.com/api/versions.json")).json();
-      const v=Array.isArray(versions)?versions[0]:null;
-      if(!v)return new Map<number,string>();
-      const dd=await (await fetch("https://ddragon.leagueoflegends.com/cdn/"+v+"/data/en_US/champion.json")).json();
-      return new Map<number,string>(Object.values(dd?.data||{}).map((x:any)=>[Number(x.key),String(x.name)]));
-    }catch{return new Map<number,string>()}
-  }
+    const payload=await fetchJson(CHAMPION_API+"/meta/champions?hl=en_US");
+    const rows=Array.isArray(payload?.data)?payload.data:[];
+    const map=new Map<number,string>();
+    for(const row of rows){
+      const id=Number(row?.id);
+      const name=clean(row?.name,60);
+      if(Number.isFinite(id)&&name)map.set(id,name);
+    }
+    if(map.size)return map;
+  }catch{}
+
+  try{
+    const versions=await (await fetch("https://ddragon.leagueoflegends.com/api/versions.json")).json();
+    const version=Array.isArray(versions)?versions[0]:null;
+    if(!version)return new Map<number,string>();
+    const dd=await (await fetch("https://ddragon.leagueoflegends.com/cdn/"+version+"/data/en_US/champion.json")).json();
+    return new Map<number,string>(Object.values(dd?.data||{}).map((x:any)=>[Number(x.key),String(x.name)]));
+  }catch{return new Map<number,string>()}
 }
-async function findSummoner(riotId:string){
+async function findSummoner(riotId:string,region:string){
   const parsed=splitRiotId(riotId);
-  if(!parsed)throw new Error("Invalid Riot ID");
-  const url=new URL(OPGG+"/summoners/v2/euw/autocomplete");
-  url.searchParams.set("gameName",parsed.gameName);
-  url.searchParams.set("tagline",parsed.tagLine);
-  const payload=await opggJson(url.toString());
+  if(!parsed)throw new Error("Ogiltigt Riot ID: "+riotId);
+  const url=SUMMONER_API+"/v3/"+region+"/summoners?riot_id="+encodeURIComponent(riotId)+"&hl=en_US";
+  const payload=await fetchJson(url);
   const rows=Array.isArray(payload?.data)?payload.data:[];
-  const exact=rows.find((x:any)=>
-    String(x.game_name||"").toLowerCase()===parsed.gameName.toLowerCase()&&
-    String(x.tagline||"").toLowerCase()===parsed.tagLine.toLowerCase()
-  )||rows[0];
-  if(!exact?.summoner_id)throw new Error("Summoner not found");
+  const exact=rows.find((x:AnyRow)=>same(x?.game_name,parsed.gameName)&&same(x?.tagline,parsed.tagLine))||rows[0];
+  if(!exact?.summoner_id)throw new Error("Spelaren hittades inte: "+riotId);
   return exact;
 }
-function normalizeChampionStats(rows:any[],names:Map<number,string>){
-  return rows.map((x:any)=>({
-    championId:Number(x.id??x.champion_id),
-    champ:names.get(Number(x.id??x.champion_id))||String(x.name||("Champion "+(x.id??x.champion_id))),
-    play:Number(x.play)||0,
-    win:Number(x.win)||0,
-    lose:Number(x.lose)||0
-  }))
-  .filter((x:any)=>Number.isFinite(x.championId)&&x.play>0)
-  .sort((a:any,b:any)=>b.play-a.play)
-  .slice(0,7)
-  .map((x:any,i:number)=>({...x,winrate:x.play?Math.round(x.win/x.play*100):0,rank:i+1}));
-}
-async function recentGameStats(summonerId:string,names:Map<number,string>){
-  const url=new URL(OPGG+"/games/euw/summoners/"+encodeURIComponent(summonerId));
-  url.searchParams.set("limit","20");
-  url.searchParams.set("game_type","ranked");
-  url.searchParams.set("hl","en_US");
-  const payload=await opggJson(url.toString());
-  const games=Array.isArray(payload?.data)?payload.data:[];
-  const by=new Map<number,{play:number,win:number,lose:number}>();
-  for(const g of games){
-    const me=g?.myData||g?.my_data;
-    const id=Number(me?.champion_id);
-    if(!Number.isFinite(id))continue;
-    const row=by.get(id)||{play:0,win:0,lose:0};
-    row.play++;
-    const result=String(me?.stats?.result||"").toUpperCase();
-    if(result==="WIN")row.win++;else if(result==="LOSE"||result==="LOSS")row.lose++;
-    by.set(id,row);
-  }
-  return [...by.entries()].map(([id,x])=>({id,...x})).sort((a,b)=>b.play-a.play).slice(0,7);
-}
-async function scoutPlayer(riotId:string,names:Map<number,string>):Promise<ScoutPlayer>{
+async function scoutPlayer(riotId:string,region:string,names:Map<number,string>):Promise<ScoutPlayer>{
   try{
-    const summoner=await findSummoner(riotId);
-    const sid=String(summoner.summoner_id);
-    let rows:any[]=[];
-    try{
-      const summary=await opggJson(OPGG+"/summoners/euw/"+encodeURIComponent(sid)+"/summary");
-      const s=summary?.data?.summoner||summary?.data||{};
-      rows=s?.most_champions?.champion_stats||s?.mostChampions?.champion_stats||[];
-    }catch{}
-    if(!Array.isArray(rows)||!rows.length){
-      try{rows=await recentGameStats(sid,names)}catch{}
+    const found=await findSummoner(riotId,region);
+    const sid=encodeURIComponent(String(found.summoner_id));
+    const [summaryResult,gamesResult]=await Promise.allSettled([
+      fetchJson(SUMMONER_API+"/"+region+"/summoners/"+sid+"/summary?hl=en_US"),
+      fetchJson(SUMMONER_API+"/"+region+"/summoners/"+sid+"/games?limit=20&game_type=ranked&hl=en_US&ended_at=")
+    ]);
+
+    const summaryRaw=summaryResult.status==="fulfilled"?summaryResult.value:null;
+    const gamesRaw=gamesResult.status==="fulfilled"?gamesResult.value:null;
+    const summoner=summaryRaw?.data?.summoner||summaryRaw?.data||{};
+    const seasonRows=Array.isArray(summoner?.most_champions?.champion_stats)?summoner.most_champions.champion_stats:[];
+    const games=Array.isArray(gamesRaw?.data)?gamesRaw.data:[];
+
+    const recent=new Map<number,{games:number,wins:number,positions:Map<string,number>}>();
+    for(const game of games){
+      const mine=game?.my_data||game?.myData||{};
+      const id=Number(mine?.champion_id);
+      if(!Number.isFinite(id))continue;
+      const row=recent.get(id)||{games:0,wins:0,positions:new Map<string,number>()};
+      row.games++;
+      const result=String(mine?.stats?.result||"").toUpperCase();
+      if(result==="WIN"||mine?.stats?.result===true)row.wins++;
+      const pos=clean(mine?.position||mine?.role||"",20).toUpperCase();
+      if(pos)row.positions.set(pos,(row.positions.get(pos)||0)+1);
+      recent.set(id,row);
     }
-    const topChampions=normalizeChampionStats(rows||[],names);
-    const totalGames=topChampions.reduce((n,x)=>n+x.play,0);
-    return {riotId,found:true,totalGames,topChampions};
+
+    const ids=new Set<number>();
+    for(const row of seasonRows){
+      const id=Number(row?.id??row?.champion_id);
+      if(Number.isFinite(id))ids.add(id);
+    }
+    for(const id of recent.keys())ids.add(id);
+
+    const topChampions=[...ids].map(id=>{
+      const season=seasonRows.find((x:AnyRow)=>Number(x?.id??x?.champion_id)===id)||{};
+      const recentRow=recent.get(id)||{games:0,wins:0,positions:new Map<string,number>()};
+      const seasonGames=Number(season?.play)||0;
+      const seasonWins=Number(season?.win)||0;
+      const seasonWinrate=pct(seasonWins,seasonGames);
+      const recentWinrate=pct(recentRow.wins,recentRow.games);
+      const role=[...recentRow.positions.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]||"";
+      const score=
+        Math.min(seasonGames,100)*0.72+
+        Math.max(0,seasonWinrate-50)*1.25+
+        Math.min(recentRow.games,10)*4.5+
+        Math.max(0,recentWinrate-50)*0.7;
+      return {
+        championId:id,
+        champ:names.get(id)||("Champion "+id),
+        seasonGames,
+        seasonWins,
+        seasonWinrate,
+        recentGames:recentRow.games,
+        recentWins:recentRow.wins,
+        recentWinrate,
+        role,
+        score:Math.round(score*10)/10
+      };
+    }).filter(x=>!x.champ.startsWith("Champion ")).sort((a,b)=>b.score-a.score).slice(0,8);
+
+    const tier=clean(found?.solo_tier_info?.tier||summoner?.league_stats?.[0]?.tier_info?.tier||"",30);
+    return {riotId,found:true,tier,topChampions};
   }catch(err){
-    return {riotId,found:false,totalGames:0,topChampions:[],error:err instanceof Error?err.message:"Scout failed"};
+    return {riotId,found:false,tier:"",topChampions:[],error:err instanceof Error?err.message:"Scouting misslyckades"};
   }
+}
+function explain(candidate:any){
+  const bits=[];
+  if(candidate.seasonGames)bits.push(candidate.seasonGames+" ranked / "+candidate.seasonWinrate+"% WR");
+  if(candidate.recentGames)bits.push(candidate.recentGames+"/20 senaste / "+candidate.recentWinrate+"% WR");
+  if(candidate.role)bits.push(candidate.role.toLowerCase());
+  return candidate.riotId+": "+candidate.champ+" · "+(bits.length?bits.join(" · "):"comfort pick i OP.GG-data");
 }
 function buildBanList(players:ScoutPlayer[]){
-  const aggregate=new Map<string,{champ:string,score:number,sources:{riotId:string,play:number,winrate:number,rank:number}[]}>();
-  const rankBase=[0,54,36,25,16,10,6,4];
-  for(const p of players){
-    for(const c of p.topChampions.slice(0,5)){
-      const sourceScore=(rankBase[c.rank]||4)+Math.min(c.play,35)*1.8+Math.max(0,c.winrate-50)*.7+(c.play>=20?16:c.play>=10?9:c.play>=5?4:0);
-      const row=aggregate.get(c.champ)||{champ:c.champ,score:0,sources:[]};
-      row.score+=sourceScore;
-      row.sources.push({riotId:p.riotId,play:c.play,winrate:c.winrate,rank:c.rank});
-      aggregate.set(c.champ,row);
+  const byChamp=new Map<string,any>();
+  for(const player of players){
+    for(let i=0;i<player.topChampions.length;i++){
+      const c=player.topChampions[i];
+      const entry={...c,riotId:player.riotId,rank:i+1,score:c.score+(8-i)*3};
+      const prev=byChamp.get(c.champ);
+      if(!prev||entry.score>prev.score)byChamp.set(c.champ,entry);
     }
   }
-  return [...aggregate.values()]
-    .map(row=>{
-      if(row.sources.length>1)row.score+=(row.sources.length-1)*16;
-      row.sources.sort((a,b)=>a.rank-b.rank||b.play-a.play);
-      return row;
-    })
-    .sort((a,b)=>b.score-a.score)
-    .slice(0,5)
-    .map((row,i)=>{
-      const main=row.sources[0];
-      const extra=row.sources.length>1?" · även spelad av "+(row.sources.length-1)+" annan"+(row.sources.length>2?"a":"")+" spelare":"";
-      const comfort=main.rank===1?"#1 comfort":main.rank===2?"#2 comfort":"top "+main.rank;
-      return {
-        champ:row.champ,
-        type:(i<3&&(main.rank<=2||main.play>=8))?"target":"watch",
-        priority:i+1,
-        why:main.riotId+": "+main.play+" matcher · "+main.winrate+"% WR · "+comfort+extra,
-        score:Math.round(row.score)
-      };
-    });
+  return [...byChamp.values()].sort((a,b)=>b.score-a.score).slice(0,5).map((c,i)=>({
+    champ:c.champ,
+    type:i<3?"target":"watch",
+    priority:i+1,
+    why:explain(c)
+  }));
+}
+function defaultConditionals(){
+  return [
+    {condition:"Vi går JUNGLE CARRY med Kindred/Graves",bans:["Poppy","Vi"],why:"Skydda jungle carry från point-and-click/anti-dash och invaderisk."},
+    {condition:"Vi går PRESS R med Jinx",bans:["Janna","Milio"],why:"Minska disengage som kan neutralisera första engage."},
+    {condition:"Vi går OBJECTIVE CONTROL mot lång range",bans:["Janna","Xerath"],why:"Skydda choke/setup-identiteten från reset/disengage och extrem range."}
+  ];
 }
 async function scoutPlan(plan:any){
-  const inputPlayers=Array.isArray(plan?.players)&&plan.players.length?plan.players:parsePlayersFromOpgg(plan?.opggUrl||"");
-  if(!inputPlayers.length)throw new Error("No Riot IDs found in OP.GG multisearch");
+  const inputPlayers=Array.isArray(plan?.players)&&plan.players.length
+    ?plan.players.map((x:unknown)=>clean(x,120)).filter(Boolean).slice(0,10)
+    :parsePlayersFromOpgg(plan?.opggUrl);
+  if(!inputPlayers.length)throw new Error("Inga Riot IDs hittades i OP.GG-länken.");
+
+  const region=regionFromOpgg(plan?.opggUrl);
   const names=await championMap();
-  const scouted=await Promise.all(inputPlayers.slice(0,10).map((p:string)=>scoutPlayer(String(p),names)));
+  const scouted=await Promise.all(inputPlayers.map((riotId:string)=>scoutPlayer(riotId,region,names)));
   const successful=scouted.filter(x=>x.found&&x.topChampions.length);
   const generated=buildBanList(successful);
-  const totalGames=successful.reduce((n,p)=>n+p.totalGames,0);
-  const confidence=successful.length>=4&&totalGames>=60?"high":successful.length>=3&&totalGames>=25?"medium":"preliminary";
-  const updatedAt=new Date().toISOString();
-  const next={...plan,
+  const updatedDate=new Date().toISOString().slice(0,10);
+  const totalEvidence=successful.reduce((n,p)=>n+p.topChampions.reduce((sum,c)=>sum+c.seasonGames+c.recentGames,0),0);
+  const confidence=successful.length>=4&&generated.length>=5&&totalEvidence>=60?"high":successful.length>=3&&generated.length>=3?"medium":"preliminary";
+
+  const next={
+    ...plan,
     players:inputPlayers,
     scoutingSource:"OP.GG",
     scoutingStatus:generated.length?"ok":"unavailable",
     scoutingConfidence:confidence,
-    scoutingUpdatedAt:updatedAt,
+    scoutingUpdatedAt:updatedDate,
     scoutingPlayers:scouted,
     scoutingSummary:{
+      region,
       playersFound:successful.length,
       playersTotal:inputPlayers.length,
-      sampledChampionGames:totalGames,
       generatedBans:generated.length
-    }
+    },
+    scoutingError:generated.length?"":"OP.GG svarade, men ingen användbar championdata hittades. Tryck Scouta om senare."
   };
+
   if(generated.length){
     next.banPriority=generated;
     next.phase1Plan={
@@ -185,10 +247,9 @@ async function scoutPlan(plan:any){
       b1:generated[0]?.champ||"",
       b2:generated[1]?.champ||"",
       b3:generated[2]?.champ||"",
-      note:"Auto-scout OP.GG · target bans baserat på deras nuvarande ranked comfort. Anpassa efter Game 1."
+      note:"Automatisk Game 1-plan från OP.GG: ranked-volym, winrate och de senaste ranked-matcherna. Verifiera roller i lobby och justera vid behov."
     };
-  }else{
-    next.scoutingError="OP.GG svarade, men ingen användbar championdata hittades. Befintlig banplan behölls.";
+    if(!Array.isArray(plan?.conditionalBans)||!plan.conditionalBans.length)next.conditionalBans=defaultConditionals();
   }
   return next;
 }
@@ -199,13 +260,12 @@ Deno.serve(async(req:Request)=>{
     const supabaseUrl=Deno.env.get("SUPABASE_URL");
     const serviceRole=Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     if(!supabaseUrl||!serviceRole)return json({error:"Server configuration missing"},500);
-    const teamSlug="riftensraksallad";
     const db=createClient(supabaseUrl,serviceRole,{auth:{persistSession:false,autoRefreshToken:false}});
     const url=new URL(req.url);
 
     if(req.method==="GET"){
       const id=url.searchParams.get("id");
-      let query=db.from("team_plans").select("id,opponent,scheduled_at,status,payload,updated_at").eq("team_slug",teamSlug);
+      let query=db.from("team_plans").select("id,opponent,scheduled_at,status,payload,updated_at").eq("team_slug",TEAM_SLUG);
       if(id)query=query.eq("id",id);
       const {data,error}=await query.order("scheduled_at",{ascending:true}).limit(50);
       if(error)return json({error:error.message},500);
@@ -214,7 +274,7 @@ Deno.serve(async(req:Request)=>{
 
     const teamKey=req.headers.get("x-team-key")?.trim()||"";
     if(!teamKey)return json({error:"Team access code required"},401);
-    const {data:allowed,error:verifyError}=await db.rpc("verify_team_key_service",{p_team_slug:teamSlug,p_team_key:teamKey});
+    const {data:allowed,error:verifyError}=await db.rpc("verify_team_key_service",{p_team_slug:TEAM_SLUG,p_team_key:teamKey});
     if(verifyError)return json({error:"Could not verify team access"},500);
     if(!allowed)return json({error:"Invalid team access code"},401);
 
@@ -227,26 +287,37 @@ Deno.serve(async(req:Request)=>{
       if(body?.scout===true){
         try{plan=await scoutPlan(plan)}
         catch(err){
-          plan={...plan,
+          plan={
+            ...plan,
             scoutingSource:"OP.GG",
             scoutingStatus:"unavailable",
             scoutingConfidence:"preliminary",
-            scoutingUpdatedAt:new Date().toISOString(),
-            scoutingError:err instanceof Error?err.message:"OP.GG scouting failed"
+            scoutingUpdatedAt:new Date().toISOString().slice(0,10),
+            scoutingError:clean(err instanceof Error?err.message:err,220)
           };
         }
       }
 
       const status=["upcoming","completed","cancelled"].includes(plan.status)?plan.status:"upcoming";
-      const row={id:plan.id,team_slug:teamSlug,opponent:plan.opponent.trim(),scheduled_at:plan.scheduledAt,status,payload:plan,updated_at:new Date().toISOString()};
+      const row={
+        id:clean(plan.id,160),
+        team_slug:TEAM_SLUG,
+        opponent:clean(plan.opponent,80),
+        scheduled_at:plan.scheduledAt,
+        status,
+        payload:plan,
+        updated_at:new Date().toISOString()
+      };
+      if(!row.id||!row.opponent)return json({error:"Invalid plan"},400);
       const {error}=await db.from("team_plans").upsert(row,{onConflict:"id"});
       if(error)return json({error:error.message},500);
-      return json({ok:true,id:plan.id,plan,scouted:body?.scout===true});
+      return json({ok:true,id:row.id,plan,scouted:body?.scout===true});
     }
+
     if(req.method==="DELETE"){
       const id=url.searchParams.get("id");
       if(!id)return json({error:"Plan id required"},400);
-      const {error}=await db.from("team_plans").delete().eq("team_slug",teamSlug).eq("id",id);
+      const {error}=await db.from("team_plans").delete().eq("team_slug",TEAM_SLUG).eq("id",id);
       if(error)return json({error:error.message},500);
       return json({ok:true});
     }
