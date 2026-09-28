@@ -349,7 +349,7 @@ function renderAnalysis(){
       '<span>'+date+'</span>'+
       '<span class="match-comp">'+(m.comp||"—")+'</span>'+
       '<span class="match-picks">'+picks+'</span>'+
-      '<button class="delete-match" data-delete-match="'+m.id+'" title="Radera match">×</button>'+
+      (window.RiftSharedData?.hasTeamKey?.()?'<button class="delete-match" data-delete-match="'+m.id+'" title="Radera match">×</button>':'<span></span>')+
     '</div>';
   }).join("")||'<span class="analysis-note">Ingen data i filtret.</span>';
 }
@@ -357,13 +357,14 @@ function renderAnalysis(){
 function renderDbStatus(s=window.RiftSharedData?.getState?.()||{mode:"local",status:"Lokal"}){
   const wrap=document.querySelector(".db-status-wrap");
   if(!wrap)return;
-  wrap.classList.remove("shared","offline","locked");
-  if(["shared","offline","locked"].includes(s.mode))wrap.classList.add(s.mode);
+  wrap.classList.remove("shared","offline","locked","readonly");
+  if(["shared","offline","locked","readonly"].includes(s.mode))wrap.classList.add(s.mode);
   $("dbStatusText").textContent=s.status||"Lokal";
   const configured=!!window.RiftSharedData?.configured?.();
   const connected=!!window.RiftSharedData?.hasTeamKey?.();
   $("dbConnectBtn").classList.toggle("hidden",!configured||connected);
-  $("dbSyncBtn").classList.toggle("hidden",!configured||!connected);
+  $("dbConnectBtn").textContent="Lås upp skrivning";
+  $("dbSyncBtn").classList.toggle("hidden",!configured);
 }
 window.RiftSharedData?.subscribe?.(s=>{
   renderDbStatus(s);
@@ -373,7 +374,7 @@ window.RiftSharedData?.subscribe?.(s=>{
   }
 });
 $("dbConnectBtn")?.addEventListener("click",async()=>{
-  const code=prompt("Ange Riftensräksallads lagkod. Den sparas bara på den här enheten.");
+  const code=prompt("Lagkoden behövs bara för att spara eller radera matcher. Ange Riftensräksallads lagkod:");
   if(!code)return;
   try{
     await window.RiftSharedData.connect(code);
