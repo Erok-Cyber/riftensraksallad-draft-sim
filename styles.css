@@ -266,3 +266,38 @@ body.review-open{overflow:hidden}
 .review-plan p{margin:7px 0;line-height:1.45}
 .legacy-review{background:#2a2418;border:1px solid #66572b;color:#ffe9ac;border-radius:10px;padding:12px;line-height:1.45}
 @media(max-width:700px){.draft-review-overlay{padding:8px}.draft-review-modal{padding:14px;max-height:96vh}.review-summary-grid,.review-team-grid{grid-template-columns:1fr}}
+
+/* Match history action layout fix */
+.match-row{
+  grid-template-columns:82px 90px 110px minmax(150px,1fr) minmax(180px,1.4fr) auto;
+  min-width:0;
+}
+.match-row>*{min-width:0}
+.match-date{color:var(--muted);font-size:12px;white-space:nowrap}
+.match-actions{display:flex;align-items:center;justify-content:flex-end;gap:6px;min-width:max-content}
+.review-match{white-space:nowrap;min-width:72px;text-align:center}
+.delete-match{width:28px;height:30px;display:grid;place-items:center;flex:0 0 28px}
+
+@media(max-width:1050px){
+  .match-row{grid-template-columns:70px 80px 105px minmax(120px,1fr) auto}
+  .match-picks{display:none}
+}
+@media(max-width:760px){
+  .match-row{grid-template-columns:65px 95px minmax(0,1fr) auto;gap:8px}
+  .match-type,.match-picks{display:none}
+  .match-comp{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+}
+@media(max-width:540px){
+  .match-row{
+    grid-template-columns:62px minmax(0,1fr) auto;
+    grid-template-areas:
+      "result date actions"
+      "comp comp actions";
+    row-gap:5px;
+  }
+  .match-result{grid-area:result}
+  .match-date{grid-area:date}
+  .match-comp{grid-area:comp}
+  .match-actions{grid-area:actions;align-self:stretch}
+  .review-match{min-width:66px;padding:6px 7px}
+}
