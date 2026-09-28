@@ -49,4 +49,6 @@ jobs:
           git config user.email "actions@users.noreply.github.com"
           git add external-meta.json
           git commit -m "Auto-update Draft Brain meta snapshots"
-          git push
+          git fetch origin main
+          git rebase origin/main
+          git push origin HEAD:main
