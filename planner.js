@@ -217,7 +217,7 @@
           field("Motståndare",'<input id="peOpponent" value="'+esc(plan.opponent)+'">')+
           field("Datum / tid",'<input id="peScheduled" type="datetime-local" value="'+esc(toLocalInput(plan.scheduledAt))+'">')+
           field("Status",'<select id="peStatus"><option value="upcoming" '+(plan.status==="upcoming"?"selected":"")+'>Kommande</option><option value="completed" '+(plan.status==="completed"?"selected":"")+'>Klar</option><option value="cancelled" '+(plan.status==="cancelled"?"selected":"")+'>Inställd</option></select>')+
-          field("Best of",'<select id="peBestOf"><option value="3" '+(plan.bestOf===3?"selected":"")+'>BO3</option><option value="5" '+(plan.bestOf===5?"selected":"")+'>BO5</option></select>')+
+          field("Best of",'<select id="peBestOf"><option value="1" '+(plan.bestOf===1?"selected":"")+'>BO1</option><option value="3" '+(plan.bestOf===3?"selected":"")+'>BO3</option><option value="5" '+(plan.bestOf===5?"selected":"")+'>BO5</option></select>')+
           field("Liga / turnering",'<input id="peCompetition" value="'+esc(plan.competition||'')+'" placeholder="Rivals">')+
           field("OP.GG",'<input id="peOpgg" value="'+esc(plan.opggUrl||'')+'">')+
           field("Spelare · en per rad",'<textarea id="pePlayers">'+esc((plan.players||[]).join("\n"))+'</textarea>')+
