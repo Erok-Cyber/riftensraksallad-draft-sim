@@ -1,12 +1,9 @@
-// Public Supabase client configuration.
-// The anon key is designed to be public. Access to team rows is additionally
-// protected by a team access code sent in x-team-key and checked by RLS.
-//
-// These values are intentionally blank until the Supabase project is provisioned.
+// Riftensräksallad shared match database.
+// No secret database credentials are stored in GitHub.
+// The Edge Function validates the per-device team access code server-side.
 window.RIFT_DB_CONFIG = {
-  provider: "supabase",
-  enabled: false,
-  url: "",
-  anonKey: "",
+  provider: "supabase-edge",
+  enabled: true,
+  functionUrl: "https://enzrxndugnfseekdgauh.supabase.co/functions/v1/rift-team-matches",
   teamSlug: "riftensraksallad"
 };
