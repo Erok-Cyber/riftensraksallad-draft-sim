@@ -194,15 +194,19 @@ document.querySelectorAll(".analysis-filter").forEach(btn=>btn.addEventListener(
   currentAnalysisFilter=btn.dataset.filter;
   renderAnalysis();
 }));
-$("matchHistory").addEventListener("click",e=>{
+$("matchHistory").addEventListener("click",async e=>{
   const btn=e.target.closest("[data-delete-match]");
   if(!btn)return;
   const id=btn.dataset.deleteMatch;
-  if(confirm("Radera den här sparade matchen?")){
-    const next=matchHistoryData().filter(m=>m.id!==id);
-    localStorage.setItem("rs_match_history",JSON.stringify(next));
-    syncDraftArchiveFromMatches(next);
-    renderAnalysis();
+  if(confirm("Radera den här sparade matchen för hela laget?")){
+    try{
+      if(window.RiftSharedData)await window.RiftSharedData.deleteMatch(id);
+      else localStorage.setItem("rs_match_history",JSON.stringify(matchHistoryData().filter(m=>m.id!==id)));
+      syncDraftArchiveFromMatches(matchHistoryData());
+      renderAnalysis();
+    }catch(err){
+      alert("Kunde inte radera från den delade databasen. Kontrollera anslutningen.");
+    }
   }
 });
 
@@ -229,6 +233,7 @@ document.querySelectorAll(".side-btn").forEach(btn=>btn.addEventListener("click"
 let currentAnalysisFilter="all";
 
 function matchHistoryData(){
+  if(window.RiftSharedData)return window.RiftSharedData.localMatches();
   try{return JSON.parse(localStorage.getItem("rs_match_history")||"[]")}catch{return[]}
 }
 function syncDraftArchiveFromMatches(matches){
@@ -257,13 +262,18 @@ function showHomeView(){
   document.querySelector(".comps").classList.remove("hidden");
   $("startTabBtn").classList.add("active");$("analysisTabBtn").classList.remove("active");
 }
-function showAnalysisView(){
+async function showAnalysisView(){
   if(mode)goHome();
   $("modeSelect").classList.add("hidden");
   document.querySelector(".comps").classList.add("hidden");
   $("analysisDashboard").classList.remove("hidden");
   $("startTabBtn").classList.remove("active");$("analysisTabBtn").classList.add("active");
   renderAnalysis();
+  if(window.RiftSharedData){
+    await window.RiftSharedData.sync();
+    syncDraftArchiveFromMatches(matchHistoryData());
+    renderAnalysis();
+  }
 }
 function renderAnalysis(){
   const all=matchHistoryData().sort((a,b)=>new Date(b.savedAt)-new Date(a.savedAt));
@@ -343,6 +353,36 @@ function renderAnalysis(){
     '</div>';
   }).join("")||'<span class="analysis-note">Ingen data i filtret.</span>';
 }
+
+function renderDbStatus(s=window.RiftSharedData?.getState?.()||{mode:"local",status:"Lokal"}){
+  const wrap=document.querySelector(".db-status-wrap");
+  if(!wrap)return;
+  wrap.classList.remove("shared","offline","locked");
+  if(["shared","offline","locked"].includes(s.mode))wrap.classList.add(s.mode);
+  $("dbStatusText").textContent=s.status||"Lokal";
+  const configured=!!window.RiftSharedData?.configured?.();
+  const connected=!!window.RiftSharedData?.hasTeamKey?.();
+  $("dbConnectBtn").classList.toggle("hidden",!configured||connected);
+  $("dbSyncBtn").classList.toggle("hidden",!configured||!connected);
+}
+window.RiftSharedData?.subscribe?.(renderDbStatus);
+$("dbConnectBtn")?.addEventListener("click",async()=>{
+  const code=prompt("Ange Riftensräksallads lagkod. Den sparas bara på den här enheten.");
+  if(!code)return;
+  try{
+    await window.RiftSharedData.connect(code);
+    syncDraftArchiveFromMatches(matchHistoryData());
+    renderAnalysis();
+  }catch{
+    alert("Lagkoden kunde inte verifieras.");
+  }
+});
+$("dbSyncBtn")?.addEventListener("click",async()=>{
+  await window.RiftSharedData?.sync?.();
+  syncDraftArchiveFromMatches(matchHistoryData());
+  renderAnalysis();
+});
+renderDbStatus();
 
 function setTrainerNav(active){
   $("homeTabs").classList.toggle("hidden",active);
