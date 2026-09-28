@@ -112,11 +112,11 @@ def fetch_role(session, source, role):
         return re.sub(r"[^a-z0-9]", "", value.lower())
 
     slug_to_champ = {slug_key(champ): champ for champ in targets}
-    tier_re = re.compile(r"(?<![A-Z0-9])(S\\+|S-|S|A\\+|A-|A|B\\+|B-|B|C\\+|C-|C|D\\+|D-|D)(?![A-Z0-9])")
+    tier_re = re.compile(r"(S\\+|S-|A\\+|A-|B\\+|B-|C\\+|C-|D\\+|D-|S|A|B|C|D)")
 
-    # LoLalytics changes layout regularly. Instead of relying on one absolute
-    # XPath, locate champion build links and walk up to the smallest ancestor
-    # that contains a tier token plus a plausible win-rate value.
+    # Current LoLalytics grid rows are rendered inside the champion build link,
+    # e.g. "Wukong183.81S+53.396.133.71...". We only need the tier marker and
+    # the first percentage-like value immediately after it (champion win rate).
     for a in tree.xpath("//a[@href]"):
         href = a.get("href") or ""
         hm = re.search(r"/lol/([^/]+)/(?:build|guide)/?", href, re.I)
@@ -126,24 +126,18 @@ def fetch_role(session, source, role):
         if not champ or champ in found:
             continue
 
-        node = a
-        for _ in range(8):
-            node = node.getparent()
-            if node is None:
-                break
-            text = compact(node.text_content())
-            if not text or len(text) > 900:
-                continue
-            tm = tier_re.search(text)
-            if not tm:
-                continue
-            after = text[tm.end():]
-            nums = [float(x) for x in re.findall(r"\\d+(?:\\.\\d+)?", after)]
-            wr = next((x for x in nums if 30 <= x <= 70), None)
-            if wr is None:
-                continue
-            found[champ] = {"tier": tm.group(1), "winrate": wr}
-            break
+        text = compact(a.text_content())
+        if not text:
+            continue
+        tm = tier_re.search(text)
+        if not tm:
+            continue
+        after = text[tm.end():]
+        wrm = re.match(r"(\\d{2}(?:\\.\\d+)?)", after)
+        wr = float(wrm.group(1)) if wrm else None
+        if wr is None or not (30 <= wr <= 70):
+            continue
+        found[champ] = {"tier": tm.group(1), "winrate": wr}
 
     # Text fallback: the server-rendered tier list contains rows in the form
     # "Champion Rank Lane% Tier Win% Pick% Ban% ...". This survives most DOM refactors.
