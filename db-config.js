@@ -5,5 +5,6 @@ window.RIFT_DB_CONFIG = {
   provider: "supabase-edge",
   enabled: true,
   functionUrl: "https://enzrxndugnfseekdgauh.supabase.co/functions/v1/rift-team-matches",
+  plannerFunctionUrl: "https://enzrxndugnfseekdgauh.supabase.co/functions/v1/rift-team-planner",
   teamSlug: "riftensraksallad"
 };
