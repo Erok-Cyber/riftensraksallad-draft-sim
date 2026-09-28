@@ -194,7 +194,16 @@ document.querySelectorAll(".analysis-filter").forEach(btn=>btn.addEventListener(
   currentAnalysisFilter=btn.dataset.filter;
   renderAnalysis();
 }));
+$("patchFilter")?.addEventListener("change",e=>{
+  currentAnalysisPatch=e.target.value||"all";
+  renderAnalysis();
+});
 $("matchHistory").addEventListener("click",async e=>{
+  const review=e.target.closest("[data-review-match]");
+  if(review){
+    openDraftReview(review.dataset.reviewMatch);
+    return;
+  }
   const btn=e.target.closest("[data-delete-match]");
   if(!btn)return;
   const id=btn.dataset.deleteMatch;
@@ -231,6 +240,7 @@ document.querySelectorAll(".side-btn").forEach(btn=>btn.addEventListener("click"
 }));
 
 let currentAnalysisFilter="all";
+let currentAnalysisPatch="all";
 
 function matchHistoryData(){
   if(window.RiftSharedData)return window.RiftSharedData.localMatches();
@@ -242,7 +252,8 @@ function syncDraftArchiveFromMatches(matches){
     ourBans:m.ourBans||[],enemyBans:m.enemyBans||[],comp:m.comp||null,
     scaling:m.scaling||null,bestWindow:m.bestWindow||null,topRisk:m.topRisk||null,
     fightStyle:m.fightStyle||null,objectiveStyle:m.objectiveStyle||null,
-    result:m.result||null,matchType:m.matchType||null
+    result:m.result||null,matchType:m.matchType||null,patch:m.patch||null,
+    matchup:m.matchup||null,draftTimeline:m.draftTimeline||[]
   }));
   localStorage.setItem("rs_draft_archive",JSON.stringify(archive));
 }
@@ -251,9 +262,24 @@ function resultCounts(list){
   const w=list.filter(m=>m.result==="win").length;
   return {w,l:list.length-w,n:list.length};
 }
+function patchSortValue(p){
+  const [a,b]=String(p||"0.0").split(".").map(Number);
+  return (Number.isFinite(a)?a:0)*100+(Number.isFinite(b)?b:0);
+}
+function syncPatchFilter(all){
+  const select=$("patchFilter");
+  if(!select)return;
+  const patches=[...new Set(all.map(m=>m.patch).filter(Boolean))].sort((a,b)=>patchSortValue(b)-patchSortValue(a));
+  if(currentAnalysisPatch!=="all"&&!patches.includes(currentAnalysisPatch))currentAnalysisPatch="all";
+  select.innerHTML='<option value="all">Alla patchar</option>'+patches.map(p=>'<option value="'+p+'">'+p+'</option>').join("");
+  select.value=currentAnalysisPatch;
+}
 function filteredMatches(){
   const all=matchHistoryData().sort((a,b)=>new Date(b.savedAt)-new Date(a.savedAt));
-  return currentAnalysisFilter==="all"?all:all.filter(m=>m.matchType===currentAnalysisFilter);
+  return all.filter(m=>
+    (currentAnalysisFilter==="all"||m.matchType===currentAnalysisFilter)&&
+    (currentAnalysisPatch==="all"||m.patch===currentAnalysisPatch)
+  );
 }
 function showHomeView(){
   if(mode)return goHome();
@@ -277,6 +303,7 @@ async function showAnalysisView(){
 }
 function renderAnalysis(){
   const all=matchHistoryData().sort((a,b)=>new Date(b.savedAt)-new Date(a.savedAt));
+  syncPatchFilter(all);
   const list=filteredMatches();
   const c=resultCounts(list),league=resultCounts(all.filter(m=>m.matchType==="league")),flex=resultCounts(all.filter(m=>m.matchType==="flex"));
   const recent=list.slice(0,10),rc=resultCounts(recent);
@@ -288,7 +315,8 @@ function renderAnalysis(){
   $("statFlexWr").textContent=percent(flex.w,flex.n);$("statFlexCount").textContent=flex.n+" matcher";
   $("statRecent").textContent=recent.length?percent(rc.w,rc.n):"—";
   $("statRecentRecord").textContent=recent.length?rc.w+"W · "+rc.l+"L":"Ingen data";
-  $("statFilterLabel").textContent=currentAnalysisFilter==="all"?"Alla matcher":currentAnalysisFilter==="league"?"Ligamatcher":"Flex / 5v5";
+  const typeLabel=currentAnalysisFilter==="all"?"Alla matcher":currentAnalysisFilter==="league"?"Ligamatcher":"Flex / 5v5";
+  $("statFilterLabel").textContent=typeLabel+(currentAnalysisPatch==="all"?"":" · patch "+currentAnalysisPatch);
 
   $("analysisEmpty").classList.toggle("hidden",all.length>0);
   document.querySelectorAll(".analysis-panel,.analysis-kpis").forEach(el=>el.classList.toggle("hidden",all.length===0));
@@ -339,20 +367,170 @@ function renderAnalysis(){
   if(!patterns.length)patterns.push("Mer data behövs innan tydliga lagmönster går att skilja från enstaka matcher.");
   $("patternInsights").innerHTML=patterns.slice(0,4).map(t=>'<div class="pattern-item">'+t+'</div>').join("");
 
+  renderTeamLearning(list);
+
   $("historyCount").textContent=list.length+" matcher";
   $("matchHistory").innerHTML=list.slice(0,50).map(m=>{
     const d=new Date(m.savedAt);const date=isNaN(d)?m.savedAt:d.toLocaleDateString("sv-SE",{month:"2-digit",day:"2-digit"});
     const picks=(m.ourPicks||[]).map(p=>p.champ||p).join(" · ");
+    const matchup=m.matchup?.score!=null?'<span class="matchup-mini">'+m.matchup.score+'/100</span>':'';
     return '<div class="match-row">'+
       '<span class="match-result '+m.result+'">'+(m.result==="win"?"WIN":"LOSS")+'</span>'+
       '<span class="match-type">'+(m.matchType==="league"?"LIGA":"FLEX")+'</span>'+
-      '<span>'+date+'</span>'+
-      '<span class="match-comp">'+(m.comp||"—")+'</span>'+
+      '<span>'+date+(m.patch?' · '+m.patch:'')+'</span>'+
+      '<span class="match-comp">'+(m.comp||"—")+' '+matchup+'</span>'+
       '<span class="match-picks">'+picks+'</span>'+
+      '<button class="review-match" data-review-match="'+m.id+'">Review</button>'+
       (window.RiftSharedData?.hasTeamKey?.()?'<button class="delete-match" data-delete-match="'+m.id+'" title="Radera match">×</button>':'<span></span>')+
     '</div>';
   }).join("")||'<span class="analysis-note">Ingen data i filtret.</span>';
 }
+
+
+function roleChamp(match,role){
+  const p=(match.ourPicks||[]).find(x=>(x.role||"")===role);
+  return p?.champ||null;
+}
+function groupedRecord(list,keyFn){
+  const map={};
+  list.forEach(m=>{
+    const key=keyFn(m);
+    if(!key)return;
+    const row=map[key]||(map[key]={n:0,w:0});
+    row.n++;if(m.result==="win")row.w++;
+  });
+  return Object.entries(map).map(([name,x])=>({name,...x,wr:x.n?x.w/x.n:0}));
+}
+function bestObserved(rows,minN=3){
+  return rows.filter(x=>x.n>=minN).sort((a,b)=>b.wr-a.wr||b.n-a.n)[0]||null;
+}
+function renderTeamLearning(list){
+  const n=list.length,c=resultCounts(list);
+  const confidence=n>=20?"HÖG SAMPLE":n>=10?"MEDEL SAMPLE":n>=5?"TIDIG TREND":"LOW SAMPLE";
+  const badge=$("learningConfidence");
+  if(badge){
+    badge.textContent=confidence;
+    badge.className="learning-confidence "+(n>=20?"high":n>=10?"medium":"low");
+  }
+
+  const comps=groupedRecord(list,m=>m.comp||null);
+  const jgMid=groupedRecord(list,m=>{
+    const j=roleChamp(m,"jungle"),mid=roleChamp(m,"mid");
+    return j&&mid?j+" + "+mid:null;
+  });
+  const bot=groupedRecord(list,m=>{
+    const a=roleChamp(m,"adc"),s=roleChamp(m,"support");
+    return a&&s?a+" + "+s:null;
+  });
+  const bestComp=bestObserved(comps,3);
+  const bestJgMid=bestObserved(jgMid,3);
+  const bestBot=bestObserved(bot,3);
+
+  const favorable=list.filter(m=>Number(m.matchup?.score)>=58);
+  const difficult=list.filter(m=>Number(m.matchup?.score)<47&&m.matchup?.score!=null);
+  const fav=resultCounts(favorable),dif=resultCounts(difficult);
+  const matchupSaved=list.filter(m=>m.matchup?.score!=null);
+  const avgMatchup=matchupSaved.length
+    ?Math.round(matchupSaved.reduce((sum,m)=>sum+Number(m.matchup.score),0)/matchupSaved.length)
+    :null;
+
+  const cards=[
+    ["UNDERLAG",n+" matcher",n>=10?"Tillräckligt för försiktiga lagtrender":"Bygg sample innan hårda slutsatser"],
+    ["OBS. COMP",bestComp?bestComp.name:"—",bestComp?percent(bestComp.w,bestComp.n)+" · "+bestComp.n+" matcher":"Kräver minst 3 matcher"],
+    ["JUNGLE + MID",bestJgMid?bestJgMid.name:"—",bestJgMid?percent(bestJgMid.w,bestJgMid.n)+" · "+bestJgMid.n+" matcher":"Kräver minst 3 matcher"],
+    ["BOTDUO",bestBot?bestBot.name:"—",bestBot?percent(bestBot.w,bestBot.n)+" · "+bestBot.n+" matcher":"Kräver minst 3 matcher"],
+    ["AVG MATCHUP",avgMatchup!=null?avgMatchup+"/100":"—",matchupSaved.length?matchupSaved.length+" matcher med nya matchup-motorn":"Nya matcher börjar samla detta"],
+    ["TOTALT",percent(c.w,c.n),c.w+"W · "+c.l+"L"]
+  ];
+  $("learningCards").innerHTML=cards.map(([label,value,sub])=>
+    '<div class="learning-card"><span>'+label+'</span><strong>'+value+'</strong><small>'+sub+'</small></div>'
+  ).join("");
+
+  const insights=[];
+  if(n<5){
+    insights.push("Team Learning samlar data. Under 5 matcher visas observationer men inga starka slutsatser.");
+  }else{
+    if(bestComp)insights.push("Observerat: "+bestComp.name+" har högst WR bland comps med minst 3 matcher ("+percent(bestComp.w,bestComp.n)+", n="+bestComp.n+").");
+    if(bestJgMid)insights.push("Jungle+mid-kombinationen "+bestJgMid.name+" har hittills "+percent(bestJgMid.w,bestJgMid.n)+" över "+bestJgMid.n+" matcher.");
+    if(bestBot)insights.push("Botduon "+bestBot.name+" har hittills "+percent(bestBot.w,bestBot.n)+" över "+bestBot.n+" matcher.");
+    if(fav.n>=3)insights.push("När Draft Matchup varit ≥58 har resultatet varit "+percent(fav.w,fav.n)+" ("+fav.w+"W · "+fav.l+"L, n="+fav.n+").");
+    if(dif.n>=3)insights.push("När Draft Matchup varit <47 har resultatet varit "+percent(dif.w,dif.n)+" ("+dif.w+"W · "+dif.l+"L, n="+dif.n+").");
+    const recent=resultCounts(list.slice(0,5)),older=resultCounts(list.slice(5,15));
+    if(recent.n>=5&&older.n>=5)insights.push("Senaste 5: "+percent(recent.w,recent.n)+" · föregående "+older.n+": "+percent(older.w,older.n)+".");
+  }
+  if(!insights.length)insights.push("Mer data behövs för att skilja lagmönster från normal matchvarians.");
+  $("learningInsights").innerHTML=insights.slice(0,5).map(x=>'<div class="learning-insight">'+x+'</div>').join("");
+}
+
+function reviewEscape(value){
+  return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
+}
+function closeDraftReview(){
+  const overlay=$("draftReviewOverlay");
+  if(!overlay)return;
+  overlay.classList.add("hidden");
+  overlay.setAttribute("aria-hidden","true");
+  document.body.classList.remove("review-open");
+}
+function openDraftReview(id){
+  const m=matchHistoryData().find(x=>x.id===id);
+  if(!m)return;
+  const overlay=$("draftReviewOverlay");
+  const d=new Date(m.savedAt);
+  const date=isNaN(d)?m.savedAt:d.toLocaleString("sv-SE",{dateStyle:"medium",timeStyle:"short"});
+  $("draftReviewTitle").textContent=(m.result==="win"?"WIN":"LOSS")+" · "+(m.comp||"Draft");
+  $("draftReviewMeta").textContent=[date,m.matchType==="league"?"Liga":"Flex / 5v5",m.patch?"Patch "+m.patch:null,m.side?m.side.toUpperCase()+" side":null].filter(Boolean).join(" · ");
+
+  const matchup=m.matchup;
+  const summary=[
+    ["RESULTAT",m.result==="win"?"WIN":"LOSS"],
+    ["COMP",m.comp||"—"],
+    ["MATCHUP",matchup?.score!=null?matchup.score+"/100 · "+(matchup.label||""):"Legacy · ej sparad"],
+    ["COUNTERVALUE",matchup?.counterValue!=null?matchup.counterValue+"/100":"—"],
+    ["POWER WINDOW",m.bestWindow||"—"],
+    ["SCALING",m.scaling||"—"]
+  ];
+  $("draftReviewSummary").innerHTML=summary.map(([a,b])=>'<div><span>'+reviewEscape(a)+'</span><strong>'+reviewEscape(b)+'</strong></div>').join("");
+  $("draftReviewMatchup").textContent=matchup?.confidence?"Confidence "+matchup.confidence:"";
+
+  $("reviewOurPicks").innerHTML=(m.ourPicks||[]).map(p=>'<span><b>'+reviewEscape((p.role||"").toUpperCase())+'</b>'+reviewEscape(p.champ||p)+'</span>').join("");
+  $("reviewEnemyPicks").innerHTML=(m.enemyPicks||[]).map(p=>'<span><b>'+reviewEscape((p.inferredRole||p.role||"?").toUpperCase())+'</b>'+reviewEscape(p.champ||p)+'</span>').join("");
+
+  if(Array.isArray(m.draftTimeline)&&m.draftTimeline.length){
+    $("draftReviewTimeline").innerHTML=m.draftTimeline.map((e,i)=>{
+      const ours=e.side===m.side;
+      const suggestions=e.brain?.suggestions||[];
+      const inTop=suggestions.includes(e.champ);
+      let brain="";
+      if(ours&&suggestions.length){
+        brain='<div class="review-brain '+(inTop?"followed":"deviated")+'"><b>Brain:</b> '+suggestions.map(reviewEscape).join(" / ")+(inTop?" · ✓ inom top 3":" · valde annat")+'</div>';
+      }
+      return '<div class="review-step '+(ours?"ours":"enemy")+'">'+
+        '<span class="review-step-num">'+(i+1)+'</span>'+
+        '<div><small>'+reviewEscape(e.label||((e.side||"").toUpperCase()+" "+e.type))+' · '+(ours?"VI":"ENEMY")+'</small>'+
+        '<strong>'+reviewEscape(e.champ)+'</strong>'+
+        (e.role?'<em>'+reviewEscape(String(e.role).toUpperCase())+'</em>':'')+brain+'</div>'+
+      '</div>';
+    }).join("");
+  }else{
+    $("draftReviewTimeline").innerHTML='<div class="legacy-review">Den här matchen sparades innan full Draft Review började loggas. Slutpicks och bans finns kvar, men den exakta pick/ban-sekvensen och Brain-förslagen saknas.</div>';
+  }
+
+  const reasons=matchup?.why?.length?'<p><b>Matchup +:</b> '+matchup.why.map(reviewEscape).join(" ")+'</p>':"";
+  const risks=matchup?.risks?.length?'<p><b>Matchup risk:</b> '+matchup.risks.map(reviewEscape).join(" ")+'</p>':"";
+  $("draftReviewPlan").innerHTML=
+    '<p><b>Loading call:</b> '+reviewEscape(m.loadingCall||"—")+'</p>'+
+    '<p><b>Top risk:</b> '+reviewEscape(m.topRisk||"—")+'</p>'+
+    '<p><b>Fight:</b> '+reviewEscape(m.fightStyle||"—")+'</p>'+
+    '<p><b>Objective:</b> '+reviewEscape(m.objectiveStyle||"—")+'</p>'+reasons+risks;
+
+  overlay.classList.remove("hidden");
+  overlay.setAttribute("aria-hidden","false");
+  document.body.classList.add("review-open");
+}
+$("closeDraftReview")?.addEventListener("click",closeDraftReview);
+$("draftReviewOverlay")?.addEventListener("click",e=>{if(e.target===$("draftReviewOverlay"))closeDraftReview()});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDraftReview()});
 
 function renderDbStatus(s=window.RiftSharedData?.getState?.()||{mode:"local",status:"Lokal"}){
   const wrap=document.querySelector(".db-status-wrap");
