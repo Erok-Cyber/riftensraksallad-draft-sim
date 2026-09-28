@@ -30,6 +30,16 @@ jobs:
         with:
           ref: main
 
+      - name: Validate JavaScript
+        run: |
+          node --check app.js
+          node --check planner.js
+          node --check live.js
+          node --check shared-data.js
+          node --check stats-engine.js
+          node --check advanced-engine.js
+          node --check draft-ai.js
+
       - name: Setup Pages
         uses: actions/configure-pages@v5
         with:
