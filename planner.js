@@ -6,6 +6,8 @@
   let selectedId=null;
   let editing=false;
   let loading=false;
+  const scoutingIds=new Set();
+  const autoScoutAttempted=new Set();
 
   const $=id=>document.getElementById(id);
   const cfg=()=>window.RIFT_DB_CONFIG||{};
@@ -55,6 +57,8 @@
       competition:plan.competition||"",
       scoutingConfidence:plan.scoutingConfidence||"preliminary",
       scoutingUpdatedAt:plan.scoutingUpdatedAt||"",
+      scoutingSource:plan.scoutingSource||"",
+      scoutingDetails:plan.scoutingDetails||null,
       players:Array.isArray(plan.players)?plan.players:[],
       banPriority:Array.isArray(plan.banPriority)?plan.banPriority:[],
       phase1Plan:plan.phase1Plan||{b1:"",b2:"",b3:"",note:""},
@@ -115,6 +119,7 @@
       writeCache(plans);
       if(!selectedId||!plans.some(p=>p.id===selectedId))selectedId=plans.find(p=>p.status==="upcoming")?.id||plans[0]?.id||null;
       render();
+      queueAutoScout();
     }catch(err){
       console.warn("Ban Planner sync failed; using cache.",err);
       if(!plans.length)renderError("Kunde inte läsa den delade Ban Planner-databasen.");
@@ -140,7 +145,7 @@
       return '<button type="button" class="planner-match-card '+(p.id===selectedId?"active":"")+'" data-plan-id="'+esc(p.id)+'">'+
         '<span class="top"><strong>'+esc(p.opponent)+'</strong><span class="status '+esc(p.status)+'">'+status+'</span></span>'+
         '<span class="date">'+esc(dateText(p.scheduledAt))+' · BO'+esc(p.bestOf||3)+'</span>'+
-        '<small>'+esc((p.phase1Plan?.b1||"—")+" / "+(p.phase1Plan?.b2||"—")+" / "+(p.phase1Plan?.b3||"—"))+'</small>'+
+        '<small>'+(scoutingIds.has(p.id)?'Scoutar OP.GG…':esc((p.phase1Plan?.b1||"—")+" / "+(p.phase1Plan?.b2||"—")+" / "+(p.phase1Plan?.b3||"—")))+'</small>'+
       '</button>';
     }).join("");
   }
@@ -156,6 +161,7 @@
           '<div class="planner-meta">'+esc(dateText(plan.scheduledAt))+' · BO'+esc(plan.bestOf)+(plan.competition?' · '+esc(plan.competition):'')+' · '+esc(plan.status.toUpperCase())+'</div></div>'+
         '<div class="planner-detail-actions">'+
           (plan.opggUrl?'<a class="planner-link" href="'+esc(plan.opggUrl)+'" target="_blank" rel="noopener">OP.GG ↗</a>':'')+
+          (hasKey()&&plan.opggUrl&&(plan.players||[]).length?'<button type="button" class="planner-edit-btn" data-planner-action="scout" '+(scoutingIds.has(plan.id)?'disabled':'')+'>'+(scoutingIds.has(plan.id)?'Scoutar…':'Scouta om')+'</button>':'')+
           '<button type="button" class="planner-edit-btn" data-planner-action="edit">Redigera plan</button>'+
           (hasKey()?'<button type="button" class="planner-delete-btn" data-planner-action="delete">Radera match</button>':'')+
         '</div>'+
@@ -167,6 +173,10 @@
       '<section class="planner-section">'+
         '<div class="planner-section-head"><h3>Scouting</h3><span class="planner-scout-badge">'+esc((plan.scoutingConfidence||"preliminary").toUpperCase())+'</span></div>'+
         '<div class="planner-player-grid">'+(plan.players||[]).map(x=>'<span class="planner-player">'+esc(x)+'</span>').join("")+'</div>'+
+        '<p class="analysis-note" style="margin:9px 0 0">'+
+          (scoutingIds.has(plan.id)?'Hämtar champion-volym, winrate och senaste ranked från OP.GG…':
+            (plan.scoutingUpdatedAt?esc((plan.scoutingSource||"OP.GG")+' · uppdaterad '+plan.scoutingUpdatedAt):'Riot IDs hittade · scouting väntar'))+
+        '</p>'+
       '</section>'+
       '<section class="planner-section">'+
         '<div class="planner-section-head"><h3>Ban-prioritet</h3><span class="analysis-note">3–5 champs</span></div>'+
@@ -384,6 +394,49 @@
     box.innerHTML='<span class="planner-preview-label">'+players.length+' spelare hittade</span>'+
       '<div class="planner-preview-players">'+players.map(p=>'<b>'+esc(p)+'</b>').join("")+'</div>';
   }
+  async function scoutPlan(id=selectedId,{silent=false}={}){
+    const plan=plans.find(p=>p.id===id);
+    if(!plan||scoutingIds.has(id))return false;
+    if(!hasKey()&&!(await ensureWrite()))return false;
+    if(!plan.opggUrl||!(plan.players||[]).length){
+      if(!silent)alert("Lägg till en OP.GG Multisearch-länk med Riot IDs först.");
+      return false;
+    }
+    scoutingIds.add(id);
+    render();
+    try{
+      const data=await request("POST","",{action:"scout",id});
+      const updated=normalize(data.plan||plan);
+      const i=plans.findIndex(p=>p.id===id);
+      if(i>=0)plans[i]=updated;
+      plans=sortPlans(plans);
+      writeCache(plans);
+      render();
+      return true;
+    }catch(err){
+      console.error("Ban Planner autoscout failed:",err);
+      if(!silent)alert("Kunde inte auto-scouta laget: "+err.message);
+      return false;
+    }finally{
+      scoutingIds.delete(id);
+      render();
+    }
+  }
+  function queueAutoScout(){
+    if(!hasKey())return;
+    const target=plans.find(p=>
+      p.status==="upcoming"&&
+      p.opggUrl&&
+      (p.players||[]).length&&
+      !(p.banPriority||[]).length&&
+      !autoScoutAttempted.has(p.id)&&
+      !scoutingIds.has(p.id)
+    );
+    if(!target)return;
+    autoScoutAttempted.add(target.id);
+    queueMicrotask(()=>scoutPlan(target.id,{silent:true}));
+  }
+
   async function createMatchFromForm(){
     if(!(await ensureWrite()))return;
     const opponent=$("pnOpponent")?.value?.trim()||"";
@@ -426,16 +479,18 @@
         general:""
       }
     });
-    if(status)status.textContent="Skapar match…";
+    if(status)status.textContent=opggUrl?"Skapar match & scoutar OP.GG…":"Skapar match…";
     try{
-      await request("POST","",{plan});
-      plans.push(plan);
+      const data=await request("POST","",{plan});
+      const savedPlan=normalize(data.plan||plan);
+      plans.push(savedPlan);
       plans=sortPlans(plans);
       writeCache(plans);
       selectedId=id;
       editing=false;
       hideNewMatchModal();
       render();
+      if(data.scoutError)console.warn("Match created, autoscout failed:",data.scoutError);
       await load();
     }catch(err){
       console.error(err);
@@ -493,6 +548,7 @@
     if(action==="edit"){if(await ensureWrite()){editing=true;render();}}
     if(action==="cancel"){editing=false;render();}
     if(action==="save")await saveCurrent();
+    if(action==="scout")await scoutPlan();
     if(action==="delete")await deleteCurrent();
   });
   $("plannerNewMatchBtn")?.addEventListener("click",async()=>{
@@ -509,5 +565,5 @@
   window.addEventListener("storage",e=>{if(e.key===TEAM_KEY_STORAGE)updateDbBadge()});
   window.RiftSharedData?.subscribe?.(()=>updateDbBadge());
 
-  window.RiftBanPlanner={show,load,render,deleteCurrent};
+  window.RiftBanPlanner={show,load,render,deleteCurrent,scoutPlan};
 })();
