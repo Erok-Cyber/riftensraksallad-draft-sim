@@ -209,3 +209,5 @@ input{width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--bor
 .db-action{border:1px solid var(--border);background:#0a1625;color:var(--text);border-radius:8px;padding:5px 8px;font-size:11px;font-weight:900;cursor:pointer}
 .db-action:hover{border-color:var(--gold)}
 @media(max-width:760px){.analysis-head-actions{align-items:flex-start}.db-status-wrap{flex-wrap:wrap}}
+
+.db-status-wrap.readonly .db-status-dot{background:#65b1ff;box-shadow:0 0 0 3px rgba(101,177,255,.12)}
