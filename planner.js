@@ -52,6 +52,7 @@
       status:plan.status||"upcoming",
       bestOf:Number(plan.bestOf)||3,
       opggUrl:plan.opggUrl||"",
+      competition:plan.competition||"",
       scoutingConfidence:plan.scoutingConfidence||"preliminary",
       scoutingUpdatedAt:plan.scoutingUpdatedAt||"",
       players:Array.isArray(plan.players)?plan.players:[],
@@ -152,7 +153,7 @@
     detail.innerHTML=
       '<div class="planner-detail-head">'+
         '<div><p class="eyebrow">KOMMANDE MATCH</p><h2>'+esc(plan.opponent)+'</h2>'+
-          '<div class="planner-meta">'+esc(dateText(plan.scheduledAt))+' · BO'+esc(plan.bestOf)+' · '+esc(plan.status.toUpperCase())+'</div></div>'+
+          '<div class="planner-meta">'+esc(dateText(plan.scheduledAt))+' · BO'+esc(plan.bestOf)+(plan.competition?' · '+esc(plan.competition):'')+' · '+esc(plan.status.toUpperCase())+'</div></div>'+
         '<div class="planner-detail-actions">'+
           (plan.opggUrl?'<a class="planner-link" href="'+esc(plan.opggUrl)+'" target="_blank" rel="noopener">OP.GG ↗</a>':'')+
           '<button type="button" class="planner-edit-btn" data-planner-action="edit">Redigera plan</button>'+
@@ -217,6 +218,7 @@
           field("Datum / tid",'<input id="peScheduled" type="datetime-local" value="'+esc(toLocalInput(plan.scheduledAt))+'">')+
           field("Status",'<select id="peStatus"><option value="upcoming" '+(plan.status==="upcoming"?"selected":"")+'>Kommande</option><option value="completed" '+(plan.status==="completed"?"selected":"")+'>Klar</option><option value="cancelled" '+(plan.status==="cancelled"?"selected":"")+'>Inställd</option></select>')+
           field("Best of",'<select id="peBestOf"><option value="3" '+(plan.bestOf===3?"selected":"")+'>BO3</option><option value="5" '+(plan.bestOf===5?"selected":"")+'>BO5</option></select>')+
+          field("Liga / turnering",'<input id="peCompetition" value="'+esc(plan.competition||'')+'" placeholder="Rivals">')+
           field("OP.GG",'<input id="peOpgg" value="'+esc(plan.opggUrl||'')+'">')+
           field("Spelare · en per rad",'<textarea id="pePlayers">'+esc((plan.players||[]).join("\n"))+'</textarea>')+
         '</section>'+
@@ -263,6 +265,7 @@
     out.status=$("peStatus")?.value||"upcoming";
     out.bestOf=Number($("peBestOf")?.value)||3;
     out.opggUrl=val("peOpgg");
+    out.competition=val("peCompetition");
     out.players=val("pePlayers").split(/\n+/).map(x=>x.trim()).filter(Boolean);
     out.phase1Plan={b1:val("peB1"),b2:val("peB2"),b3:val("peB3"),note:val("pePhaseNote")};
     out.scoutingConfidence=$("peConfidence")?.value||"preliminary";
@@ -304,22 +307,138 @@
       alert("Kunde inte spara Ban Planner: "+err.message);
     }
   }
-  async function createMatch(){
+  function parseOpggPlayers(url){
+    const raw=(url||"").trim();
+    if(!raw)return [];
+    try{
+      const u=new URL(raw);
+      const host=u.hostname.toLowerCase();
+      if(!host.endsWith("op.gg"))return [];
+      const value=u.searchParams.get("summoners")||"";
+      return value.split(",")
+        .map(x=>decodeURIComponent(x).trim())
+        .filter(Boolean)
+        .map(x=>x.replace(/%23/gi,"#"))
+        .slice(0,10);
+    }catch{
+      return [];
+    }
+  }
+  function defaultFallbacks(){
+    return [
+      {champ:"Jarvan IV",options:["Wukong","Vi","Xin Zhao"]},
+      {champ:"Annie",options:["Vex","Taliyah","Hwei"]},
+      {champ:"Xin Zhao",options:["Volibear","Jarvan IV","Wukong"]},
+      {champ:"Ashe",options:["Varus","Xayah"]},
+      {champ:"Nautilus",options:["Leona","Maokai"]},
+      {champ:"Malphite",options:["Sion","Shen","Mordekaiser"]}
+    ];
+  }
+  function slugify(value){
+    return String(value||"match").toLowerCase()
+      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+      .replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"match";
+  }
+  function defaultNewMatchTime(){
+    const d=new Date();
+    d.setDate(d.getDate()+7);
+    d.setHours(19,30,0,0);
+    const local=new Date(d.getTime()-d.getTimezoneOffset()*60000);
+    return local.toISOString().slice(0,16);
+  }
+  function showNewMatchModal(){
+    $("pnOpponent").value="";
+    $("pnScheduled").value=defaultNewMatchTime();
+    $("pnBestOf").value="3";
+    $("pnOpgg").value="";
+    $("pnCompetition").value="";
+    $("pnPreNotes").value="";
+    $("pnPlayerPreview").innerHTML='<span class="analysis-note">Klistra in en OP.GG Multisearch-länk så läser vi Riot IDs automatiskt.</span>';
+    $("pnCreateStatus").textContent="";
+    const modal=$("plannerNewMatchOverlay");
+    modal.classList.remove("hidden");
+    modal.setAttribute("aria-hidden","false");
+    document.body.classList.add("planner-modal-open");
+    queueMicrotask(()=>$("pnOpponent")?.focus());
+  }
+  function hideNewMatchModal(){
+    const modal=$("plannerNewMatchOverlay");
+    modal?.classList.add("hidden");
+    modal?.setAttribute("aria-hidden","true");
+    document.body.classList.remove("planner-modal-open");
+  }
+  function renderOpggPreview(){
+    const players=parseOpggPlayers($("pnOpgg")?.value||"");
+    const box=$("pnPlayerPreview");
+    if(!box)return;
+    if(!($("pnOpgg")?.value||"").trim()){
+      box.innerHTML='<span class="analysis-note">Klistra in en OP.GG Multisearch-länk så läser vi Riot IDs automatiskt.</span>';
+      return;
+    }
+    if(!players.length){
+      box.innerHTML='<span class="planner-form-error">Kunde inte läsa spelarna. Kontrollera att det är en OP.GG Multisearch-länk.</span>';
+      return;
+    }
+    box.innerHTML='<span class="planner-preview-label">'+players.length+' spelare hittade</span>'+
+      '<div class="planner-preview-players">'+players.map(p=>'<b>'+esc(p)+'</b>').join("")+'</div>';
+  }
+  async function createMatchFromForm(){
     if(!(await ensureWrite()))return;
-    const opponent=prompt("Motståndarlag:");
-    if(!opponent?.trim())return;
-    const when=prompt("Datum och tid (YYYY-MM-DD HH:MM):","2026-10-10 19:30");
-    if(!when)return;
-    const d=new Date(when.replace(" ","T"));
-    if(isNaN(d)){alert("Ogiltigt datum.");return}
-    const id=opponent.toLowerCase().replace(/[^a-z0-9åäö]+/gi,"-").replace(/^-|-$/g,"")+"-"+d.toISOString().slice(0,10);
+    const opponent=$("pnOpponent")?.value?.trim()||"";
+    const dt=$("pnScheduled")?.value||"";
+    const opggUrl=$("pnOpgg")?.value?.trim()||"";
+    const bestOf=Number($("pnBestOf")?.value)||3;
+    const competition=$("pnCompetition")?.value?.trim()||"";
+    const preNotes=$("pnPreNotes")?.value?.trim()||"";
+    const status=$("pnCreateStatus");
+    if(!opponent){if(status)status.textContent="Skriv motståndarlag.";return}
+    const d=new Date(dt);
+    if(!dt||isNaN(d)){if(status)status.textContent="Välj giltigt datum och tid.";return}
+    const players=parseOpggPlayers(opggUrl);
+    if(opggUrl&&!players.length){if(status)status.textContent="OP.GG-länken kunde inte läsas.";return}
+
+    const baseId=slugify(opponent)+"-"+d.toISOString().slice(0,10);
+    let id=baseId;
+    let suffix=2;
+    while(plans.some(p=>p.id===id)){id=baseId+"-"+suffix++}
+
     const plan=normalize({
-      id,opponent:opponent.trim(),scheduledAt:d.toISOString(),status:"upcoming",bestOf:3,
-      players:[],banPriority:[],phase1Plan:{b1:"",b2:"",b3:"",note:""},
-      conditionalBans:[],ourFallbacks:[],gameNotes:{preSeries:"",game1:"",game2:"",general:""}
+      id,
+      opponent,
+      scheduledAt:d.toISOString(),
+      status:"upcoming",
+      bestOf,
+      competition,
+      opggUrl,
+      players,
+      scoutingConfidence:"preliminary",
+      scoutingUpdatedAt:"",
+      banPriority:[],
+      phase1Plan:{b1:"",b2:"",b3:"",note:"Ny matchup — fyll banplan efter scouting."},
+      conditionalBans:[],
+      ourFallbacks:defaultFallbacks(),
+      gameNotes:{
+        preSeries:preNotes,
+        game1:"",
+        game2:"",
+        general:""
+      }
     });
-    await request("POST","",{plan});
-    plans.push(plan);plans=sortPlans(plans);writeCache(plans);selectedId=id;editing=true;render();
+    if(status)status.textContent="Skapar match…";
+    try{
+      await request("POST","",{plan});
+      plans.push(plan);
+      plans=sortPlans(plans);
+      writeCache(plans);
+      selectedId=id;
+      editing=false;
+      hideNewMatchModal();
+      render();
+      await load();
+    }catch(err){
+      console.error(err);
+      if(status)status.textContent="Kunde inte skapa matchen.";
+    }
   }
   function render(){
     updateDbBadge();
@@ -349,7 +468,17 @@
     if(action==="cancel"){editing=false;render();}
     if(action==="save")await saveCurrent();
   });
-  $("plannerNewMatchBtn")?.addEventListener("click",createMatch);
+  $("plannerNewMatchBtn")?.addEventListener("click",async()=>{
+    if(await ensureWrite())showNewMatchModal();
+  });
+  $("plannerNewMatchCancel")?.addEventListener("click",hideNewMatchModal);
+  $("plannerNewMatchCancelBottom")?.addEventListener("click",hideNewMatchModal);
+  $("plannerNewMatchCreate")?.addEventListener("click",createMatchFromForm);
+  $("pnOpgg")?.addEventListener("input",renderOpggPreview);
+  $("plannerNewMatchOverlay")?.addEventListener("click",e=>{if(e.target===$("plannerNewMatchOverlay"))hideNewMatchModal()});
+  document.addEventListener("keydown",e=>{
+    if(e.key==="Escape"&&!$("plannerNewMatchOverlay")?.classList.contains("hidden"))hideNewMatchModal();
+  });
   window.addEventListener("storage",e=>{if(e.key===TEAM_KEY_STORAGE)updateDbBadge()});
   window.RiftSharedData?.subscribe?.(()=>updateDbBadge());
 
