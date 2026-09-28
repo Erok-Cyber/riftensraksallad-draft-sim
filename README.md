@@ -61,3 +61,18 @@ Live Draft Brain har ett 🧪 **TEST MODE** i headern. När det är på kan man 
 
 ## Advanced automatic engine
 `advanced-engine.js` lägger ett automatiskt lager ovanpå grundmotorn och före Hybrid AI. Det analyserar bland annat comp completeness, damage profile, pick dependencies, role responsibility, frontline/engage/peel-kvalitet, objective DPS/turn style, side-lane, vision/fog dependency, cooldown dependency, hybrid identity och mönster från tidigare riktiga drafts.
+
+
+## Shared team database (Supabase)
+
+
+### Current shared storage
+The production site uses a Supabase project in `eu-north-1` and the `rift-team-matches` Edge Function.
+The browser never contains a service-role/secret database key. Each device enters the team code once; the function verifies it server-side and then performs list/upsert/delete operations.
+
+`shared-data.js` is cloud-first with a localStorage cache:
+- existing local real matches migrate on first successful sync
+- offline saves remain local and upload on next sync
+- match IDs deduplicate across devices
+- Test Mode never writes match data
+- Analysis reads the synced local cache for fast rendering
