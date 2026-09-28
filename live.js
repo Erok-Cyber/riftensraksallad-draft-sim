@@ -945,16 +945,17 @@ function matchHistoryData(){
 function renderLiveDbStatus(s=window.RiftSharedData?.getState?.()||{mode:"local",status:"Lokal"}){
   const el=$("liveDbStatus");
   if(!el)return;
-  el.className="live-db-status"+(["shared","offline","locked"].includes(s.mode)?" "+s.mode:"");
+  el.className="live-db-status"+(["shared","offline","locked","readonly"].includes(s.mode)?" "+s.mode:"");
   el.textContent=s.status||"Lokal lagring";
   const configured=!!window.RiftSharedData?.configured?.();
   const connected=!!window.RiftSharedData?.hasTeamKey?.();
   $("liveDbConnectBtn")?.classList.toggle("hidden",!configured||connected);
-  $("liveDbSyncBtn")?.classList.toggle("hidden",!configured||!connected);
+  if($("liveDbConnectBtn"))$("liveDbConnectBtn").textContent="Lås upp sparning";
+  $("liveDbSyncBtn")?.classList.toggle("hidden",!configured);
 }
 window.RiftSharedData?.subscribe?.(renderLiveDbStatus);
 $("liveDbConnectBtn")?.addEventListener("click",async()=>{
-  const code=prompt("Ange Riftensräksallads lagkod. Den sparas bara på den här enheten.");
+  const code=prompt("Lagkoden behövs bara för att spara matcher. Ange Riftensräksallads lagkod:");
   if(!code)return;
   try{
     const matches=await window.RiftSharedData.connect(code);
@@ -971,7 +972,7 @@ $("liveDbSyncBtn")?.addEventListener("click",async()=>{
   localStorage.setItem("rs_draft_archive",JSON.stringify((matches||[]).slice(-50)));
   renderLiveDbStatus();
 });
-if(window.RiftSharedData?.hasTeamKey?.()){
+if(window.RiftSharedData?.configured?.()){
   window.RiftSharedData.sync().then(matches=>{
     const archive=(matches||[]).slice(-50).map(m=>({...m}));
     localStorage.setItem("rs_draft_archive",JSON.stringify(archive));
@@ -1039,6 +1040,18 @@ function buildMatchRecord(){
 
 async function saveCompletedMatch(){
   if(testMode||draftIsTest||historySaved||!pendingMatchResult||!pendingMatchType)return;
+
+  if(window.RiftSharedData?.configured?.()&&!window.RiftSharedData?.hasTeamKey?.()){
+    const code=prompt("För att spara i lagets databas behövs lagkoden en gång på den här enheten:");
+    if(!code)return;
+    try{
+      await window.RiftSharedData.connect(code);
+    }catch{
+      alert("Fel lagkod. Matchen har inte sparats.");
+      return;
+    }
+  }
+
   $("saveMatchBtn").disabled=true;
   $("matchSaveHint").textContent="Sparar match…";
   try{
