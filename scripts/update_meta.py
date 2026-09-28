@@ -129,10 +129,11 @@ def fetch_role(session, source, role):
         text = compact(a.text_content())
         if not text:
             continue
-        tm = tier_re.search(text)
+        stats_text = text[len(champ):] if text.lower().startswith(champ.lower()) else text
+        tm = tier_re.search(stats_text)
         if not tm:
             continue
-        after = text[tm.end():]
+        after = stats_text[tm.end():]
         wrm = re.match(r"(\d{2}(?:\.\d{1,2})?)", after)
         wr = float(wrm.group(1)) if wrm else None
         if wr is None or not (30 <= wr <= 70):
@@ -154,9 +155,10 @@ def fetch_role(session, source, role):
                 # A real grid row normally has rank/lane numbers before the tier.
                 if len(re.findall(r"\d+(?:\.\d+)?", prefix)) < 1:
                     continue
-                nums = [float(x) for x in re.findall(r"\d+(?:\.\d+)?", segment[tm.end():])]
-                wr = next((x for x in nums if 30 <= x <= 70), None)
-                if wr is None:
+                after = segment[tm.end():]
+                wrm = re.match(r"(\d{2}(?:\.\d{1,2})?)", after)
+                wr = float(wrm.group(1)) if wrm else None
+                if wr is None or not (30 <= wr <= 70):
                     continue
                 found[champ] = {"tier": tm.group(1), "winrate": wr}
                 break
