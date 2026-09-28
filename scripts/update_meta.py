@@ -145,15 +145,27 @@ def fetch_role(session, source, role):
             found[champ] = {"tier": tm.group(1), "winrate": wr}
             break
 
-    if not found:
-        candidates = []
-        for a in tree.xpath("//a[@href]"):
-            href = a.get("href") or ""
-            if "/lol/" in href:
-                candidates.append((href, compact(a.text_content())[:80]))
-            if len(candidates) >= 25:
+    # Text fallback: the server-rendered tier list contains rows in the form
+    # "Champion Rank Lane% Tier Win% Pick% Ban% ...". This survives most DOM refactors.
+    if len(found) < len(targets):
+        for champ in targets:
+            if champ in found:
+                continue
+            for match in re.finditer(re.escape(champ), body_text, re.I):
+                segment = body_text[match.end():match.end()+220]
+                tm = tier_re.search(segment)
+                if not tm:
+                    continue
+                prefix = segment[:tm.start()]
+                # A real grid row normally has rank/lane numbers before the tier.
+                if len(re.findall(r"\\d+(?:\\.\\d+)?", prefix)) < 1:
+                    continue
+                nums = [float(x) for x in re.findall(r"\\d+(?:\\.\\d+)?", segment[tm.end():])]
+                wr = next((x for x in nums if 30 <= x <= 70), None)
+                if wr is None:
+                    continue
+                found[champ] = {"tier": tm.group(1), "winrate": wr}
                 break
-        print(f"DEBUG {role} {source} candidate links: {candidates}", file=sys.stderr)
 
     return found, sample
 
