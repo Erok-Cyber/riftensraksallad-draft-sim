@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Riftensräksallad Draft Trainer</title>
-  <link rel="stylesheet" href="styles.css?v=20260928-analysis1" />
+  <link rel="stylesheet" href="styles.css?v=20260928-shared1" />
 </head>
 <body>
   <main class="app">
@@ -144,10 +144,18 @@
           <h2>Analys</h2>
           <p class="analysis-intro">Statistik från matcher som sparats efter färdig Draft Brain-draft.</p>
         </div>
-        <div class="analysis-filters">
-          <button class="analysis-filter active" data-filter="all">Alla</button>
-          <button class="analysis-filter" data-filter="league">Liga</button>
-          <button class="analysis-filter" data-filter="flex">Flex / 5v5</button>
+        <div class="analysis-head-actions">
+          <div class="db-status-wrap">
+            <span id="dbStatusDot" class="db-status-dot"></span>
+            <span id="dbStatusText">Lokal databas</span>
+            <button id="dbConnectBtn" class="db-action hidden">Anslut</button>
+            <button id="dbSyncBtn" class="db-action hidden">Synka</button>
+          </div>
+          <div class="analysis-filters">
+            <button class="analysis-filter active" data-filter="all">Alla</button>
+            <button class="analysis-filter" data-filter="league">Liga</button>
+            <button class="analysis-filter" data-filter="flex">Flex / 5v5</button>
+          </div>
         </div>
       </div>
 
@@ -208,6 +216,6 @@
   </main>
 
   <script src="brand.js?v=20260928-analysis1"></script>
-  <script src="app.js?v=20260928-analysis2"></script>
+  <script src="app.js?v=20260928-shared1"></script>
 </body>
 </html>
