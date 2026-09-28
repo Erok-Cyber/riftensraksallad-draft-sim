@@ -1,5 +1,5 @@
 /* Riftensräksallad shared match storage.
-   Supabase RPC backend + local cache/offline fallback. */
+   Supabase Edge Function + local cache/offline fallback. */
 (function(){
   const LOCAL_MATCHES="rs_match_history";
   const TEAM_KEY_STORAGE="rs_team_access_key";
@@ -14,7 +14,7 @@
   function setState(next){state={...state,...next};emit()}
   function configured(){
     const c=cfg();
-    return !!(c.enabled&&c.url&&c.anonKey&&c.teamSlug);
+    return !!(c.enabled&&c.functionUrl&&c.teamSlug);
   }
   function teamKey(){return localStorage.getItem(TEAM_KEY_STORAGE)||""}
   function hasTeamKey(){return !!teamKey()}
@@ -29,27 +29,26 @@
     list.forEach(m=>{if(m&&m.id)map.set(m.id,m)});
     return [...map.values()].sort((a,b)=>new Date(a.savedAt)-new Date(b.savedAt));
   }
-  function headers(){
-    const c=cfg();
-    return {
-      "apikey":c.anonKey,
-      "Authorization":"Bearer "+c.anonKey,
-      "Content-Type":"application/json"
-    };
+  function edgeUrl(query=""){
+    return String(cfg().functionUrl||"").replace(/\/$/,"")+query;
   }
-  function rpc(name){
-    const c=cfg();
-    return c.url.replace(/\/$/,"")+"/rest/v1/rpc/"+name;
+  function edgeHeaders(){
+    return {"Content-Type":"application/json","x-team-key":teamKey()};
   }
-  async function call(name,body){
-    const res=await fetch(rpc(name),{method:"POST",headers:headers(),body:JSON.stringify(body)});
+  async function request(method,query="",body=null){
+    const res=await fetch(edgeUrl(query),{
+      method,
+      headers:edgeHeaders(),
+      body:body==null?undefined:JSON.stringify(body)
+    });
+    const text=await res.text().catch(()=>"");
+    let data=null;
+    try{data=text?JSON.parse(text):null}catch{data={error:text}}
     if(!res.ok){
-      const detail=await res.text().catch(()=>"");
-      throw new Error("Shared DB "+res.status+(detail?": "+detail.slice(0,180):""));
+      const message=data?.error||("Shared DB "+res.status);
+      throw new Error(message);
     }
-    if(res.status===204)return null;
-    const text=await res.text();
-    return text?JSON.parse(text):null;
+    return data;
   }
   function rowToMatch(row){
     const p=row.payload||{};
@@ -66,21 +65,26 @@
   async function fetchRemote(){
     if(!configured())return localMatches();
     if(!hasTeamKey())throw new Error("TEAM_KEY_MISSING");
-    const c=cfg();
-    const rows=await call("rift_list_matches",{p_team_slug:c.teamSlug,p_team_key:teamKey()});
-    return (rows||[]).map(rowToMatch);
+    const data=await request("GET");
+    return (data?.matches||[]).map(rowToMatch);
   }
   async function uploadOne(match){
-    const c=cfg();
-    return call("rift_upsert_match",{p_team_slug:c.teamSlug,p_team_key:teamKey(),p_match:match});
+    if(!hasTeamKey())throw new Error("TEAM_KEY_MISSING");
+    return request("POST","",{match});
   }
   async function saveMatch(match){
     const local=uniqueById([...localMatches(),match]);
     writeLocal(local);
-    if(!configured()||!hasTeamKey()){
-      setState({mode:"local",status:configured()?"Ej ansluten":"Lokal",error:null});
+
+    if(!configured()){
+      setState({mode:"local",status:"Lokal · databas ej aktiverad",error:null});
       return {cloud:false,match};
     }
+    if(!hasTeamKey()){
+      setState({mode:"locked",status:"Delad DB · anslut lagkod",error:null});
+      return {cloud:false,match};
+    }
+
     try{
       await uploadOne(match);
       setState({mode:"shared",status:"Delad",lastSync:new Date().toISOString(),error:null});
@@ -92,15 +96,18 @@
     }
   }
   async function deleteMatch(id){
-    writeLocal(localMatches().filter(m=>m.id!==id));
+    const before=localMatches();
+    writeLocal(before.filter(m=>m.id!==id));
     if(!configured()||!hasTeamKey())return {cloud:false};
-    const c=cfg();
+
     try{
-      await call("rift_delete_match",{p_team_slug:c.teamSlug,p_team_key:teamKey(),p_match_id:id});
+      await request("DELETE","?id="+encodeURIComponent(id));
       setState({mode:"shared",status:"Delad",lastSync:new Date().toISOString(),error:null});
       return {cloud:true};
     }catch(err){
-      setState({mode:"offline",status:"Offline",error:String(err)});
+      // Restore local copy when a shared delete fails so clients do not diverge.
+      writeLocal(before);
+      setState({mode:"offline",status:"Offline · radering misslyckades",error:String(err)});
       throw err;
     }
   }
@@ -114,14 +121,21 @@
       setState({mode:"locked",status:"Delad DB · anslut lagkod",error:null});
       return localMatches();
     }
-    state.syncing=true;emit();
+
+    state.syncing=true;
+    setState({status:"Synkar…"});
     try{
       const local=localMatches();
       const remote=await fetchRemote();
       const remoteIds=new Set(remote.map(m=>m.id));
+
+      // Migrate/offline-sync local real matches that the cloud does not have.
       for(const m of local){
-        if(m?.id&&m?.result&&m?.matchType&&!remoteIds.has(m.id))await uploadOne(m);
+        if(m?.id&&m?.result&&m?.matchType&&!remoteIds.has(m.id)){
+          await uploadOne(m);
+        }
       }
+
       const fresh=await fetchRemote();
       const merged=uniqueById([...local,...fresh]);
       writeLocal(merged);
@@ -130,14 +144,16 @@
     }catch(err){
       console.warn("Shared sync failed; using local cache.",err);
       const msg=String(err);
+      const locked=msg.includes("TEAM_KEY_MISSING")||msg.toLowerCase().includes("access code")||msg.toLowerCase().includes("invalid team");
       setState({
-        mode:msg.includes("TEAM_KEY_MISSING")?"locked":"offline",
-        status:msg.includes("TEAM_KEY_MISSING")?"Delad DB · anslut lagkod":"Offline · lokal cache",
+        mode:locked?"locked":"offline",
+        status:locked?"Delad DB · anslut lagkod":"Offline · lokal cache",
         error:msg
       });
       return localMatches();
     }finally{
-      state.syncing=false;emit();
+      state.syncing=false;
+      emit();
     }
   }
   async function connect(key){
@@ -145,7 +161,7 @@
     if(!value)throw new Error("Tom lagkod.");
     localStorage.setItem(TEAM_KEY_STORAGE,value);
     try{
-      await fetchRemote();
+      await fetchRemote(); // Validate before uploading local history.
       await sync();
       return true;
     }catch(err){
@@ -162,5 +178,12 @@
   function getState(){return {...state}}
 
   window.RiftSharedData={configured,hasTeamKey,localMatches,saveMatch,deleteMatch,sync,connect,disconnect,subscribe,getState};
-  setState({mode:configured()?(hasTeamKey()?"shared":"locked"):"local",status:configured()?(hasTeamKey()?"Delad · synkar…":"Delad DB · anslut lagkod"):"Lokal · databas ej aktiverad"});
+  setState({
+    mode:configured()?(hasTeamKey()?"shared":"locked"):"local",
+    status:configured()?(hasTeamKey()?"Delad · synkar…":"Delad DB · anslut lagkod"):"Lokal · databas ej aktiverad"
+  });
+
+  if(configured()&&hasTeamKey()){
+    queueMicrotask(()=>sync().catch(()=>{}));
+  }
 })();
