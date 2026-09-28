@@ -938,7 +938,22 @@ function renderFinalGameplan(){
 }
 
 function matchHistoryData(){
+  if(window.RiftSharedData)return window.RiftSharedData.localMatches();
   try{return JSON.parse(localStorage.getItem("rs_match_history")||"[]")}catch{return[]}
+}
+
+function renderLiveDbStatus(s=window.RiftSharedData?.getState?.()||{mode:"local",status:"Lokal"}){
+  const el=$("liveDbStatus");
+  if(!el)return;
+  el.className="live-db-status"+(["shared","offline","locked"].includes(s.mode)?" "+s.mode:"");
+  el.textContent=s.status||"Lokal lagring";
+}
+window.RiftSharedData?.subscribe?.(renderLiveDbStatus);
+if(window.RiftSharedData?.hasTeamKey?.()){
+  window.RiftSharedData.sync().then(matches=>{
+    const archive=(matches||[]).slice(-50).map(m=>({...m}));
+    localStorage.setItem("rs_draft_archive",JSON.stringify(archive));
+  }).catch(()=>{});
 }
 
 function renderMatchSave(){
@@ -1000,12 +1015,18 @@ function buildMatchRecord(){
   };
 }
 
-function saveCompletedMatch(){
+async function saveCompletedMatch(){
   if(testMode||draftIsTest||historySaved||!pendingMatchResult||!pendingMatchType)return;
+  $("saveMatchBtn").disabled=true;
+  $("matchSaveHint").textContent="Sparar match…";
   try{
     const record=buildMatchRecord();
-    const matches=matchHistoryData();
-    localStorage.setItem("rs_match_history",JSON.stringify([...matches,record].slice(-250)));
+
+    if(window.RiftSharedData)await window.RiftSharedData.saveMatch(record);
+    else{
+      const matches=matchHistoryData();
+      localStorage.setItem("rs_match_history",JSON.stringify([...matches,record].slice(-250)));
+    }
 
     const old=recentPicks();
     const current=ours().map(e=>e.champ);
@@ -1017,9 +1038,14 @@ function saveCompletedMatch(){
     historySaved=true;
     saveState();
     renderMatchSave();
+
+    const db=window.RiftSharedData?.getState?.();
+    if(db?.mode==="shared")$("matchSaveHint").textContent="Sparad i lagets delade databas.";
+    else if(window.RiftSharedData?.configured?.())$("matchSaveHint").textContent="Sparad lokalt. Synkas automatiskt när databasen är tillgänglig.";
   }catch(err){
     console.error("Could not save match:",err);
-    $("matchSaveHint").textContent="Kunde inte spara matchen lokalt.";
+    $("matchSaveHint").textContent="Kunde inte spara matchen.";
+    $("saveMatchBtn").disabled=false;
   }
 }
 
