@@ -7,7 +7,7 @@
   "liveSourcePatch": "16.19",
   "previousPatch": "26.18",
   "previousSourcePatch": "16.18",
-  "generatedAt": "2026-09-28T00:59:34Z",
+  "generatedAt": "2026-09-28T01:02:02Z",
   "notes": "Current patch is primary. Previous patch is blended as fallback when the live patch is fresh, incomplete, or unavailable. Invalid fetches never replace last-known-good data.",
   "patches": [
     {
@@ -39,7 +39,7 @@
           },
           "Shen": {
             "tier": "S",
-            "winrate": 51.953,
+            "winrate": 51.95,
             "strong": [],
             "weak": []
           },
@@ -51,7 +51,7 @@
           },
           "Sion": {
             "tier": "B",
-            "winrate": 50.872,
+            "winrate": 50.87,
             "strong": [],
             "weak": []
           },
@@ -177,7 +177,7 @@
         "mid": {
           "Ahri": {
             "tier": "S",
-            "winrate": 51.428,
+            "winrate": 51.42,
             "strong": [
               "Pantheon",
               "Anivia",
@@ -191,7 +191,7 @@
           },
           "Annie": {
             "tier": "B",
-            "winrate": 51.561,
+            "winrate": 51.56,
             "strong": [],
             "weak": []
           },
@@ -226,7 +226,7 @@
           },
           "Anivia": {
             "tier": "B",
-            "winrate": 50.472,
+            "winrate": 50.47,
             "strong": [],
             "weak": []
           }
@@ -234,7 +234,7 @@
         "adc": {
           "Ashe": {
             "tier": "C+",
-            "winrate": 50.917,
+            "winrate": 50.91,
             "strong": [
               "Samira",
               "Smolder",
@@ -371,7 +371,7 @@
           },
           "Shen": {
             "tier": "A",
-            "winrate": 51.833,
+            "winrate": 51.83,
             "strong": [],
             "weak": []
           },
@@ -383,7 +383,7 @@
           },
           "Sion": {
             "tier": "B",
-            "winrate": 50.392,
+            "winrate": 50.39,
             "strong": [],
             "weak": []
           },
@@ -395,7 +395,7 @@
           },
           "Darius": {
             "tier": "A",
-            "winrate": 50.087,
+            "winrate": 50.08,
             "strong": [],
             "weak": []
           },
@@ -505,7 +505,7 @@
         "mid": {
           "Ahri": {
             "tier": "S-",
-            "winrate": 51.718,
+            "winrate": 51.71,
             "strong": [
               "Pantheon",
               "Anivia",
@@ -554,13 +554,13 @@
           },
           "Sylas": {
             "tier": "A-",
-            "winrate": 50.036,
+            "winrate": 50.03,
             "strong": [],
             "weak": []
           },
           "Anivia": {
             "tier": "B",
-            "winrate": 50.411,
+            "winrate": 50.41,
             "strong": [],
             "weak": []
           }
@@ -568,7 +568,7 @@
         "adc": {
           "Ashe": {
             "tier": "B",
-            "winrate": 50.9782,
+            "winrate": 50.97,
             "strong": [
               "Samira",
               "Smolder",
