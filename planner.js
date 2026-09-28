@@ -300,6 +300,32 @@
     out.gameNotes={preSeries:val("pePreSeries"),game1:val("peGame1"),game2:val("peGame2"),general:val("peGeneral")};
     return normalize(out);
   }
+  async function autoScoutPlan(plan,{silent=false}={}){
+    if(!plan?.opggUrl)return;
+    if(!(await ensureWrite()))return;
+    if(autoScoutPlan.running?.has(plan.id))return;
+    autoScoutPlan.running=autoScoutPlan.running||new Set();
+    autoScoutPlan.running.add(plan.id);
+    if(!silent){
+      const btn=document.querySelector('[data-planner-action="scout"]');
+      if(btn){btn.disabled=true;btn.textContent="Scoutar OP.GG…";}
+    }
+    try{
+      const data=await request("POST","",{scout:true,plan});
+      const next=normalize(data.plan||plan);
+      const i=plans.findIndex(p=>p.id===next.id);
+      if(i>=0)plans[i]=next;else plans.push(next);
+      plans=sortPlans(plans);writeCache(plans);
+      editing=false;render();
+    }catch(err){
+      console.error("OP.GG auto-scout failed:",err);
+      if(!silent)alert("Kunde inte auto-scouta OP.GG: "+err.message);
+    }finally{
+      autoScoutPlan.running.delete(plan.id);
+    }
+  }
+  autoScoutPlan.running=new Set();
+
   async function saveCurrent(){
     if(!(await ensureWrite()))return;
     const plan=collect(current());
@@ -530,6 +556,10 @@
       return;
     }
     editing?renderEdit(normalize(p)):renderRead(normalize(p));
+    const plan=normalize(p);
+    if(!editing&&hasKey()&&plan.opggUrl&&!plan.banPriority.length&&!plan.scoutingUpdatedAt&&!autoScoutPlan.running.has(plan.id)){
+      queueMicrotask(()=>autoScoutPlan(plan,{silent:true}));
+    }
   }
   function show(){
     updateDbBadge();
