@@ -157,6 +157,7 @@
         '<div class="planner-detail-actions">'+
           (plan.opggUrl?'<a class="planner-link" href="'+esc(plan.opggUrl)+'" target="_blank" rel="noopener">OP.GG ↗</a>':'')+
           '<button type="button" class="planner-edit-btn" data-planner-action="edit">Redigera plan</button>'+
+          (hasKey()?'<button type="button" class="planner-delete-btn" data-planner-action="delete">Radera match</button>':'')+
         '</div>'+
       '</div>'+
       '<div class="planner-phase1">'+
@@ -209,6 +210,7 @@
     detail.innerHTML=
       '<div class="planner-detail-head"><div><p class="eyebrow">REDIGERA PLAN</p><h2>'+esc(plan.opponent)+'</h2></div>'+
         '<div class="planner-detail-actions"><span id="plannerSaveStatus" class="planner-save-status"></span>'+
+          (hasKey()?'<button type="button" class="planner-delete-btn" data-planner-action="delete">Radera match</button>':'')+
           '<button type="button" class="planner-cancel-btn" data-planner-action="cancel">Avbryt</button>'+
           '<button type="button" class="planner-save-btn" data-planner-action="save">Spara</button></div></div>'+
       '<div class="planner-two-col">'+
@@ -440,6 +442,30 @@
       if(status)status.textContent="Kunde inte skapa matchen.";
     }
   }
+  async function deleteCurrent(){
+    const plan=plans.find(p=>p.id===selectedId);
+    if(!plan)return;
+    if(!(await ensureWrite()))return;
+
+    const when=dateText(plan.scheduledAt);
+    const ok=confirm("Radera "+plan.opponent+" · "+when+"?\n\nMatchplanen, bans och anteckningarna tas bort för hela laget. Detta går inte att ångra.");
+    if(!ok)return;
+
+    try{
+      await request("DELETE","?id="+encodeURIComponent(plan.id));
+      plans=plans.filter(p=>p.id!==plan.id);
+      plans=sortPlans(plans);
+      writeCache(plans);
+      selectedId=plans.find(p=>p.status==="upcoming")?.id||plans[0]?.id||null;
+      editing=false;
+      render();
+      await load();
+    }catch(err){
+      console.error("Could not delete Ban Planner match:",err);
+      alert("Kunde inte radera matchen från den delade databasen.");
+    }
+  }
+
   function render(){
     updateDbBadge();
     renderList();
@@ -467,6 +493,7 @@
     if(action==="edit"){if(await ensureWrite()){editing=true;render();}}
     if(action==="cancel"){editing=false;render();}
     if(action==="save")await saveCurrent();
+    if(action==="delete")await deleteCurrent();
   });
   $("plannerNewMatchBtn")?.addEventListener("click",async()=>{
     if(await ensureWrite())showNewMatchModal();
@@ -482,5 +509,5 @@
   window.addEventListener("storage",e=>{if(e.key===TEAM_KEY_STORAGE)updateDbBadge()});
   window.RiftSharedData?.subscribe?.(()=>updateDbBadge());
 
-  window.RiftBanPlanner={show,load,render};
+  window.RiftBanPlanner={show,load,render,deleteCurrent};
 })();
