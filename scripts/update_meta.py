@@ -133,7 +133,7 @@ def fetch_role(session, source, role):
         if not tm:
             continue
         after = text[tm.end():]
-        wrm = re.match(r"(\d{2}(?:\.\d+)?)", after)
+        wrm = re.match(r"(\d{2}(?:\.\d{1,2})?)", after)
         wr = float(wrm.group(1)) if wrm else None
         if wr is None or not (30 <= wr <= 70):
             continue
