@@ -310,7 +310,13 @@ function lockCurrent(){
     if(turn.side===userSide&&ownRoleMap()[selectedRole]){alert("Den rollen är redan fylld.");return}
     role=selectedRole;
   }
-  events.push({...turn,champ,role});
+  const brainBefore=turn.side===userSide?{
+    role:role||null,
+    suggestions:turn.type==="ban"?banRecommendations().slice(0,3):topRecommendations(role).slice(0,3),
+    comp:desiredComp(),
+    matchup:draftMatchupAnalysis()
+  }:null;
+  events.push({...turn,champ,role,brain:brainBefore});
   enemyInferenceCache={key:null,value:null};enemyProfileCache={key:null,value:null};finalAnalysisCache={key:null,value:null};
   step++;selectedRole=null;$("championInput").value="";
   document.querySelectorAll(".role-buttons button").forEach(b=>b.classList.remove("active"));
@@ -365,6 +371,7 @@ function render(){
   document.body.classList.toggle("draft-complete",done);
   renderTeam("blue");renderTeam("red");renderTurn();renderStatus();
   $("draftProgress").textContent=step+" / "+draftOrder.length;
+  renderDraftMatchup();
 
   if(done){
     renderFinalGameplan();
@@ -1070,7 +1077,22 @@ function buildMatchRecord(){
     topRisk:draftRiskEngine()[0]?.text||null,
     fightStyle:final.advFightStyle||null,
     objectiveStyle:final.advObjectiveStyle||null,
-    loadingCall:shortLoadingPlan(final).call||null
+    loadingCall:shortLoadingPlan(final).call||null,
+    matchup:draftMatchupAnalysis(),
+    draftTimeline:events.map(e=>({
+      label:e.label,type:e.type,side:e.side,champ:e.champ,role:e.role||null,
+      brain:e.brain?{
+        role:e.brain.role||null,
+        suggestions:[...(e.brain.suggestions||[])],
+        comp:e.brain.comp||null,
+        matchup:e.brain.matchup?{
+          score:e.brain.matchup.score,
+          label:e.brain.matchup.label,
+          counterValue:e.brain.matchup.counterValue,
+          confidence:e.brain.matchup.confidence
+        }:null
+      }:null
+    }))
   };
 }
 
@@ -1869,6 +1891,176 @@ function nextPickNeed(){
   needs.sort((a,b)=>b.p-a.p);
   if(!needs.length)return "Ingen akut lucka — välj bästa comp-fit/counter.";
   return needs.slice(0,2).map(x=>x.t).join(" + ");
+}
+
+
+function matchupClamp(n,min=0,max=100){return Math.max(min,Math.min(max,n))}
+function matchupCount(list,set){return list.filter(e=>set.has(e.champ)).length}
+function matchupLabel(score){
+  if(score>=68)return "MYCKET BRA";
+  if(score>=58)return "BRA";
+  if(score>=47)return "JÄMNT";
+  if(score>=38)return "SVÅRT";
+  return "MYCKET SVÅRT";
+}
+function matchupConfidence(){
+  const a=ours().length,b=enemies().length,total=a+b;
+  if(a===5&&b===5)return "HÖG";
+  if(a>=3&&b>=3)return "MEDEL";
+  if(total>=4&&a>=1&&b>=1)return "LÅG";
+  return "TIDIG READ";
+}
+function draftMatchupAnalysis(){
+  const own=ours(), enemy=enemies();
+  if(!own.length||!enemy.length){
+    return {
+      available:false,score:null,label:"VÄNTAR",counterValue:null,confidence:"TIDIG READ",
+      why:["Behöver picks från båda lagen innan comp-vs-comp kan bedömas."],risks:[],dimensions:{}
+    };
+  }
+
+  const ownEngage=matchupCount(own,traits.engage);
+  const enemyEngage=matchupCount(enemy,traits.engage);
+  const ownDive=matchupCount(own,traits.dive);
+  const enemyDive=matchupCount(enemy,traits.dive);
+  const ownDis=matchupCount(own,traits.disengage);
+  const enemyDis=matchupCount(enemy,traits.disengage);
+  const ownPeel=matchupCount(own,smartTraits.peel);
+  const enemyPeel=matchupCount(enemy,smartTraits.peel);
+  const ownFront=matchupCount(own,traits.frontline);
+  const enemyFront=matchupCount(enemy,traits.frontline);
+  const ownRange=matchupCount(own,smartTraits.rangedDamage)+matchupCount(own,traits.poke)*.6;
+  const enemyRange=matchupCount(enemy,smartTraits.rangedDamage)+matchupCount(enemy,traits.poke)*.6;
+  const ownAnti=matchupCount(own,smartTraits.antiTank);
+  const enemyAnti=matchupCount(enemy,smartTraits.antiTank);
+  const ownObj=matchupCount(own,smartTraits.objective)+matchupCount(own,smartTraits.zone)*.55;
+  const enemyObj=matchupCount(enemy,smartTraits.objective)+matchupCount(enemy,smartTraits.zone)*.55;
+  const ownPick=matchupCount(own,smartTraits.pick);
+  const enemyImmobile=matchupCount(enemy,traits.immobileCarry);
+  const enemyHyper=matchupCount(enemy,traits.hyperCarry);
+  const enemyTanks=enemy.filter(e=>hasSmartTrait(e.champ,traits.tanks,"Tank")).length;
+  const ownTanks=own.filter(e=>hasSmartTrait(e.champ,traits.tanks,"Tank")).length;
+  const enemyMelee=matchupCount(enemy,traits.melee);
+  const ownZone=matchupCount(own,smartTraits.zone);
+
+  const access=matchupClamp(50+(ownEngage+ownDive+ownPick)*6-(enemyDis+enemyPeel)*5+(enemyImmobile+enemyHyper)*3,15,90);
+  const antiDive=matchupClamp(50+(ownPeel+ownDis)*11-enemyDive*9,15,90);
+  const range=matchupClamp(50+(ownRange-enemyRange)*8,15,90);
+  const frontline=matchupClamp(50+(ownFront-enemyFront)*8+ownTanks*2-enemyAnti*3,15,90);
+  const antiTank=matchupClamp(50+ownAnti*11-enemyTanks*9,15,90);
+  const objective=matchupClamp(50+(ownObj-enemyObj)*7+(ownZone-(matchupCount(enemy,smartTraits.zone)))*3,15,90);
+
+  const ownCurve=teamCurve(own), enemyCurve=teamCurve(enemy);
+  const early=matchupClamp(50+(ownCurve.early-enemyCurve.early)*18,20,85);
+  const scaling=matchupClamp(50+(ownCurve.late-enemyCurve.late)*18,20,85);
+
+  let pairCounter=0;
+  const roleMap=ownRoleMap();
+  for(const [role,champ] of Object.entries(roleMap)){
+    specificRules.forEach(rule=>{
+      if(rule.role===role&&rule.enemy.some(x=>hasEnemy(x)))pairCounter+=rule.boost[champ]||0;
+    });
+  }
+  let metaCounter=0;
+  own.forEach(e=>{
+    const stat=window.RiftStats?.scoreChampion?.({champ:e.champ,role:e.role,enemies:enemy.map(x=>x.champ),allies:own.map(x=>x.champ)});
+    (stat?.reasons||[]).forEach(r=>{
+      if(String(r).startsWith("statstarkt mot "))metaCounter+=2;
+      if(String(r).startsWith("statssvagt mot "))metaCounter-=2;
+    });
+  });
+  const explicitCounter=matchupClamp(50+Math.min(18,pairCounter*.45)+metaCounter,20,88);
+
+  const n=currentNeeds();
+  let structure=50;
+  if(n.front>0)structure+=7; else if(own.length>=4)structure-=10;
+  if(n.engage>0)structure+=7; else if(own.length>=4)structure-=9;
+  if(n.dmg>=2)structure+=6; else if(own.length>=4)structure-=7;
+  if(n.ad>=2&&n.ap===0)structure-=5;
+  if(n.ap>=2&&n.ad===0)structure-=5;
+  structure=matchupClamp(structure,25,80);
+
+  const counterValue=Math.round(
+    access*.23+antiDive*.20+range*.13+antiTank*.17+explicitCounter*.27
+  );
+  const score=Math.round(matchupClamp(
+    counterValue*.52+objective*.13+frontline*.10+early*.08+scaling*.07+structure*.10,
+    20,85
+  ));
+
+  const positives=[],risks=[];
+  const addPos=(cond,text)=>{if(cond)positives.push(text)};
+  const addRisk=(cond,text)=>{if(cond)risks.push(text)};
+
+  addPos(enemyDive>=2&&ownPeel+ownDis>=2,"Bra anti-dive: vår peel/disengage matchar deras commit.");
+  addRisk(enemyDive>=2&&ownPeel+ownDis===0,"Deras dive har få tydliga svar i vår draft.");
+  addPos(enemyTanks>=2&&ownAnti>=1,"Vi har anti-tank/sustained svar mot deras frontline.");
+  addRisk(enemyTanks>=2&&ownAnti===0,"Deras frontline kan bli svår att döda i lång fight.");
+  addPos((enemyImmobile+enemyHyper)>=1&&(ownEngage+ownDive+ownPick)>=2,"Bra carry access mot deras viktiga backline.");
+  addRisk((enemyImmobile+enemyHyper)>=1&&(ownEngage+ownDive+ownPick)===0,"Vi saknar tydlig access på deras carry.");
+  addPos(enemyMelee>=3&&ownZone>=2,"Deras korta range går in i vår zone/control.");
+  addPos(range>=62,"Vi har tydlig range-fördel i setup.");
+  addRisk(range<=38,"De outrangar oss; vi behöver flank/hård engage.");
+  addPos(objective>=62,"Objective setup/chokes lutar åt oss.");
+  addRisk(objective<=38,"Deras objective setup ser starkare ut än vår.");
+  addPos(explicitCounter>=62,"Direkt champion-countervalue lutar åt oss.");
+  addRisk(explicitCounter<=38,"Flera direkta championinteraktioner lutar åt enemy.");
+  addPos(early>=62,"Vår draft har bättre tidigt tempo/skirmishprofil.");
+  addRisk(scaling<=38,"De har tydligare late scaling om matchen drar ut.");
+  addPos(scaling>=62,"Vi har bättre scaling-fallback.");
+  addRisk(structure<=40,"Vår egen compstruktur har fortfarande en tydlig lucka.");
+
+  if(!positives.length)positives.push("Ingen massiv counteredge ännu; matchupen avgörs mer av execution och lane state.");
+  if(!risks.length)risks.push("Ingen enskild matchup-risk sticker ut just nu.");
+
+  return {
+    available:true,
+    score,
+    label:matchupLabel(score),
+    counterValue,
+    confidence:matchupConfidence(),
+    why:positives.slice(0,3),
+    risks:risks.slice(0,3),
+    dimensions:{
+      access:Math.round(access),
+      antiDive:Math.round(antiDive),
+      range:Math.round(range),
+      frontline:Math.round(frontline),
+      antiTank:Math.round(antiTank),
+      objective:Math.round(objective),
+      early:Math.round(early),
+      scaling:Math.round(scaling),
+      explicitCounter:Math.round(explicitCounter)
+    }
+  };
+}
+
+function renderDraftMatchup(){
+  const card=$("draftMatchupCard");
+  if(!card)return;
+  const m=draftMatchupAnalysis();
+  card.classList.remove("hidden");
+  const badge=$("matchupBadge");
+  badge.className="badge matchup-badge "+(m.score>=58?"good":m.score!=null&&m.score<47?"bad":"even");
+  badge.textContent=m.available?m.label:"VÄNTAR";
+  $("matchupScore").textContent=m.available?m.score+"/100":"—";
+  $("matchupScoreCaption").textContent="Draft matchup score · inte win probability";
+  $("matchupConfidence").textContent=m.confidence;
+  $("matchupCounterValue").textContent=m.counterValue!=null?m.counterValue+"/100":"—";
+
+  const dims=[
+    ["CARRY ACCESS","access"],["ANTI-DIVE","antiDive"],["RANGE","range"],
+    ["FRONTLINE","frontline"],["ANTI-TANK","antiTank"],["OBJECTIVE","objective"],
+    ["EARLY","early"],["SCALING","scaling"]
+  ];
+  $("matchupDimensions").innerHTML=dims.map(([name,key])=>{
+    const val=m.dimensions[key];
+    const cls=val>=60?"good":val<45?"bad":"even";
+    return '<div class="matchup-dim '+cls+'"><span>'+name+'</span><strong>'+(val??"—")+'</strong><i><b style="width:'+(val??0)+'%"></b></i></div>';
+  }).join("");
+
+  $("matchupWhy").textContent=m.why.join(" ");
+  $("matchupRisk").textContent=m.risks.join(" ");
 }
 
 function renderAutoRead(){
