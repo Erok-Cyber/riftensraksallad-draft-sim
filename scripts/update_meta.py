@@ -107,22 +107,43 @@ def fetch_role(session, source, role):
 
     found = {}
     targets = set(TEAM_POOL[role])
-    container = tree.xpath("/html/body/main/div[6]")
-    if not container:
-        raise RuntimeError(f"Tier list layout not found for {role} {source}")
 
-    for row in container[0].xpath("./div"):
-        champ_nodes = row.xpath("./div[3]/a")
-        tier_nodes = row.xpath("./div[4]")
-        wr_nodes = row.xpath("./div[6]/div/span[1]")
-        if not champ_nodes:
+    def slug_key(value):
+        return re.sub(r"[^a-z0-9]", "", value.lower())
+
+    slug_to_champ = {slug_key(champ): champ for champ in targets}
+    tier_re = re.compile(r"(?<![A-Z0-9])(S\\+|S-|S|A\\+|A-|A|B\\+|B-|B|C\\+|C-|C|D\\+|D-|D)(?![A-Z0-9])")
+
+    # LoLalytics changes layout regularly. Instead of relying on one absolute
+    # XPath, locate champion build links and walk up to the smallest ancestor
+    # that contains a tier token plus a plausible win-rate value.
+    for a in tree.xpath("//a[@href]"):
+        href = a.get("href") or ""
+        hm = re.search(r"/lol/([^/]+)/(?:build|guide)/?", href, re.I)
+        if not hm:
             continue
-        champ = compact(champ_nodes[0].text_content())
-        if champ not in targets:
+        champ = slug_to_champ.get(slug_key(hm.group(1)))
+        if not champ or champ in found:
             continue
-        tier = compact(tier_nodes[0].text_content()) if tier_nodes else None
-        wr = number(wr_nodes[0].text_content()) if wr_nodes else None
-        found[champ] = {"tier": tier or None, "winrate": wr}
+
+        node = a
+        for _ in range(8):
+            node = node.getparent()
+            if node is None:
+                break
+            text = compact(node.text_content())
+            if not text or len(text) > 900:
+                continue
+            tm = tier_re.search(text)
+            if not tm:
+                continue
+            after = text[tm.end():]
+            nums = [float(x) for x in re.findall(r"\\d+(?:\\.\\d+)?", after)]
+            wr = next((x for x in nums if 30 <= x <= 70), None)
+            if wr is None:
+                continue
+            found[champ] = {"tier": tm.group(1), "winrate": wr}
+            break
 
     return found, sample
 
@@ -207,6 +228,10 @@ def main():
         except Exception as exc:
             errors.append(f"{src}: {exc}")
             print(f"WARNING: {src}: {exc}", file=sys.stderr)
+
+    if not fetched:
+        print("No valid fresh snapshots; preserving external-meta.json exactly as-is.")
+        return 0
 
     merged = {**existing, **fetched}
     patches = []
