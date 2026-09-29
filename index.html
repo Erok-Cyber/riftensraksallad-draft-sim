@@ -49,6 +49,22 @@
       </div>
     </section>
 
+    <section id="matchDayDashboard" class="match-day-dashboard card hidden">
+      <div class="match-day-head">
+        <div>
+          <p class="eyebrow">MATCH DAY</p>
+          <h2 id="matchDayOpponent">—</h2>
+          <p id="matchDayMeta" class="match-day-meta">—</p>
+        </div>
+        <button id="matchDayOpenPlanner" class="secondary" type="button">Öppna matchplan →</button>
+      </div>
+      <div id="matchDayBans" class="match-day-ban-grid"></div>
+      <div class="match-day-foot">
+        <span id="matchDayScout">—</span>
+        <span id="matchDayTargets">—</span>
+      </div>
+    </section>
+
     <section id="banPlannerDashboard" class="ban-planner-dashboard hidden">
       <div class="planner-dashboard-head">
         <div>
@@ -148,6 +164,13 @@
 
     <section class="card hidden test-brief" id="testBrief">
       <p class="eyebrow">DRAFT TEST</p>
+      <div class="test-opponent-picker">
+        <label for="testOpponentSelect">Motståndare</label>
+        <select id="testOpponentSelect">
+          <option value="">Slumpat träningsscenario</option>
+        </select>
+        <small id="testOpponentHint">Välj ett scoutat lag från Ban Planner eller kör ett vanligt scenario.</small>
+      </div>
       <h2 id="scenarioTitle"></h2>
       <p id="scenarioBrief"></p>
       <div class="scenario-meta">
