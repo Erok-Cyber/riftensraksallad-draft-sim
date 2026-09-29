@@ -1,0 +1,20 @@
+name: CM API Probe
+on:
+  push:
+    paths:
+      - ".github/workflows/cm-probe.yml"
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Probe Challengermode GraphQL
+        shell: bash
+        run: |
+          cat > /tmp/payload.json <<'JSON'
+          {
+            "query": "query($id: UUID!) { tournament(tournamentId: $id) { name state stages { index format ... on TournamentEliminationStage { brackets { rounds { roundNumber title matchSeriesPage(first: 5) { nodes { id title state lineups { name members { user { id username } } } matches(includeFailed: true) { id state lineups { number members { user { id username } } } } } } } } } ... on TournamentGroupStage { groups { title matchSeriesPage(first: 5) { nodes { id title state lineups { name members { user { id username } } } } } } } ... on TournamentSwissStage { rounds { roundNumber title matchSeriesPage(first: 5) { nodes { id title state lineups { name members { user { id username } } } } } } } } } }",
+            "variables": {"id":"4848735b-e52f-4039-37cf-08df10190155"}
+          }
+          JSON
+          echo "=== RESPONSE ==="
+          curl -sS -D - -X POST "https://publicapi.challengermode.com/graphql"             -H "Content-Type: application/json"             --data-binary @/tmp/payload.json
