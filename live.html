@@ -7,8 +7,28 @@
   <link rel="stylesheet" href="styles.css?v=20260929-opponentsuite1" />
   <link rel="stylesheet" href="live.css?v=20260928-analysispack1" />
 </head>
-<body>
-  <main class="app">
+<body class="draft-os live-os">
+  <aside class="os-sidebar" id="osSidebar">
+    <div class="os-brand">
+      <div class="os-mark"><img class="team-logo os-logo" alt="Riftens Räksallad" hidden></div>
+      <div><strong>Riftensräksallad</strong><span>Draft OS</span></div>
+    </div>
+    <nav class="os-nav" aria-label="Huvudnavigation">
+      <span class="os-nav-label">WORKSPACE</span>
+      <a class="os-nav-item" href="index.html"><span>⌂</span><b>Home</b></a>
+      <a class="os-nav-item" href="index.html"><span>⚔</span><b>Draft Trainer</b></a>
+      <a class="os-nav-item active" href="live.html"><span>◉</span><b>Draft Brain</b><em>LIVE</em></a>
+      <a class="os-nav-item" href="index.html?view=planner"><span>◎</span><b>Ban Planner</b></a>
+      <a class="os-nav-item" href="index.html?view=analysis"><span>▥</span><b>Analys</b></a>
+      <span class="os-nav-label os-nav-label-gap">TEAM</span>
+      <a class="os-nav-item" href="index.html#comps"><span>◇</span><b>Comp Library</b></a>
+    </nav>
+    <div class="os-side-footer">
+      <div class="os-status-row"><i></i><span>Rivals League · Div 6</span></div>
+      <div class="os-patch-row"><span>PATCH</span><strong>26.19</strong></div>
+    </div>
+  </aside>
+  <main class="app os-main">
     <header>
       <div class="brand-head"><img class="team-logo" alt="Riftens Räksallad" hidden><div>
         <p class="eyebrow">RIFTENSRÄKSALLAD · PATCH 26.19</p>
@@ -23,8 +43,19 @@
       </div>
     </header>
 
-    <section id="startCard" class="card">
-      <h2>Välj sida</h2>
+    <section id="startCard" class="card os-live-hero">
+      <div class="os-live-hero-head">
+        <div>
+          <p class="eyebrow">LIVE DRAFT COMMAND CENTER</p>
+          <h2>Drafta med en plan — inte på känsla.</h2>
+          <p class="sub">Rekommendationer, pivots, matchup-read och execution-plan i samma vy.</p>
+        </div>
+        <div class="os-live-signal"><i></i><span>Brain online</span></div>
+      </div>
+      <div class="os-section-title compact">
+        <div><p class="eyebrow">SETUP</p><h2>Välj sida</h2></div>
+        <span>Blue = first pick</span>
+      </div>
       <div class="side-buttons">
         <button class="side-btn" data-side="blue">Blue side · First pick</button>
         <button class="side-btn" data-side="red">Red side</button>
@@ -327,6 +358,8 @@
       </div>
     </section>
   </main>
+  <button class="os-mobile-toggle" id="osMobileToggle" type="button" aria-label="Öppna navigation">☰</button>
+  <script src="ui-shell.js?v=20260929-redesign1"></script>
   <script src="brand.js?v=20260928-publicread3"></script>
   <script src="db-config.js?v=20260928-publicread3"></script>
   <script src="shared-data.js?v=20260928-publicread3"></script>
