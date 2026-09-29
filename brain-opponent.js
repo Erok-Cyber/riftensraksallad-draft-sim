@@ -83,7 +83,7 @@
   });
   async function load(){
     try{const cached=JSON.parse(localStorage.getItem('rs_ban_plans_cache')||'[]');if(Array.isArray(cached))plans=cached;offline=true;}catch{}
-    update();
+    revision++;update();if(userSide)render();
     try{
       const url=window.RIFT_DB_CONFIG?.plannerFunctionUrl;if(!url)throw Error('Ej konfigurerat');
       const response=await fetch(url,{cache:'no-store'});if(!response.ok)throw Error('HTTP '+response.status);
