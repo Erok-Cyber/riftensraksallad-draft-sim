@@ -26,6 +26,7 @@ function aiEnsureContext(){
 let aiHistoryCacheRaw=null;
 let aiHistoryCache=[];
 function aiHistoryArchive(){
+  if(new URLSearchParams(location.search).has("replay"))return [];
   const raw=localStorage.getItem("rs_draft_archive")||"[]";
   if(raw===aiHistoryCacheRaw)return aiHistoryCache;
   aiHistoryCacheRaw=raw;
@@ -273,7 +274,7 @@ function aiRisk(champ,role,map){
   const conf=comfort[role]?.[champ]||5;
 
   if(conf<=6){risk+=2;reasons.push("lägre comfort");}
-  if(!enemyMap[role]&&(role==="top"||role==="mid")&&smartTraits.counterSensitive.has(champ)){
+  if(!enemyRoleShown(role)&&(role==="top"||role==="mid")&&smartTraits.counterSensitive.has(champ)){
     risk+=2;reasons.push("counterkänslig blind");
   }
 
@@ -316,7 +317,7 @@ function aiCandidate(champ,role){
   // Preserve the current core direction, but reward a useful second pivot.
   if(compRanks[1]&&compRanks[1].score>=9)score+=2;
 
-  const reasons=base.reasons.filter(x=>x.pts>0).slice(0,3).map(x=>x.label);
+  const reasons=base.reasons.filter(x=>x.pts>0&&x.label!=="comfort").slice(0,3).map(x=>x.label);
   if(history.n>=3&&history.bonus>=.35)reasons.unshift("teamdata "+history.w+"W/"+history.l+"L · "+history.label);
   if(flex>=4)reasons.push("håller flera pivots öppna");
   if(lookahead>=70)reasons.push("bra struktur efter egna följdpicks");
@@ -346,9 +347,9 @@ function aiRoleTimingBonus(role){
   const enemyMap=enemyRoleMap(),map=ownRoleMap();
   if(map[role])return -999;
   let s=0;
-  if(enemyMap[role])s+=role==="top"?12:role==="mid"?10:6;
-  if(!enemyMap[role]&&role==="top")s-=7;
-  if(!enemyMap[role]&&role==="mid")s-=4;
+  if(enemyRoleShown(role))s+=role==="top"?12:role==="mid"?10:6;
+  if(!enemyRoleShown(role)&&role==="top")s-=7;
+  if(!enemyRoleShown(role)&&role==="mid")s-=4;
 
   const remaining=(teamPool[role]||[]).filter(ch=>!unavailable().has(ch.toLowerCase())).length;
   if(remaining<=2)s+=9;
@@ -447,6 +448,8 @@ function renderRecommendation(){
   };
   addButton(top,$("recommendPicks"));
   $("recommendReason").textContent=top.reasons?.slice(0,2).join(" · ")||"Baserat på comp och visade hot.";
+  const stats=window.RiftStats?.getStatus?.();
+  $("brainDataStatus").textContent=stats?.hasData?stats.source+" · data "+(stats.metaPatch||"?")+(stats.fallback?" · äldre underlag":""):"Metadata saknas · regler och lagpool används";
   const alternatives=$("recommendAlternatives");alternatives.replaceChildren();
   list.slice(1).forEach(x=>addButton(x,alternatives));
   $("recommendStrength").textContent=t.type==="pick"?aiConfidenceLabel(list[1]?top.total-list[1].total:20)+" · regelbaserat stöd":"Alternativ om banplanen ändras";

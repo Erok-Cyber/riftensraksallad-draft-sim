@@ -35,6 +35,7 @@ const advCount=(list,set)=>list.reduce((n,e)=>n+(set.has(e.champ)?1:0),0);
 const advQ=(list,map)=>list.reduce((n,e)=>n+(map[e.champ]||0),0);
 
 function advArchive(){
+  if(new URLSearchParams(location.search).has("replay"))return [];
   try{
     return JSON.parse(localStorage.getItem("rs_draft_archive")||"[]")
       .filter(m=>m&&((m.result==="win")||(m.result==="loss")));
@@ -348,3 +349,4 @@ window.RiftAdvanced={
   teamPattern:advTeamPattern,
   objectiveProfile:advObjectiveProfile
 };
+

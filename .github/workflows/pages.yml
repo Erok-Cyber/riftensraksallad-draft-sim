@@ -39,6 +39,8 @@ jobs:
           node --check stats-engine.js
           node --check advanced-engine.js
           node --check draft-ai.js
+          node --check champion-picker.js
+          node tests/brain-regression.cjs
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

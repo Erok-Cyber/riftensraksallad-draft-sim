@@ -369,3 +369,5 @@ body.live-os .live-playbook-card .secondary{
 .live-os #recommendReason,.live-os .live-call-grid p,.live-os .auto-read-grid p,.live-os .ai-explain p{font-size:14px;line-height:1.6}
 .live-os .recommendation h3{font-size:13px;margin-bottom:6px}
 .live-os .live-coach-card h2{font-size:clamp(18px,2vw,23px)}
+
+.live-os #liveArea>details.card{margin-top:16px;margin-bottom:16px}

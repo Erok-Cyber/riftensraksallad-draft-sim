@@ -258,6 +258,7 @@ function chooseSuggestedChampion(champ,role=null){
     selectedRole=role;
     document.querySelectorAll(".role-buttons button").forEach(b=>b.classList.toggle("active",b.dataset.role===role));
     renderTurn();
+    renderRecommendation();
   }
 
   $("lockBtn").textContent="Lås "+champ;
@@ -467,7 +468,7 @@ function renderTurn(){
     if(hint){
       if(isOwn){
         hint.classList.toggle("hidden",!suggested);
-        hint.textContent=suggested?"Rekommenderad nästa roll: "+roleNames[suggested]+" · gul markering = Draft Brains förslag":"";
+        hint.textContent=selectedRole?"Vald roll: "+roleNames[selectedRole]:(suggested?"Föreslagen roll: "+roleNames[suggested]:"");
       }else{
         hint.classList.remove("hidden");
         hint.textContent="Enemy: lämna ? för AUTO. Draft Brain infererar mest sannolik roll och räknar om när fler picks visas.";
@@ -694,6 +695,12 @@ function buildPath(){
 
 function renderCoach(){
   const comp=desiredComp();
+  if(compConfidence()==="öppen"){
+    $("compCall").textContent="COMP: Öppen";
+    $("planCall").textContent="Säkra ett flexibelt pick. Anpassa riktningen efter det motståndaren visar.";
+    $("winconCall").textContent="Bygg frontline, damage och ett tydligt sätt att starta eller vända fights.";
+    $("watchCall").textContent=buildWatch();$("pathCall").textContent=buildPath();return;
+  }
   $("compCall").textContent="COMP: "+comp;
   $("planCall").textContent=comps[comp].plan;
   $("winconCall").textContent=buildWincon(comp);
@@ -1395,6 +1402,11 @@ function enemyRoleCandidates(champ){
 function enemyRoleMap(){
   return inferEnemyRoles().map;
 }
+function enemyRoleShown(role){
+  const inferred=inferEnemyRoles();
+  const champion=inferred.map[role],evidence=inferred.byChamp[champion];
+  return !!evidence&&(evidence.explicit||evidence.confidence>=0.8);
+}
 
 let enemyProfileCache={key:null,value:null};
 function enemyProfile(){
@@ -1550,7 +1562,7 @@ function scoreCandidateDetails(champ,role,compName){
   if(rule)add(rule,"specifik matchup/synergy");
 
   // Draft-order intelligence: reward safe blinds, reward counters once lane is shown.
-  if(enemyMap[role]){
+  if(enemyRoleShown(role)){
     add(role==="top"||role==="mid"?7:4,"rollen är visad");
   }else if(ours().length<3){
     if(roleBlindSafety[role]?.has(champ))add(6,"säker blind");
