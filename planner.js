@@ -99,8 +99,29 @@
     },0);
   }
   function scoutLineup(plan){
-    const players=(plan?.scoutingPlayers||[]).filter(p=>p?.found!==false&&Array.isArray(p?.topChampions)&&p.topChampions.length).slice(0,5);
+    const players=(plan?.scoutingPlayers||[]).filter(p=>p?.found!==false&&Array.isArray(p?.topChampions)&&p.topChampions.length).slice(0,8);
     if(!players.length)return [];
+
+    const cmRoster=Array.isArray(plan?.competitiveEvidence?.currentRoster)?plan.competitiveEvidence.currentRoster:[];
+    const exact=cmRoster.filter(x=>x?.role&&x?.riotId).map(row=>{
+      const player=players.find(p=>String(p.riotId||"").toLowerCase()===String(row.riotId||"").toLowerCase());
+      if(!player)return null;
+      const role=String(row.role||"").toLowerCase();
+      let pool=(player.topChampions||[]).filter(c=>SCOUT_ROLE_POOLS[role]?.has(c.champ));
+      if(pool.length<2)pool=[...(player.topChampions||[])];
+      pool=pool.filter((c,idx,arr)=>c?.champ&&arr.findIndex(x=>x.champ===c.champ)===idx).slice(0,6);
+      return {
+        role,
+        roleName:SCOUT_ROLE_NAMES[role]||role.toUpperCase(),
+        roleConfidence:100,
+        source:"challengermode",
+        cmUsername:row.player||"",
+        player,
+        pool
+      };
+    }).filter(Boolean);
+    if(exact.length>=3)return exact.sort((a,b)=>SCOUT_ROLES.indexOf(a.role)-SCOUT_ROLES.indexOf(b.role));
+
     const roles=SCOUT_ROLES.slice();
     let best={score:-1,assign:[]};
     const walk=(i,left,assign,score)=>{
@@ -114,7 +135,7 @@
       });
     };
     walk(0,roles,[],0);
-    return players.map((player,i)=>{
+    return players.slice(0,5).map((player,i)=>{
       const role=best.assign[i]||roles[i]||"";
       const scores=SCOUT_ROLES.map(r=>scoutRoleScore(player,r));
       const total=scores.reduce((a,b)=>a+b,0);
@@ -126,6 +147,7 @@
         role,
         roleName:SCOUT_ROLE_NAMES[role]||role.toUpperCase(),
         roleConfidence:total?Math.round(roleScore/total*100):0,
+        source:"opgg-inferred",
         player,
         pool
       };
