@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=20260929-qol2" />
-  <link rel="stylesheet" href="live.css?v=20260929-qol2" />
+  <link rel="stylesheet" href="live.css?v=20260929-opponent1" />
 </head>
 <body class="draft-os live-os" data-workspace="brain">
   <aside class="os-sidebar" id="osSidebar">
@@ -120,6 +120,13 @@
           <input id="championInput" list="champions" placeholder="Skriv champion..." autocomplete="off" />
           <datalist id="champions"></datalist>
           <button id="lockBtn" class="primary">Lås</button>
+          <div class="opponent-context">
+            <label for="brainOpponent">Rekommendationer mot</label>
+            <select id="brainOpponent" aria-describedby="brainOpponentHint">
+              <option value="">Generella rekommendationer</option>
+            </select>
+            <small id="brainOpponentHint" role="status">Laddar lag från Ban Planner…</small>
+          </div>
 
           <div id="recommendationBox" class="recommendation hidden">
             <p class="eyebrow" id="recommendEyebrow">REKOMMENDATION</p>
@@ -391,11 +398,14 @@
   <script src="shared-data.js?v=20260928-publicread3"></script>
   <script src="stats-engine.js?v=20260928-meta2"></script>
   <script src="champion-picker.js?v=20260929-qol2"></script>
-  <script src="live.js?v=20260929-qol2"></script>
+  <script src="scouting-lineup.js?v=20260929-opponent1"></script>
+  <script src="brain-opponent.js?v=20260929-opponent1"></script>
+  <script src="live.js?v=20260929-opponent1"></script>
   <script src="advanced-engine.js?v=20260929-qol2"></script>
-  <script src="draft-ai.js?v=20260929-qol2"></script>
+  <script src="draft-ai.js?v=20260929-opponent1"></script>
   <script src="ui-shell.js?v=20260929-workspace1"></script>
   <div id="workspaceReady" hidden></div>
 </body>
 </html>
+
 

@@ -578,6 +578,7 @@ function banRecommendations(){
     "Nocturne","Poppy","Janna","Milio","Lulu","Skarner","Rell","Ornn","K'Sante","Vi","Jarvan IV",
     "Aatrox","Aurora","Syndra","Gwen","Fiora","Trundle","Kog'Maw","Jinx","Aphelios"
   ];
+  if(window.RiftOpponent?.active())return window.RiftOpponent.bans(candidates);
   return candidates.filter(c=>!used.has(c.toLowerCase()))
     .map(ch=>({ch,s:banScore(ch)})).sort((a,b)=>b.s-a.s).slice(0,3).map(x=>x.ch);
 }
@@ -2152,3 +2153,4 @@ window.RiftChampionPicker?.attach({inputId:"championInput",roster:()=>championRo
     $("lockBtn").textContent="Lås "+champ;
     if(current()?.type==="pick"&&role){selectedRole=role;renderTurn();renderRecommendation();}
   }});
+

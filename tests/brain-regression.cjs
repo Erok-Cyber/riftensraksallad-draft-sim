@@ -1,12 +1,12 @@
 // Offline invariants for the heuristic engine. No network or real match writes.
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
 const root=path.join(__dirname,'..');
-function harness(files){
-  const elements=new Map(),storage=new Map();
+function harness(files,fixtures={}){
+  const elements=new Map(),storage=new Map(Object.entries(fixtures)),listeners=new Map();
   const element=id=>{
     if(!elements.has(id))elements.set(id,{value:'',textContent:'',innerHTML:'',dataset:{},style:{},disabled:false,
       classList:{add(){},remove(){},toggle(){},contains(){return false;}},
-      addEventListener(){},setAttribute(){},appendChild(){},replaceChildren(){},querySelectorAll(){return [];}});
+      addEventListener(type,fn){listeners.set(String(id)+":"+type,fn);},setAttribute(){},appendChild(){},replaceChildren(){},querySelectorAll(){return [];}});
     return elements.get(id);
   };
   const store={getItem:key=>storage.get(key)||null,setItem:(key,val)=>storage.set(key,val),removeItem:key=>storage.delete(key)};
@@ -14,11 +14,11 @@ function harness(files){
     localStorage:store,sessionStorage:store,location:{search:'',pathname:'/index.html'},history:{replaceState(){}},
     fetch:async()=>{throw Error('offline test');},queueMicrotask(){},setTimeout(){},clearTimeout(){},
     confirm:()=>true,alert(){},document:{body:element('body'),getElementById:element,createElement:()=>element(Symbol()),
-      querySelectorAll:()=>[],querySelector:()=>element('query'),addEventListener(){},dispatchEvent(){}},
+      querySelectorAll:()=>[],querySelector:()=>element('query'),addEventListener(type,fn){listeners.set("document:"+type,fn);},dispatchEvent(){}},
     window:{addEventListener(){},scrollTo(){}}};
   vm.createContext(context);
   for(const file of files)vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
-  return {run:s=>vm.runInContext(s,context),elements,storage};
+  return {run:s=>vm.runInContext(s,context),elements,storage,fire:(id,type)=>listeners.get(id+":"+type)?.()};
 }
 const brain=harness(['live.js','advanced-engine.js','draft-ai.js']);
 brain.run('userSide="blue";step=6;events=[];');
@@ -65,3 +65,27 @@ assert.equal(brain.run('step'),1);
 assert.equal(brain.run('draftIsTest&&testMode'),true);
 assert.equal(brain.storage.get('rs_draft_state'),'real-draft-must-survive');
 console.log('PASS: review replay cannot overwrite the real draft.');
+
+// Opponent context must use actual starters and remain an optional, bounded prior.
+const fixture={id:'opponent',opponent:'Testlag',status:'upcoming',phase1Plan:{b1:'Nocturne',b2:'Poppy',b3:'Janna'},
+ competitiveEvidence:{currentRoster:[{riotId:'Starter#1',role:'jungle'}]},
+ scoutingPlayers:[{riotId:'Starter#1',found:true,topChampions:[{champ:'Nocturne',seasonGames:100}]},
+ {riotId:'Sub#1',found:true,topChampions:[{champ:'Vi',seasonGames:500}]}]};
+const opponent=harness(['live.js','advanced-engine.js','draft-ai.js','scouting-lineup.js','brain-opponent.js'],
+ {'rs_ban_plans_cache':JSON.stringify([fixture]),'rs_brain_opponent':'opponent'});
+opponent.fire('document','DOMContentLoaded');
+opponent.run('userSide="blue";events=[];step=0;');
+assert.equal(opponent.run('window.RiftOpponent.active().id'),'opponent');
+assert.equal(opponent.run('window.RiftScouting.lineup(window.RiftOpponent.active())[0].player.riotId'),'Starter#1');
+assert(opponent.run('window.RiftOpponent.pickSignal("Xayah","adc").points')>0);
+assert(opponent.run('window.RiftOpponent.pickSignal("Xayah","adc").points')<=8);
+assert(opponent.run('banRecommendations().includes("Nocturne")'));
+opponent.run('events=[{side:"red",type:"ban",champ:"Nocturne"}];');
+assert(!opponent.run('banRecommendations().includes("Nocturne")'));
+assert.equal(opponent.run('window.RiftOpponent.pickSignal("Xayah","adc").points'),0);
+opponent.run('events=[{side:"red",type:"pick",role:"jungle",champ:"Ivern"}];');
+assert.equal(opponent.run('window.RiftOpponent.pickSignal("Xayah","adc").points'),0);
+opponent.elements.get('brainOpponent').value='';opponent.fire('brainOpponent','change');
+assert.equal(opponent.run('window.RiftOpponent.active()'),null);
+assert.equal(opponent.run('window.RiftOpponent.pickSignal("Xayah","adc").points'),0);
+console.log('PASS: optional opponent, starters over subs, planned bans, unavailable picks, revealed roles supersede scouting.');

@@ -40,6 +40,8 @@ jobs:
           node --check advanced-engine.js
           node --check draft-ai.js
           node --check champion-picker.js
+          node --check scouting-lineup.js
+          node --check brain-opponent.js
           node tests/brain-regression.cjs
 
       - name: Setup Pages

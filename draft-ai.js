@@ -20,7 +20,7 @@ let aiContextKey="";
 const aiRoleCache=new Map(),aiStateCache=new Map();
 function aiEnsureContext(){
   const key=JSON.stringify([userSide,events.map(e=>[e.side,e.type,e.role,e.champ]),
-    window.RiftStats?.getStatus?.(),localStorage.getItem("rs_draft_archive"),Object.keys(championMeta).length]);
+    window.RiftStats?.getStatus?.(),window.RiftOpponent?.key(),localStorage.getItem("rs_draft_archive"),Object.keys(championMeta).length]);
   if(key!==aiContextKey){aiContextKey=key;aiRoleCache.clear();aiStateCache.clear();}
 }
 let aiHistoryCacheRaw=null;
@@ -313,11 +313,14 @@ function aiCandidate(champ,role){
   score+=flex*AI_CONFIG.flexibilityWeight;
   score-=risk.value*2.4;
   score+=history.bonus;
+  const scouting=window.RiftOpponent?.pickSignal(champ,role);
+  score+=scouting?.points||0;
 
   // Preserve the current core direction, but reward a useful second pivot.
   if(compRanks[1]&&compRanks[1].score>=9)score+=2;
 
   const reasons=base.reasons.filter(x=>x.pts>0&&x.label!=="comfort").slice(0,3).map(x=>x.label);
+  if(scouting?.points>=1&&scouting.reason)reasons.unshift(scouting.reason);
   if(history.n>=3&&history.bonus>=.35)reasons.unshift("teamdata "+history.w+"W/"+history.l+"L · "+history.label);
   if(flex>=4)reasons.push("håller flera pivots öppna");
   if(lookahead>=70)reasons.push("bra struktur efter egna följdpicks");
@@ -447,7 +450,7 @@ function renderRecommendation(){
     b.textContent=item.ch;parent.appendChild(b);
   };
   addButton(top,$("recommendPicks"));
-  $("recommendReason").textContent=top.reasons?.slice(0,2).join(" · ")||"Baserat på comp och visade hot.";
+  $("recommendReason").textContent=top.reasons?.slice(0,2).join(" · ")||window.RiftOpponent?.banReason(top.ch)||"Baserat på comp och visade hot.";
   const stats=window.RiftStats?.getStatus?.();
   $("brainDataStatus").textContent=stats?.hasData?stats.source+" · data "+(stats.metaPatch||"?")+(stats.fallback?" · äldre underlag":""):"Metadata saknas · regler och lagpool används";
   const alternatives=$("recommendAlternatives");alternatives.replaceChildren();
@@ -486,4 +489,5 @@ render = function(){
 };
 
 if(userSide)render();
+
 
