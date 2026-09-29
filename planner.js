@@ -105,8 +105,8 @@
 
     const cmRoster=Array.isArray(plan?.competitiveEvidence?.currentRoster)?plan.competitiveEvidence.currentRoster:[];
     const exact=cmRoster.filter(x=>x?.role&&x?.riotId).map(row=>{
-      const player=players.find(p=>String(p.riotId||"").toLowerCase()===String(row.riotId||"").toLowerCase());
-      if(!player)return null;
+      const player=players.find(p=>String(p.riotId||"").toLowerCase()===String(row.riotId||"").toLowerCase())
+        ||{riotId:row.riotId,found:false,tier:"",topChampions:[]};
       const role=String(row.role||"").toLowerCase();
       let pool=(player.topChampions||[]).filter(c=>SCOUT_ROLE_POOLS[role]?.has(c.champ));
       if(pool.length<2)pool=[...(player.topChampions||[])];
@@ -163,7 +163,7 @@
     }).join("");
     return '<article class="planner-scout-profile">'+
       '<div class="planner-scout-profile-head"><div><span class="planner-role-chip">'+esc(entry.roleName)+'</span><strong>'+esc(p.riotId||"Okänd spelare")+'</strong></div>'+
-      '<small>'+esc(p.tier||"UNRANKED")+(entry.roleConfidence?' · rollsignal '+esc(entry.roleConfidence)+'%':' · roll osäker')+'</small></div>'+
+      '<small>'+esc(p.tier||"UNRANKED")+(entry.source==="challengermode"?' · RIVALS-roll':entry.roleConfidence?' · rollsignal '+esc(entry.roleConfidence)+'%':' · roll osäker')+'</small></div>'+
       '<div class="planner-profile-champs">'+(champRows||'<span class="analysis-note">Ingen championdata.</span>')+'</div>'+
     '</article>';
   }
