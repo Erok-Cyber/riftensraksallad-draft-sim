@@ -7,7 +7,7 @@
   <script>
     (() => {
       const q=new URLSearchParams(location.search);
-      if(q.get("open")||q.get("view")||location.hash==="#comps"){
+      if(q.get("workspace")&&q.get("workspace")!=="home"){
         document.documentElement.classList.add("route-pending");
       }
     })();
@@ -21,7 +21,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=20260929-undomove1" />
 </head>
-<body class="draft-os">
+<body class="draft-os" data-workspace="home">
   <aside class="os-sidebar" id="osSidebar">
     <div class="os-brand">
       <div class="os-mark"><img class="team-logo os-logo" alt="Riftens Räksallad" hidden></div>
@@ -29,14 +29,14 @@
     </div>
     <nav class="os-nav" aria-label="Huvudnavigation">
       <span class="os-nav-label">WORKSPACE</span>
-      <button class="os-nav-item active" data-shell-click="startTabBtn" data-shell-view="home"><span>⌂</span><b>Home</b></button>
-      <a class="os-nav-item" href="live.html"><span>◉</span><b>Draft Brain</b><em>LIVE</em></a>
-      <button class="os-nav-item" data-shell-focus="simModeBtn" data-shell-mode="sim"><span>⚔</span><b>Draft Trainer</b></button>
-      <button class="os-nav-item" data-shell-focus="testModeBtn" data-shell-mode="test"><span>▤</span><b>Draft Test</b></button>
-      <button class="os-nav-item" data-shell-click="plannerTabBtn" data-shell-view="planner"><span>◎</span><b>Ban Planner</b></button>
-      <button class="os-nav-item" data-shell-click="analysisTabBtn" data-shell-view="analysis"><span>▥</span><b>Analys</b></button>
+      <button class="os-nav-item active" data-shell-click="startTabBtn" data-workspace-target="home"><span>⌂</span><b>Home</b></button>
+      <a class="os-nav-item" href="live.html" data-workspace-target="brain"><span>◉</span><b>Draft Brain</b><em>LIVE</em></a>
+      <button class="os-nav-item" data-shell-focus="simModeBtn" data-workspace-target="trainer"><span>⚔</span><b>Draft Trainer</b></button>
+      <button class="os-nav-item" data-shell-focus="testModeBtn" data-workspace-target="test"><span>▤</span><b>Draft Test</b></button>
+      <button class="os-nav-item" data-shell-click="plannerTabBtn" data-workspace-target="planner"><span>◎</span><b>Ban Planner</b></button>
+      <button class="os-nav-item" data-shell-click="analysisTabBtn" data-workspace-target="analysis"><span>▥</span><b>Analys</b></button>
       <span class="os-nav-label os-nav-label-gap">TEAM</span>
-      <button class="os-nav-item" type="button" data-shell-click="compLibraryTabBtn" data-shell-view="comps"><span>◇</span><b>Comp Library</b></button>
+      <button class="os-nav-item" type="button" data-shell-click="compLibraryTabBtn" data-workspace-target="comps"><span>◇</span><b>Comp Library</b></button>
     </nav>
     <div class="os-side-footer">
       <div class="os-status-row"><i></i><span>Rivals League · Div 6</span></div>
