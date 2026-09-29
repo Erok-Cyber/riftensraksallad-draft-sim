@@ -187,7 +187,7 @@
         '<div><span>AKTIV LINEUP</span><div class="planner-player-grid">'+(active.length?active.map(x=>'<b class="planner-player">'+esc(x)+'</b>').join(""):'<em>Ingen spelad lineup ännu</em>')+'</div></div>'+
         '<div><span>SUBS / ÖVRIG ROSTER</span><div class="planner-player-grid">'+(subs.length?subs.map(x=>'<b class="planner-player sub">'+esc(x)+'</b>').join(""):(registered.length?'<em>Inga subs identifierade ännu</em>':'<em>Ingen rosterdata</em>'))+'</div></div>'+
       '</div>'+
-      (recent.length?'<div class="planner-cm-history">'+recent.map(series=>'<div><strong>Serie '+esc(series.ordinal||"—")+'</strong><span>'+esc(series.state||"")+'</span><small>'+esc((series.matches||[]).map(m=>m.state||"").filter(Boolean).join(" / "))+'</small></div>').join("")+'</div>':'')+
+      (recent.length?'<div class="planner-cm-history">'+recent.map(series=>'<div><strong>Serie '+esc(series.ordinal||"—")+'</strong><span>'+esc(series.state||"")+(series.score!=null?' · score '+esc(series.score):'')+'</span><small>'+esc((series.matches||[]).map(m=>m.state||"").filter(Boolean).join(" / "))+'</small></div>').join("")+'</div>':'')+
     '</section>';
   }
   function toLocalInput(iso){
