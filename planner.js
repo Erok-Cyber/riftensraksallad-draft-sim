@@ -132,7 +132,7 @@
     }).join("");
     return '<article class="planner-scout-profile">'+
       '<div class="planner-scout-profile-head"><div><span class="planner-role-chip">'+esc(entry.roleName)+'</span><strong>'+esc(p.riotId||"Okänd spelare")+'</strong></div>'+
-      '<small>'+esc(p.tier||"UNRANKED")+(entry.roleConfidence?' · roll '+esc(entry.roleConfidence)+'%':'')+'</small></div>'+
+      '<small>'+esc(p.tier||"UNRANKED")+(entry.roleConfidence?' · rollsignal '+esc(entry.roleConfidence)+'%':' · roll osäker')+'</small></div>'+
       '<div class="planner-profile-champs">'+(champRows||'<span class="analysis-note">Ingen championdata.</span>')+'</div>'+
     '</article>';
   }
