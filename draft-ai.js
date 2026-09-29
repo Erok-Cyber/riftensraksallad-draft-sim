@@ -16,11 +16,16 @@ const AI_CONFIG = {
   beamDepth: 2
 };
 
+let aiHistoryCacheRaw=null;
+let aiHistoryCache=[];
 function aiHistoryArchive(){
+  const raw=localStorage.getItem("rs_draft_archive")||"[]";
+  if(raw===aiHistoryCacheRaw)return aiHistoryCache;
+  aiHistoryCacheRaw=raw;
   try{
-    return JSON.parse(localStorage.getItem("rs_draft_archive")||"[]")
-      .filter(m=>m&&(m.result==="win"||m.result==="loss"));
-  }catch{return[]}
+    aiHistoryCache=JSON.parse(raw).filter(m=>m&&(m.result==="win"||m.result==="loss"));
+  }catch{aiHistoryCache=[]}
+  return aiHistoryCache;
 }
 function aiHistoryTier(n){
   if(n>=10)return {label:"established",cap:3};
