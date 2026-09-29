@@ -136,6 +136,15 @@ const CM_TOURNAMENT_QUERY=`query TournamentLive($id: UUID!) {
       id
       state
       ordinal
+      results {
+        final
+        draw
+        lineupResults {
+          lineupNumber
+          position
+          score
+        }
+      }
       matches(includeFailed: false) {
         id
         state
@@ -190,18 +199,27 @@ async function syncChallengermodePlan(plan:any){
   const registered=cmUsers(rosterLineup);
   const teamId=String(rosterLineup?.team?.id||"");
   const series=(tournament?.matchSeries||[]).map((ms:any)=>{
+    let targetLineupNumber:any=null;
     const matches=(ms?.matches||[]).map((m:any)=>{
       const lineup=cmMatchTargetLineup(m,teamId,registered);
+      if(lineup?.number!=null&&targetLineupNumber==null)targetLineupNumber=lineup.number;
       return {
         id:String(m?.id||""),
         state:clean(m?.state,40),
+        lineupNumber:lineup?.number??null,
         lineup:lineup?cmUsers(lineup):[]
       };
     });
+    const lineupResults=Array.isArray(ms?.results?.lineupResults)?ms.results.lineupResults:[];
+    const targetResult=targetLineupNumber==null?null:lineupResults.find((r:any)=>Number(r?.lineupNumber)===Number(targetLineupNumber))||null;
     return {
       id:String(ms?.id||""),
       ordinal:Number(ms?.ordinal)||0,
       state:clean(ms?.state,40),
+      final:!!ms?.results?.final,
+      draw:!!ms?.results?.draw,
+      score:targetResult?.score??null,
+      position:targetResult?.position??null,
       matches
     };
   });
