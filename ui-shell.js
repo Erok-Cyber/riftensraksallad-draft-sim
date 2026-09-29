@@ -67,17 +67,17 @@
   }
 
   ["startTabBtn","analysisTabBtn","plannerTabBtn","compLibraryTabBtn"].forEach(id=>{
-    document.getElementById(id)?.addEventListener("click",()=>setTimeout(syncActiveNav,0));
+    document.getElementById(id)?.addEventListener("click",syncActiveNav);
   });
 
   document.getElementById("simModeBtn")?.addEventListener("click",()=>{
-    setTimeout(()=>setShellActive("mode","sim"),0);
+    setShellActive("mode","sim");
   });
   document.getElementById("testModeBtn")?.addEventListener("click",()=>{
-    setTimeout(()=>setShellActive("mode","test"),0);
+    setShellActive("mode","test");
   });
   document.getElementById("homeBtn")?.addEventListener("click",()=>{
-    setTimeout(()=>setShellActive("view","home"),0);
+    setShellActive("view","home");
   });
 
   const topTabs=document.getElementById("homeTabs");
