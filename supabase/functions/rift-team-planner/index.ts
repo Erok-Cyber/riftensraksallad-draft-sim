@@ -10,6 +10,9 @@ const json=(body:unknown,status=200)=>new Response(JSON.stringify(body),{status,
 const TEAM_SLUG="riftensraksallad";
 const SUMMONER_API="https://lol-api-summoner.op.gg/api";
 const CHAMPION_API="https://lol-api-champion.op.gg/api";
+const CM_AUTH_URL="https://publicapi.challengermode.com/mk1/v1/auth/access_keys";
+const CM_GRAPHQL_URL="https://publicapi.challengermode.com/graphql";
+let cmTokenCache:{value:string;expiresAt:number}|null=null;
 const OPGG_HEADERS={
   "Accept":"application/json,text/plain,*/*",
   "Accept-Language":"en-US,en;q=0.9",
@@ -66,6 +69,190 @@ function parsePlayersFromOpgg(urlValue:unknown){
   }catch{return []}
 }
 function pct(wins:number,games:number){return games>0?Math.round(wins/games*100):0}
+function cmTournamentId(value:unknown){
+  const raw=String(value||"").trim();
+  const match=raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
+  return match?.[0]||"";
+}
+function nameKey(value:unknown){
+  return String(value||"").toLowerCase()
+    .replace(/#.*$/,"")
+    .replace(/0/g,"o").replace(/1/g,"i")
+    .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .replace(/[^a-z0-9]/g,"");
+}
+function nameLooksSame(a:unknown,b:unknown){
+  const x=nameKey(a),y=nameKey(b);
+  if(!x||!y)return false;
+  return x===y||x.includes(y)||y.includes(x);
+}
+async function cmAccessToken(){
+  if(cmTokenCache&&Date.now()<cmTokenCache.expiresAt-120000)return cmTokenCache.value;
+  const refreshKey=Deno.env.get("CHALLENGERMODE_REFRESH_KEY")||"";
+  if(!refreshKey)throw new Error("CHALLENGERMODE_NOT_CONFIGURED");
+  const res=await fetch(CM_AUTH_URL,{
+    method:"POST",
+    headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({refreshKey})
+  });
+  if(!res.ok)throw new Error("Challengermode auth HTTP "+res.status);
+  const data=await res.json();
+  const value=String(data?.value||"");
+  const expiresAt=Date.parse(String(data?.expiresAt||""));
+  if(!value)throw new Error("Challengermode auth saknar access token");
+  cmTokenCache={value,expiresAt:Number.isFinite(expiresAt)?expiresAt:Date.now()+15*60*1000};
+  return value;
+}
+async function cmGraphql(query:string,variables:Record<string,unknown>){
+  const token=await cmAccessToken();
+  const res=await fetch(CM_GRAPHQL_URL,{
+    method:"POST",
+    headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
+    body:JSON.stringify({query,variables})
+  });
+  const body=await res.json().catch(()=>null);
+  if(!res.ok)throw new Error("Challengermode GraphQL HTTP "+res.status);
+  if(Array.isArray(body?.errors)&&body.errors.length)throw new Error(clean(body.errors[0]?.message||"Challengermode GraphQL error",220));
+  return body?.data||{};
+}
+const CM_TOURNAMENT_QUERY=`query TournamentLive($id: UUID!) {
+  tournament(tournamentId: $id) {
+    id
+    name
+    state
+    attendance {
+      roster {
+        lineups(limit: 100) {
+          name
+          team { id name }
+          members {
+            captain
+            user { userId username }
+          }
+        }
+      }
+    }
+    matchSeries {
+      id
+      state
+      ordinal
+      matches(includeFailed: false) {
+        id
+        state
+        lineups {
+          number
+          name
+          team { id name }
+          members {
+            user { userId username }
+          }
+        }
+      }
+    }
+  }
+}`;
+function cmUsers(lineup:any){
+  return (lineup?.members||[]).map((m:any)=>clean(m?.user?.username,80)).filter(Boolean);
+}
+function cmTargetLineup(tournament:any,teamName:string){
+  const lineups=tournament?.attendance?.roster?.lineups||[];
+  const wanted=nameKey(teamName);
+  return lineups.find((l:any)=>nameKey(l?.team?.name)===wanted||nameKey(l?.name)===wanted)
+    ||lineups.find((l:any)=>nameKey(l?.team?.name).includes(wanted)||wanted.includes(nameKey(l?.team?.name)))
+    ||lineups.find((l:any)=>nameKey(l?.name).includes(wanted)||wanted.includes(nameKey(l?.name)))
+    ||null;
+}
+function cmMatchTargetLineup(match:any,teamId:string,registered:string[]){
+  const lineups=match?.lineups||[];
+  if(teamId){
+    const byTeam=lineups.find((l:any)=>String(l?.team?.id||"")===teamId);
+    if(byTeam)return byTeam;
+  }
+  let best:any=null,bestScore=-1;
+  for(const lineup of lineups){
+    const users=cmUsers(lineup);
+    const score=users.filter((u:string)=>registered.some(r=>nameLooksSame(r,u))).length;
+    if(score>bestScore){bestScore=score;best=lineup}
+  }
+  return bestScore>0?best:null;
+}
+async function syncChallengermodePlan(plan:any){
+  const tournamentId=cmTournamentId(plan?.challengermodeTournamentId||plan?.challengermodeUrl);
+  if(!tournamentId)throw new Error("Saknar giltig Challengermode-turneringslänk eller tournament ID.");
+  const data=await cmGraphql(CM_TOURNAMENT_QUERY,{id:tournamentId});
+  const tournament=data?.tournament;
+  if(!tournament)throw new Error("Challengermode-turneringen hittades inte.");
+
+  const teamName=clean(plan?.challengermodeTeamName||plan?.opponent,100);
+  const rosterLineup=cmTargetLineup(tournament,teamName);
+  if(!rosterLineup)throw new Error("Kunde inte hitta laget '"+teamName+"' i turneringens roster.");
+
+  const registered=cmUsers(rosterLineup);
+  const teamId=String(rosterLineup?.team?.id||"");
+  const series=(tournament?.matchSeries||[]).map((ms:any)=>{
+    const matches=(ms?.matches||[]).map((m:any)=>{
+      const lineup=cmMatchTargetLineup(m,teamId,registered);
+      return {
+        id:String(m?.id||""),
+        state:clean(m?.state,40),
+        lineup:lineup?cmUsers(lineup):[]
+      };
+    });
+    return {
+      id:String(ms?.id||""),
+      ordinal:Number(ms?.ordinal)||0,
+      state:clean(ms?.state,40),
+      matches
+    };
+  });
+
+  const allMatches=series.flatMap((x:any)=>x.matches.map((m:any)=>({...m,seriesId:x.id,seriesOrdinal:x.ordinal,seriesState:x.state})));
+  const withLineup=allMatches.filter((m:any)=>Array.isArray(m.lineup)&&m.lineup.length);
+  const latest=withLineup[withLineup.length-1]||null;
+  const active=latest?.lineup?.slice(0,10)||[];
+  const substitutes=registered.filter((u:string)=>!active.some((a:string)=>nameLooksSame(a,u)));
+  const previousActive=plan?.challengermode?.activeRoster||plan?.competitiveEvidence?.currentRoster?.map((x:any)=>x?.player||x)||[];
+  const rosterChanged=!!active.length&&!!previousActive.length&&(
+    active.length!==previousActive.length||
+    active.some((u:string)=>!previousActive.some((p:string)=>nameLooksSame(p,u)))
+  );
+
+  const evidenceGames=Array.isArray(plan?.competitiveEvidence?.games)?plan.competitiveEvidence.games:[];
+  const competitiveEvidence={
+    ...(plan?.competitiveEvidence||{}),
+    source:"Challengermode / Rivals League",
+    tournamentId,
+    rosterChanged:rosterChanged||!!plan?.competitiveEvidence?.rosterChanged,
+    observedAt:new Date().toISOString(),
+    currentRoster:(active.length?active:registered).map((player:string)=>({player})),
+    substitutes,
+    games:evidenceGames
+  };
+
+  return {
+    ...plan,
+    challengermodeUrl:plan?.challengermodeUrl||"",
+    challengermodeTournamentId:tournamentId,
+    challengermodeTeamName:teamName,
+    challengermode:{
+      configured:true,
+      tournamentId,
+      tournamentName:clean(tournament?.name,120),
+      tournamentState:clean(tournament?.state,40),
+      teamId,
+      teamName:clean(rosterLineup?.team?.name||rosterLineup?.name||teamName,100),
+      registeredRoster:registered,
+      activeRoster:active,
+      substitutes,
+      rosterChanged,
+      latestMatchId:latest?.id||"",
+      latestMatchState:latest?.state||"",
+      series:series.slice(-12),
+      lastSyncedAt:new Date().toISOString()
+    },
+    competitiveEvidence
+  };
+}
 
 async function fetchJson(url:string){
   const controller=new AbortController();
@@ -344,6 +531,12 @@ Deno.serve(async(req:Request)=>{
       let plan=body?.plan;
       if(!plan||typeof plan.id!=="string"||typeof plan.opponent!=="string"||!plan.scheduledAt)return json({error:"Invalid plan"},400);
 
+      let cmSyncError="";
+      if(body?.syncChallengermode===true){
+        try{plan=await syncChallengermodePlan(plan)}
+        catch(err){cmSyncError=clean(err instanceof Error?err.message:err,220)}
+      }
+
       if(body?.scout===true){
         try{plan=await scoutPlan(plan)}
         catch(err){
@@ -371,7 +564,15 @@ Deno.serve(async(req:Request)=>{
       if(!row.id||!row.opponent)return json({error:"Invalid plan"},400);
       const {error}=await db.from("team_plans").upsert(row,{onConflict:"id"});
       if(error)return json({error:error.message},500);
-      return json({ok:true,id:row.id,plan,scouted:body?.scout===true});
+      return json({
+        ok:true,
+        id:row.id,
+        plan,
+        scouted:body?.scout===true,
+        challengermodeSynced:body?.syncChallengermode===true&&!cmSyncError,
+        challengermodeError:cmSyncError||undefined,
+        challengermodeConfigured:!!Deno.env.get("CHALLENGERMODE_REFRESH_KEY")
+      });
     }
 
     if(req.method==="DELETE"){
