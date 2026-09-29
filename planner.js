@@ -74,6 +74,73 @@
   function current(){
     return normalize(plans.find(p=>p.id===selectedId)||plans[0]||{});
   }
+  const SCOUT_ROLES=["top","jungle","mid","adc","support"];
+  const SCOUT_ROLE_NAMES={top:"TOP",jungle:"JUNGLE",mid:"MID",adc:"ADC",support:"SUPPORT"};
+  const SCOUT_ROLE_POOLS={
+    top:new Set(["Aatrox","Ambessa","Camille","Darius","Fiora","Galio","Garen","Gnar","Gragas","Gwen","Heimerdinger","Jax","Jayce","Kayle","Kennen","K'Sante","Malphite","Mordekaiser","Olaf","Ornn","Poppy","Renekton","Rumble","Shen","Sion","Tahm Kench","Trundle","Tryndamere","Yone","Yorick","Dr. Mundo"]),
+    jungle:new Set(["Amumu","Diana","Ekko","Gragas","Graves","Ivern","Jarvan IV","Kayn","Kindred","Lee Sin","Lillia","Nocturne","Nunu & Willump","Poppy","Sejuani","Skarner","Trundle","Udyr","Vi","Viego","Volibear","Wukong","Xin Zhao","Zac"]),
+    mid:new Set(["Ahri","Akali","Anivia","Annie","Aurora","Azir","Cassiopeia","Diana","Ekko","Galio","Hwei","LeBlanc","Malzahar","Orianna","Ryze","Sylas","Syndra","Taliyah","Tristana","Twisted Fate","Vex","Viktor","Yone","Zed","Zoe"]),
+    adc:new Set(["Aphelios","Ashe","Caitlyn","Corki","Ezreal","Jinx","Kai'Sa","Kalista","Lucian","Miss Fortune","Samira","Senna","Sivir","Smolder","Tristana","Varus","Xayah","Yunara","Zeri"]),
+    support:new Set(["Alistar","Bard","Blitzcrank","Braum","Janna","Leona","Lulu","Maokai","Milio","Nami","Nautilus","Pantheon","Poppy","Pyke","Rakan","Rell","Senna","Seraphine","Tahm Kench","Thresh","Zilean"])
+  };
+  function scoutRoleScore(player,role){
+    return (player?.topChampions||[]).slice(0,8).reduce((sum,c,i)=>{
+      if(!SCOUT_ROLE_POOLS[role]?.has(c.champ))return sum;
+      const games=Number(c.seasonGames||c.recentGames||0);
+      return sum+(9-i)*(1+Math.log2(games+2));
+    },0);
+  }
+  function scoutLineup(plan){
+    const players=(plan?.scoutingPlayers||[]).filter(p=>p?.found!==false&&Array.isArray(p?.topChampions)&&p.topChampions.length).slice(0,5);
+    if(!players.length)return [];
+    const roles=SCOUT_ROLES.slice();
+    let best={score:-1,assign:[]};
+    const walk=(i,left,assign,score)=>{
+      if(i>=players.length||!left.length){
+        if(score>best.score)best={score,assign:[...assign]};
+        return;
+      }
+      left.forEach((role,idx)=>{
+        const next=left.slice();next.splice(idx,1);
+        walk(i+1,next,[...assign,role],score+scoutRoleScore(players[i],role));
+      });
+    };
+    walk(0,roles,[],0);
+    return players.map((player,i)=>{
+      const role=best.assign[i]||roles[i]||"";
+      const scores=SCOUT_ROLES.map(r=>scoutRoleScore(player,r));
+      const total=scores.reduce((a,b)=>a+b,0);
+      const roleScore=scoutRoleScore(player,role);
+      let pool=(player.topChampions||[]).filter(c=>SCOUT_ROLE_POOLS[role]?.has(c.champ));
+      if(pool.length<2)pool=[...(player.topChampions||[])];
+      pool=pool.filter((c,idx,arr)=>c?.champ&&arr.findIndex(x=>x.champ===c.champ)===idx).slice(0,6);
+      return {
+        role,
+        roleName:SCOUT_ROLE_NAMES[role]||role.toUpperCase(),
+        roleConfidence:total?Math.round(roleScore/total*100):0,
+        player,
+        pool
+      };
+    }).sort((a,b)=>SCOUT_ROLES.indexOf(a.role)-SCOUT_ROLES.indexOf(b.role));
+  }
+  function scoutProfileCard(entry){
+    const p=entry.player||{};
+    const champRows=(entry.pool||[]).slice(0,4).map(c=>{
+      const games=Number(c.seasonGames||c.recentGames||0);
+      const wr=Number(c.seasonWinrate||c.recentWinrate||0);
+      return '<div class="planner-profile-champ"><strong>'+esc(c.champ)+'</strong><span>'+esc(games?games+" matcher":"sample saknas")+(games?' · '+esc(wr)+'% WR':'')+'</span></div>';
+    }).join("");
+    return '<article class="planner-scout-profile">'+
+      '<div class="planner-scout-profile-head"><div><span class="planner-role-chip">'+esc(entry.roleName)+'</span><strong>'+esc(p.riotId||"Okänd spelare")+'</strong></div>'+
+      '<small>'+esc(p.tier||"UNRANKED")+(entry.roleConfidence?' · roll '+esc(entry.roleConfidence)+'%':'')+'</small></div>'+
+      '<div class="planner-profile-champs">'+(champRows||'<span class="analysis-note">Ingen championdata.</span>')+'</div>'+
+    '</article>';
+  }
+  function getPlans(){return sortPlans(plans.map(normalize))}
+  function selectPlan(id){
+    if(!plans.some(p=>p.id===id))return false;
+    selectedId=id;editing=false;render();return true;
+  }
   function sortPlans(list){
     return [...list].sort((a,b)=>new Date(a.scheduledAt)-new Date(b.scheduledAt));
   }
@@ -182,6 +249,7 @@
             (plan.scoutingUpdatedAt?esc((plan.scoutingSource||"OP.GG")+' · uppdaterad '+plan.scoutingUpdatedAt):'Riot IDs hittade · scouting väntar'))+
         '</p>'+
         (plan.scoutingError?'<div class="planner-scout-warning">'+esc(plan.scoutingError)+'</div>':'')+
+        (scoutLineup(plan).length?'<div class="planner-scout-profile-grid">'+scoutLineup(plan).map(scoutProfileCard).join("")+'</div>':'')+
       '</section>'+
       '<section class="planner-section">'+
         '<div class="planner-section-head"><h3>Ban-prioritet</h3><span class="analysis-note">3–5 champs</span></div>'+
@@ -571,5 +639,5 @@
   window.addEventListener("storage",e=>{if(e.key===TEAM_KEY_STORAGE)updateDbBadge()});
   window.RiftSharedData?.subscribe?.(()=>updateDbBadge());
 
-  window.RiftBanPlanner={show,load,render,deleteCurrent,scoutPlan};
+  window.RiftBanPlanner={show,load,render,deleteCurrent,scoutPlan,getPlans,selectPlan,roleLineup:scoutLineup};
 })();
