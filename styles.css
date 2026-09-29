@@ -1415,3 +1415,17 @@ body.comp-guide-open .os-sidebar{
   cursor:not-allowed!important;
 }
 
+
+/* Native cross-document navigation: keep the previous frame until the
+   destination has initialized its workspace. No second routing system. */
+@view-transition{navigation:auto}
+.os-sidebar{view-transition-name:os-sidebar}
+::view-transition-group(root),
+::view-transition-old(root),
+::view-transition-new(root){animation-duration:120ms;animation-timing-function:ease-out}
+::view-transition-group(os-sidebar){animation:none}
+::view-transition-old(os-sidebar){display:none}
+::view-transition-new(os-sidebar){animation:none}
+@media(prefers-reduced-motion:reduce){
+  @view-transition{navigation:none}
+}
