@@ -219,3 +219,91 @@ body.draft-complete .comps{display:none!important}
 .matchup-explain-grid p{margin:6px 0 0;font-weight:750;line-height:1.45}
 @media(max-width:900px){.matchup-dim-grid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:650px){.matchup-hero,.matchup-explain-grid,.matchup-dim-grid{grid-template-columns:1fr}}
+
+
+/* =========================================================
+   LIVE VIEW CONSISTENCY PASS
+   Match Draft Brain to the shared Draft OS visual language.
+   ========================================================= */
+body.live-os .live-layout,
+body.live-os .live-call-grid,
+body.live-os .role-status,
+body.live-os .role-rec-grid,
+body.live-os .check-grid,
+body.live-os .gameplan-grid,
+body.live-os .ai-grid,
+body.live-os .auto-read-grid,
+body.live-os .advanced-auto-grid,
+body.live-os .advanced-final-grid,
+body.live-os .loading-call-grid{
+  gap:10px;
+}
+body.live-os .live-layout>.card,
+body.live-os .live-call-grid>div,
+body.live-os .role-slot,
+body.live-os .role-rec,
+body.live-os .check,
+body.live-os .gameplan-grid>div,
+body.live-os .ai-grid>div,
+body.live-os .ai-explain,
+body.live-os .stats-bar>div,
+body.live-os .power-summary>div,
+body.live-os .timeline-grid>div,
+body.live-os .auto-read-grid>div,
+body.live-os .advanced-auto-grid>div,
+body.live-os .advanced-final-grid>div,
+body.live-os .loading-call-grid>div{
+  border-radius:12px!important;
+  border-color:rgba(65,92,124,.58)!important;
+  background:#0d1a2a!important;
+  box-shadow:none!important;
+}
+body.live-os .recommendation,
+body.live-os .final-gameplan,
+body.live-os .auto-read-card,
+body.live-os .match-save-card,
+body.live-os .loading-call,
+body.live-os .ai-insight-card{
+  border-radius:14px!important;
+  border-color:rgba(65,92,124,.62)!important;
+  background:linear-gradient(180deg,rgba(14,27,44,.96),rgba(10,21,35,.98))!important;
+  box-shadow:none!important;
+}
+body.live-os .role-buttons button,
+body.live-os .meta-source-link,
+body.live-os #statsProfile{
+  border-radius:9px!important;
+  font-family:var(--font-display)!important;
+  font-weight:600!important;
+}
+body.live-os .role-buttons button{
+  background:#0d1a2a!important;
+  border-color:#2f4662!important;
+}
+body.live-os .role-buttons button.active{
+  background:#152b44!important;
+  border-color:#5980ad!important;
+  color:#d9eaff!important;
+}
+body.live-os .role-rec.recommended,
+body.live-os .golden-rule,
+body.live-os .loading-script{
+  background:rgba(105,82,33,.18)!important;
+  border-color:rgba(176,139,53,.48)!important;
+  box-shadow:none!important;
+}
+body.live-os .mini-label,
+body.live-os .time-tag,
+body.live-os .stats-status,
+body.live-os .suggested-role-text,
+body.live-os .ban-chip{
+  font-family:var(--font-display)!important;
+}
+body.live-os .big-picks,
+body.live-os .golden-rule strong,
+body.live-os .loading-script strong{
+  font-family:var(--font-display)!important;
+  font-weight:700!important;
+}
+body.live-os .section-gap{margin-top:12px}
+body.live-os .live-layout{margin-top:12px}
