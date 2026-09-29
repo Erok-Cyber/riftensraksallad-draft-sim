@@ -362,10 +362,12 @@ setTrainerNav(false);
 const requestedView=new URLSearchParams(location.search).get("view");
 if(requestedView==="analysis")queueMicrotask(()=>showAnalysisView());
 if(requestedView==="planner")queueMicrotask(()=>showBanPlannerView());
+if(requestedView==="comps")queueMicrotask(()=>showCompLibraryView());
 
 $("startTabBtn").addEventListener("click",()=>showHomeView());
 $("analysisTabBtn").addEventListener("click",()=>showAnalysisView());
 $("plannerTabBtn")?.addEventListener("click",()=>showBanPlannerView());
+$("compLibraryTabBtn")?.addEventListener("click",()=>showCompLibraryView());
 document.querySelectorAll(".analysis-filter").forEach(btn=>btn.addEventListener("click",()=>{
   document.querySelectorAll(".analysis-filter").forEach(b=>b.classList.remove("active"));
   btn.classList.add("active");
@@ -579,10 +581,11 @@ function showHomeView(){
   $("banPlannerDashboard")?.classList.add("hidden");
   $("modeSelect").classList.remove("hidden");
   renderMatchDayDashboard();
-  document.querySelector(".comps").classList.remove("hidden");
+  document.querySelector(".comps")?.classList.add("hidden");
   $("startTabBtn").classList.add("active");
   $("analysisTabBtn").classList.remove("active");
   $("plannerTabBtn")?.classList.remove("active");
+  $("compLibraryTabBtn")?.classList.remove("active");
 }
 async function showAnalysisView(){
   if(mode)goHome();
@@ -594,6 +597,7 @@ async function showAnalysisView(){
   $("startTabBtn").classList.remove("active");
   $("analysisTabBtn").classList.add("active");
   $("plannerTabBtn")?.classList.remove("active");
+  $("compLibraryTabBtn")?.classList.remove("active");
   renderAnalysis();
   if(window.RiftSharedData){
     await window.RiftSharedData.sync();
@@ -611,7 +615,22 @@ function showBanPlannerView(){
   $("startTabBtn").classList.remove("active");
   $("analysisTabBtn").classList.remove("active");
   $("plannerTabBtn")?.classList.add("active");
+  $("compLibraryTabBtn")?.classList.remove("active");
   window.RiftBanPlanner?.show?.();
+}
+
+function showCompLibraryView(){
+  if(mode)goHome();
+  $("matchDayDashboard")?.classList.add("hidden");
+  $("modeSelect").classList.add("hidden");
+  $("analysisDashboard").classList.add("hidden");
+  $("banPlannerDashboard")?.classList.add("hidden");
+  document.querySelector(".comps")?.classList.remove("hidden");
+  $("startTabBtn").classList.remove("active");
+  $("analysisTabBtn").classList.remove("active");
+  $("plannerTabBtn")?.classList.remove("active");
+  $("compLibraryTabBtn")?.classList.add("active");
+  window.scrollTo({top:0,behavior:"smooth"});
 }
 
 function renderAnalysis(){
@@ -911,10 +930,11 @@ function goHome(){
   $("analysisDashboard").classList.add("hidden");
   $("banPlannerDashboard")?.classList.add("hidden");
   $("modeSelect").classList.remove("hidden");
-  document.querySelector(".comps").classList.remove("hidden");
+  document.querySelector(".comps")?.classList.add("hidden");
   $("startTabBtn").classList.add("active");
   $("analysisTabBtn").classList.remove("active");
   $("plannerTabBtn")?.classList.remove("active");
+  $("compLibraryTabBtn")?.classList.remove("active");
   renderMatchDayDashboard();
 }
 
@@ -949,6 +969,8 @@ function undoPick(){
 function selectMode(m){
   mode=m;
   setTrainerNav(true);
+  document.querySelector(".comps")?.classList.add("hidden");
+  $("compLibraryTabBtn")?.classList.remove("active");
   $("matchDayDashboard")?.classList.add("hidden");
   $("modeSelect").classList.add("hidden");
   $("setup").classList.remove("hidden");
