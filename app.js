@@ -407,8 +407,6 @@ $("matchDayOpenPlanner")?.addEventListener("click",()=>{
   showBanPlannerView();
   if(id)window.RiftBanPlanner?.selectPlan?.(id);
 });
-$("resetBtn").addEventListener("click",()=>location.reload());
-$("homeBtn").addEventListener("click",goHome);
 $("undoBtn").addEventListener("click",undoPick);
 $("lockBtn").addEventListener("click",()=>lockPick(false));
 $("randomEnemyBtn").addEventListener("click",()=>lockPick(true));
@@ -908,9 +906,7 @@ queueMicrotask(()=>refreshPlannerData());
 
 function setTrainerNav(active){
   $("homeTabs").classList.toggle("hidden",active);
-  $("homeBtn").classList.toggle("hidden",!active);
   $("undoBtn").classList.toggle("hidden",!active);
-  $("resetBtn").classList.toggle("hidden",!active);
 }
 
 function goHome(){
