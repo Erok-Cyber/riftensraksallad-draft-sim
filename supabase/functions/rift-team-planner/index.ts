@@ -179,25 +179,82 @@ async function scoutPlayer(riotId:string,region:string,names:Map<number,string>)
 }
 function explain(candidate:any){
   const bits=[];
+  if(candidate.competitivePicks)bits.push(candidate.competitivePicks+" tävlingspick"+(candidate.competitivePicks===1?"":"s"));
+  if(candidate.competitiveBans)bits.push(candidate.competitiveBans+" respect-ban"+(candidate.competitiveBans===1?"":"s"));
+  if(candidate.competitiveRole)bits.push(candidate.competitiveRole.toLowerCase());
+  if(candidate.competitivePlayer)bits.push(candidate.competitivePlayer);
   if(candidate.seasonGames)bits.push(candidate.seasonGames+" ranked / "+candidate.seasonWinrate+"% WR");
   if(candidate.recentGames)bits.push(candidate.recentGames+"/20 senaste / "+candidate.recentWinrate+"% WR");
-  if(candidate.role)bits.push(candidate.role.toLowerCase());
-  return candidate.riotId+": "+candidate.champ+" · "+(bits.length?bits.join(" · "):"comfort pick i OP.GG-data");
+  if(candidate.role&&!candidate.competitiveRole)bits.push(candidate.role.toLowerCase());
+  const prefix=candidate.competitivePicks||candidate.competitiveBans?"RIVALS väger högst":"OP.GG";
+  return prefix+": "+candidate.champ+" · "+(bits.length?bits.join(" · "):"observerad comfort");
 }
-function buildBanList(players:ScoutPlayer[]){
+function competitiveSignals(evidence:any){
+  const map=new Map<string,any>();
+  const games=Array.isArray(evidence?.games)?evidence.games:[];
+  const now=Date.now();
+  const rowFor=(champ:string)=>{
+    const key=clean(champ,60);
+    if(!key)return null;
+    const row=map.get(key)||{champ:key,score:0,competitivePicks:0,competitiveBans:0,competitiveRole:"",competitivePlayer:""};
+    map.set(key,row);
+    return row;
+  };
+  for(const game of games){
+    const stamp=Date.parse(String(game?.playedAt||game?.observedAt||""));
+    const ageDays=Number.isFinite(stamp)?Math.max(0,(now-stamp)/86400000):30;
+    const recency=ageDays<=21?1.25:ageDays<=60?1:0.75;
+    for(const pick of (Array.isArray(game?.picks)?game.picks:[])){
+      const champ=typeof pick==="string"?pick:pick?.champ;
+      const row=rowFor(champ);
+      if(!row)continue;
+      row.competitivePicks++;
+      row.score+=58*recency;
+      if(typeof pick==="object"){
+        row.competitiveRole=row.competitiveRole||clean(pick?.role,24).toUpperCase();
+        row.competitivePlayer=row.competitivePlayer||clean(pick?.player,80);
+      }
+    }
+    for(const ban of (Array.isArray(game?.bansAgainst)?game.bansAgainst:[])){
+      const champ=typeof ban==="string"?ban:ban?.champ;
+      const row=rowFor(champ);
+      if(!row)continue;
+      row.competitiveBans++;
+      row.score+=82*recency;
+    }
+  }
+  return map;
+}
+function buildBanList(players:ScoutPlayer[],evidence:any){
   const byChamp=new Map<string,any>();
+  const comp=competitiveSignals(evidence);
+  const rosterChanged=!!evidence?.rosterChanged||Array.isArray(evidence?.currentRoster)&&evidence.currentRoster.length>=5;
+  const soloScale=rosterChanged?.32:1;
+
   for(const player of players){
     for(let i=0;i<player.topChampions.length;i++){
       const c=player.topChampions[i];
-      const entry={...c,riotId:player.riotId,rank:i+1,score:c.score+(8-i)*3};
+      const score=(c.score+(8-i)*3)*soloScale;
+      const entry={...c,riotId:player.riotId,rank:i+1,score};
       const prev=byChamp.get(c.champ);
       if(!prev||entry.score>prev.score)byChamp.set(c.champ,entry);
     }
   }
+
+  for(const [champ,signal] of comp){
+    const prev=byChamp.get(champ)||{champ,score:0};
+    byChamp.set(champ,{
+      ...prev,
+      ...signal,
+      score:(prev.score||0)+signal.score
+    });
+  }
+
   return [...byChamp.values()].sort((a,b)=>b.score-a.score).slice(0,5).map((c,i)=>({
     champ:c.champ,
     type:i<3?"target":"watch",
     priority:i+1,
+    source:c.competitivePicks||c.competitiveBans?"competitive":"opgg",
     why:explain(c)
   }));
 }
@@ -212,13 +269,14 @@ async function scoutPlan(plan:any){
   const inputPlayers=Array.isArray(plan?.players)&&plan.players.length
     ?plan.players.map((x:unknown)=>clean(x,120)).filter(Boolean).slice(0,10)
     :parsePlayersFromOpgg(plan?.opggUrl);
-  if(!inputPlayers.length)throw new Error("Inga Riot IDs hittades i OP.GG-länken.");
+  const hasCompetitive=Array.isArray(plan?.competitiveEvidence?.games)&&plan.competitiveEvidence.games.length>0;
+  if(!inputPlayers.length&&!hasCompetitive)throw new Error("Ingen OP.GG- eller Challengermode-data att scouta.");
 
   const region=regionFromOpgg(plan?.opggUrl);
-  const names=await championMap();
-  const scouted=await Promise.all(inputPlayers.map((riotId:string)=>scoutPlayer(riotId,region,names)));
+  const names=inputPlayers.length?await championMap():new Map<number,string>();
+  const scouted=inputPlayers.length?await Promise.all(inputPlayers.map((riotId:string)=>scoutPlayer(riotId,region,names))):[];
   const successful=scouted.filter(x=>x.found&&x.topChampions.length);
-  const generated=buildBanList(successful);
+  const generated=buildBanList(successful,plan?.competitiveEvidence);
   const updatedDate=new Date().toISOString().slice(0,10);
   const totalEvidence=successful.reduce((n,p)=>n+p.topChampions.reduce((sum,c)=>sum+c.seasonGames+c.recentGames,0),0);
   const confidence=successful.length>=4&&generated.length>=5&&totalEvidence>=60?"high":successful.length>=3&&generated.length>=3?"medium":"preliminary";
@@ -226,7 +284,7 @@ async function scoutPlan(plan:any){
   const next={
     ...plan,
     players:inputPlayers,
-    scoutingSource:"OP.GG",
+    scoutingSource:hasCompetitive?"RIVALS + OP.GG":"OP.GG",
     scoutingStatus:generated.length?"ok":"unavailable",
     scoutingConfidence:confidence,
     scoutingUpdatedAt:updatedDate,
@@ -247,7 +305,9 @@ async function scoutPlan(plan:any){
       b1:generated[0]?.champ||"",
       b2:generated[1]?.champ||"",
       b3:generated[2]?.champ||"",
-      note:"Automatisk Game 1-plan från OP.GG: ranked-volym, winrate och de senaste ranked-matcherna. Verifiera roller i lobby och justera vid behov."
+      note:hasCompetitive
+        ?"Game 1-plan väger Challengermode/RIVALS tydligt högre än soloqueue. Ny tävlingsroster prioriteras framför äldre OP.GG-profiler."
+        :"Automatisk Game 1-plan från OP.GG: ranked-volym, winrate och de senaste ranked-matcherna. Verifiera roller i lobby och justera vid behov."
     };
     if(!Array.isArray(plan?.conditionalBans)||!plan.conditionalBans.length)next.conditionalBans=defaultConditionals();
   }
