@@ -33,19 +33,6 @@
       closeSidebar();
     });
   });
-  function openCompLibrary(){
-    const home=document.getElementById("startTabBtn");
-    if(home)home.click();
-    setTimeout(()=>{
-      document.getElementById("comps")?.scrollIntoView({behavior:"smooth",block:"start"});
-    },80);
-    closeSidebar();
-  }
-
-  document.querySelectorAll("[data-shell-open-comps]").forEach(btn=>{
-    btn.addEventListener("click",openCompLibrary);
-  });
-
   toggle?.addEventListener("click",()=>{
     document.body.classList.toggle("os-nav-open");
   });
@@ -67,12 +54,14 @@
   function syncActiveNav(){
     const analysis=document.getElementById("analysisTabBtn");
     const planner=document.getElementById("plannerTabBtn");
-    if(planner?.classList.contains("active"))setShellActive("view","planner");
+    const comps=document.getElementById("compLibraryTabBtn");
+    if(comps?.classList.contains("active"))setShellActive("view","comps");
+    else if(planner?.classList.contains("active"))setShellActive("view","planner");
     else if(analysis?.classList.contains("active"))setShellActive("view","analysis");
     else setShellActive("view","home");
   }
 
-  ["startTabBtn","analysisTabBtn","plannerTabBtn"].forEach(id=>{
+  ["startTabBtn","analysisTabBtn","plannerTabBtn","compLibraryTabBtn"].forEach(id=>{
     document.getElementById(id)?.addEventListener("click",()=>setTimeout(syncActiveNav,0));
   });
 
@@ -97,8 +86,8 @@
   if(requestedOpen==="comps"||location.hash==="#comps"){
     window.addEventListener("load",()=>{
       setTimeout(()=>{
-        openCompLibrary();
-        if(requestedOpen==="comps")history.replaceState(null,"",location.pathname);
+        document.getElementById("compLibraryTabBtn")?.click();
+        history.replaceState(null,"",location.pathname+"?view=comps");
       },120);
     },{once:true});
   }
