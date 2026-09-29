@@ -621,9 +621,8 @@ body.draft-os:after{
   padding:22px 32px 64px;
 }
 .draft-os .app.os-main>header,
-.draft-os .app.os-main>section:not(.planner-new-overlay),
-.draft-os .app.os-main>.draft-grid,
-.draft-os .app.os-main>.comp-guide-overlay{
+.draft-os .app.os-main>section:not(.planner-new-overlay):not(.comp-guide-overlay),
+.draft-os .app.os-main>.draft-grid{
   max-width:1540px;
   margin-left:auto;
   margin-right:auto;
@@ -954,9 +953,16 @@ body.draft-os:after{
 
 /* Comp guide backdrop: keep the app visible as context rather than blacking it out. */
 .draft-os .comp-guide-overlay{
-  background:rgba(4,9,16,.55)!important;
-  -webkit-backdrop-filter:blur(15px) saturate(.78)!important;
-  backdrop-filter:blur(15px) saturate(.78)!important;
+  position:fixed!important;
+  inset:0!important;
+  width:100vw!important;
+  height:100vh!important;
+  max-width:none!important;
+  margin:0!important;
+  padding:22px!important;
+  background:rgba(4,9,16,.58)!important;
+  -webkit-backdrop-filter:blur(16px) saturate(.76)!important;
+  backdrop-filter:blur(16px) saturate(.76)!important;
 }
 .draft-os .comp-guide-modal{
   background:linear-gradient(180deg,rgba(13,25,41,.96),rgba(8,18,31,.97))!important;
@@ -987,3 +993,8 @@ body.draft-os:after{
 /* Sidebar links should feel clickable, including same-page anchors. */
 .draft-os .os-nav-item{user-select:none}
 .draft-os .os-nav-item[href="#comps"]{cursor:pointer}
+
+body.comp-guide-open .os-sidebar{
+  filter:blur(1px);
+  opacity:.82;
+}
