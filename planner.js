@@ -227,6 +227,10 @@
     }
     try{
       const data=await request("GET");
+      if(data?.capabilities&&typeof data.capabilities.challengermode==="boolean"){
+        cmApiState.configured=data.capabilities.challengermode;
+        cmApiState.error=data.capabilities.challengermode?"":"Challengermode API väntar på server-side refresh key.";
+      }
       plans=sortPlans((data.plans||[]).map(rowToPlan).map(normalize));
       writeCache(plans);
       if(!selectedId||!plans.some(p=>p.id===selectedId))selectedId=plans.find(p=>p.status==="upcoming")?.id||plans[0]?.id||null;
