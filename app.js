@@ -583,7 +583,6 @@ function showHomeView(){
   $("startTabBtn").classList.add("active");
   $("analysisTabBtn").classList.remove("active");
   $("plannerTabBtn")?.classList.remove("active");
-  renderMatchDayDashboard();
 }
 async function showAnalysisView(){
   if(mode)goHome();
@@ -916,6 +915,7 @@ function goHome(){
   $("startTabBtn").classList.add("active");
   $("analysisTabBtn").classList.remove("active");
   $("plannerTabBtn")?.classList.remove("active");
+  renderMatchDayDashboard();
 }
 
 function undoPick(){
