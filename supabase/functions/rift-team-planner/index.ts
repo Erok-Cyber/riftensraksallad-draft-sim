@@ -536,7 +536,10 @@ Deno.serve(async(req:Request)=>{
       if(id)query=query.eq("id",id);
       const {data,error}=await query.order("scheduled_at",{ascending:true}).limit(50);
       if(error)return json({error:error.message},500);
-      return json({plans:data||[]});
+      return json({
+        plans:data||[],
+        capabilities:{challengermode:!!Deno.env.get("CHALLENGERMODE_REFRESH_KEY")}
+      });
     }
 
     const teamKey=req.headers.get("x-team-key")?.trim()||"";
