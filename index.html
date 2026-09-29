@@ -139,15 +139,19 @@
 
         <div class="planner-new-grid">
           <div class="planner-field">
-            <label for="pnCmUrl">Challengermode-turnering <span>valfritt</span></label>
-            <input id="pnCmUrl" placeholder="https://www.challengermode.com/s/.../tournaments/UUID">
+            <label for="pnCmTeamUrl">Challengermode lagprofil <span>valfritt</span></label>
+            <input id="pnCmTeamUrl" placeholder="https://www.challengermode.com/teams/UUID">
+          </div>
+          <div class="planner-field">
+            <label for="pnCmUrl">Rivals-turnering <span>behövs för live-sync</span></label>
+            <input id="pnCmUrl" placeholder="https://www.challengermode.com/.../tournaments/UUID">
           </div>
           <div class="planner-field">
             <label for="pnCmTeamName">Lagnamn på Challengermode <span>valfritt</span></label>
             <input id="pnCmTeamName" placeholder="Samma som motståndarlaget">
           </div>
         </div>
-        <p class="planner-cm-help">Med Challengermode-länk kan Ban Planner följa registrerad roster, faktisk matchlineup, subs och nya matchserier automatiskt.</p>
+        <p class="planner-cm-help"><b>/teams/...</b> är lagprofilen. För automatisk roster, subs och matchhistorik behövs länken till själva Rivals-turneringen med <b>/tournaments/...</b>.</p>
 
         <div class="planner-field">
           <label for="pnPreNotes">Anteckning inför matchen <span>valfritt</span></label>
