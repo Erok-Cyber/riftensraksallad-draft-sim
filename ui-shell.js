@@ -91,6 +91,14 @@
       },120);
     },{once:true});
   }
+  if(requestedOpen==="sim"){
+    window.addEventListener("load",()=>{
+      setTimeout(()=>{
+        document.getElementById("simModeBtn")?.click();
+        history.replaceState(null,"",location.pathname);
+      },120);
+    },{once:true});
+  }
   if(requestedOpen==="test"){
     window.addEventListener("load",()=>{
       setTimeout(()=>{
