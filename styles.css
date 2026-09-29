@@ -998,3 +998,41 @@ body.comp-guide-open .os-sidebar{
   filter:blur(1px);
   opacity:.82;
 }
+
+
+/* Draft OS analytics overflow + sidebar polish */
+.draft-os .analysis-two-col>*,
+.draft-os .analysis-panel,
+.draft-os .stat-row>*{min-width:0}
+.draft-os .stat-row{
+  grid-template-columns:minmax(135px,1fr) minmax(90px,150px) minmax(112px,auto);
+  gap:12px;
+}
+.draft-os .stat-value{
+  min-width:0;
+  text-align:right;
+  white-space:normal;
+  overflow-wrap:anywhere;
+  line-height:1.15;
+}
+.draft-os .stat-value small{
+  display:block;
+  margin-top:4px;
+  color:var(--muted);
+  font-size:9px;
+  line-height:1.25;
+  font-weight:800;
+  white-space:normal;
+  overflow-wrap:anywhere;
+}
+@media(max-width:1120px){
+  .draft-os .stat-row{
+    grid-template-columns:minmax(120px,1fr) minmax(70px,120px) minmax(100px,auto);
+  }
+}
+@media(max-width:760px){
+  .draft-os .stat-row{
+    grid-template-columns:minmax(110px,1fr) minmax(64px,1fr) minmax(86px,auto);
+    gap:8px;
+  }
+}
