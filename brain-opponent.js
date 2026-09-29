@@ -30,7 +30,15 @@
       points+=rule.boost[champ]*weight*0.3;
       if(weight>0)threats.push(...matches.map(p=>p.champ));
     }
-    return {points:Math.min(8,points),reason:threats.length?'Scout: svar mot '+[...new Set(threats)].slice(0,2).join('/')+' om de väljs':''};
+    // Broad comp answers also cover scouted champions without a handwritten matchup rule.
+    const mass=set=>predicted.reduce((sum,p)=>sum+(set.has(p.champ)?p.weight:0),0);
+    const answers=[];
+    const add=(value,label)=>{if(value>0){points+=value;if(value>=0.5)answers.push(label);}};
+    if(smartTraits.peel.has(champ)||traits.disengage.has(champ))add(mass(traits.dive)*2,'peel mot deras dive-pool');
+    if(traits.engage.has(champ)||smartTraits.pick.has(champ))add(mass(traits.poke)*2,'access mot deras poke-pool');
+    if(smartTraits.antiTank.has(champ))add(mass(traits.tanks)*2,'damage mot deras tank-pool');
+    if(smartTraits.zone.has(champ))add(mass(traits.melee)*1.2,'zonkontroll mot deras melee-pool');
+    return {points:Math.min(8,points),reason:threats.length?'Scout: svar mot '+[...new Set(threats)].slice(0,2).join('/')+' om de väljs':answers.length?'Scout: '+answers[0]:''};
   }
   function plannedBans(){
     const plan=active();if(!plan)return [];
