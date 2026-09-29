@@ -676,7 +676,10 @@ Deno.serve(async(req:Request)=>{
       if(error)return json({error:error.message},500);
       return json({
         plans:data||[],
-        capabilities:{challengermode:!!Deno.env.get("CHALLENGERMODE_REFRESH_KEY")}
+        capabilities:{
+          challengermode:true,
+          challengermodeSecret:!!Deno.env.get("CHALLENGERMODE_REFRESH_KEY")
+        }
       });
     }
 
@@ -732,7 +735,8 @@ Deno.serve(async(req:Request)=>{
         scouted:body?.scout===true,
         challengermodeSynced:body?.syncChallengermode===true&&!cmSyncError,
         challengermodeError:cmSyncError||undefined,
-        challengermodeConfigured:!!Deno.env.get("CHALLENGERMODE_REFRESH_KEY")
+        challengermodeConfigured:true,
+        challengermodeSecretConfigured:!!Deno.env.get("CHALLENGERMODE_REFRESH_KEY")
       });
     }
 
