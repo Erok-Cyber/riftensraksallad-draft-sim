@@ -456,13 +456,20 @@ async function scoutPlan(plan:any){
   const inputPlayers=Array.isArray(plan?.players)&&plan.players.length
     ?plan.players.map((x:unknown)=>clean(x,120)).filter(Boolean).slice(0,10)
     :parsePlayersFromOpgg(plan?.opggUrl);
-  const hasCompetitive=Array.isArray(plan?.competitiveEvidence?.games)&&plan.competitiveEvidence.games.length>0;
+  const activeRoster=(plan?.competitiveEvidence?.currentRoster||[]).map((x:any)=>clean(x?.player||x,80)).filter(Boolean);
+  const evidenceGames=Array.isArray(plan?.competitiveEvidence?.games)?plan.competitiveEvidence.games:[];
+  const hasCompetitive=activeRoster.length>0||evidenceGames.length>0;
   if(!inputPlayers.length&&!hasCompetitive)throw new Error("Ingen OP.GG- eller Challengermode-data att scouta.");
 
   const region=regionFromOpgg(plan?.opggUrl);
   const names=inputPlayers.length?await championMap():new Map<number,string>();
   const scouted=inputPlayers.length?await Promise.all(inputPlayers.map((riotId:string)=>scoutPlayer(riotId,region,names))):[];
-  const successful=scouted.filter(x=>x.found&&x.topChampions.length);
+  const allSuccessful=scouted.filter(x=>x.found&&x.topChampions.length);
+  const rosterChanged=!!plan?.competitiveEvidence?.rosterChanged;
+  const matchedActive=activeRoster.length
+    ?allSuccessful.filter(p=>activeRoster.some((name:string)=>nameLooksSame(name,p.riotId)))
+    :allSuccessful;
+  const successful=rosterChanged&&activeRoster.length?matchedActive:allSuccessful;
   const generated=buildBanList(successful,plan?.competitiveEvidence);
   const updatedDate=new Date().toISOString().slice(0,10);
   const totalEvidence=successful.reduce((n,p)=>n+p.topChampions.reduce((sum,c)=>sum+c.seasonGames+c.recentGames,0),0);
@@ -482,7 +489,11 @@ async function scoutPlan(plan:any){
       playersTotal:inputPlayers.length,
       generatedBans:generated.length
     },
-    scoutingError:generated.length?"":"OP.GG svarade, men ingen användbar championdata hittades. Tryck Scouta om senare."
+    scoutingError:generated.length?"":(
+      rosterChanged&&activeRoster.length
+        ?"Challengermode visar en ny lineup. Gamla OP.GG-profiler används inte som primär ban-data förrän den nya rostern är mappad/scoutad."
+        :"OP.GG svarade, men ingen användbar championdata hittades. Tryck Scouta om senare."
+    )
   };
 
   if(generated.length){
@@ -497,6 +508,15 @@ async function scoutPlan(plan:any){
         :"Automatisk Game 1-plan från OP.GG: ranked-volym, winrate och de senaste ranked-matcherna. Verifiera roller i lobby och justera vid behov."
     };
     if(!Array.isArray(plan?.conditionalBans)||!plan.conditionalBans.length)next.conditionalBans=defaultConditionals();
+  }else if(rosterChanged&&activeRoster.length){
+    next.banPriority=[];
+    next.phase1Plan={
+      ...(plan.phase1Plan||{}),
+      b1:"",
+      b2:"",
+      b3:"",
+      note:"Challengermode har upptäckt en ny aktiv lineup. Tidigare OP.GG-bans är pausade tills den nya rostern har tillräcklig data."
+    };
   }
   return next;
 }
