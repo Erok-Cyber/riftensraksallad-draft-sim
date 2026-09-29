@@ -593,8 +593,13 @@ function renderTeamLearning(list){
     return a&&s?a+" + "+s:null;
   });
   const bestComp=bestObserved(comps,3);
-  const bestJgMid=bestObserved(jgMid,3);
-  const bestBot=bestObserved(bot,3);
+  const bestJgMid=bestObserved(jgMid,1);
+  const bestBot=bestObserved(bot,1);
+  const sampleText=row=>{
+    if(!row)return "Ingen komplett duo-data";
+    const games=row.n===1?"1 match":row.n+" matcher";
+    return percent(row.w,row.n)+" · "+games+(row.n<3?" · LOW SAMPLE":"");
+  };
 
   const favorable=list.filter(m=>Number(m.matchup?.score)>=58);
   const difficult=list.filter(m=>Number(m.matchup?.score)<47&&m.matchup?.score!=null);
@@ -606,9 +611,9 @@ function renderTeamLearning(list){
 
   const cards=[
     ["UNDERLAG",n+" matcher",n>=10?"Tillräckligt för försiktiga lagtrender":"Bygg sample innan hårda slutsatser"],
-    ["OBS. COMP",bestComp?bestComp.name:"—",bestComp?percent(bestComp.w,bestComp.n)+" · "+bestComp.n+" matcher":"Kräver minst 3 matcher"],
-    ["JUNGLE + MID",bestJgMid?bestJgMid.name:"—",bestJgMid?percent(bestJgMid.w,bestJgMid.n)+" · "+bestJgMid.n+" matcher":"Kräver minst 3 matcher"],
-    ["BOTDUO",bestBot?bestBot.name:"—",bestBot?percent(bestBot.w,bestBot.n)+" · "+bestBot.n+" matcher":"Kräver minst 3 matcher"],
+    ["OBS. COMP",bestComp?bestComp.name:"—",bestComp?percent(bestComp.w,bestComp.n)+" · "+bestComp.n+" matcher":"Kräver minst 3 matcher med samma comp"],
+    ["JUNGLE + MID",bestJgMid?bestJgMid.name:"—",sampleText(bestJgMid)],
+    ["BOTDUO",bestBot?bestBot.name:"—",sampleText(bestBot)],
     ["AVG MATCHUP",avgMatchup!=null?avgMatchup+"/100":"—",matchupSaved.length?matchupSaved.length+" matcher med nya matchup-motorn":"Nya matcher börjar samla detta"],
     ["TOTALT",percent(c.w,c.n),c.w+"W · "+c.l+"L"]
   ];
