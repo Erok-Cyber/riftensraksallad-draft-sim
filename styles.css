@@ -1036,3 +1036,17 @@ body.comp-guide-open .os-sidebar{
     gap:8px;
   }
 }
+
+.draft-os .os-nav-subitem{
+  margin-top:-2px;
+  padding-left:20px;
+}
+.draft-os .os-nav-subitem>span{
+  opacity:.82;
+  font-size:13px;
+}
+.draft-os .os-nav-subitem>b{
+  font-size:11px;
+  color:#9aa8ba;
+}
+.draft-os .os-nav-subitem:hover>b{color:#eef3fa}
