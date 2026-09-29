@@ -169,7 +169,7 @@ async function loadChampionRoster(){
     const data=await fetch("https://ddragon.leagueoflegends.com/cdn/"+version+"/data/en_US/champion.json").then(r=>r.json());
     const entries=Object.values(data.data);
     championRoster=entries.map(c=>c.name).sort((a,b)=>a.localeCompare(b));
-    championMeta=Object.fromEntries(entries.map(c=>[c.name,{tags:c.tags||[],info:c.info||{}}]));
+    championMeta=Object.fromEntries(entries.map(c=>[c.name,{tags:c.tags||[],info:c.info||{},image:"https://ddragon.leagueoflegends.com/cdn/"+version+"/img/champion/"+c.image.full}]));
     populateDatalist();
   }catch(e){
     console.warn("Data Dragon roster fallback används.",e);
@@ -192,11 +192,30 @@ function saveState(){
   localStorage.setItem("rs_draft_state",JSON.stringify({userSide,step,events,historySaved,pendingMatchResult,pendingMatchType}));
 }
 function restoreState(){
+  if(new URLSearchParams(location.search).get("replay")==="1"){
+    try{
+      const replay=JSON.parse(sessionStorage.getItem("rs_review_replay")||"null");
+      const valid=replay&&["blue","red"].includes(replay.side)&&Array.isArray(replay.events)&&replay.events.length<draftOrder.length&&
+        replay.events.every((e,i)=>e.type===draftOrder[i].type&&e.side===draftOrder[i].side&&typeof e.champ==="string");
+      if(valid){
+        testMode=true;draftIsTest=true;userSide=replay.side;events=replay.events;step=events.length;
+        $("startCard").classList.add("hidden");$("liveArea").classList.remove("hidden");
+        renderTestMode();$("testModeBtn").disabled=true;
+        $("replayNotice").classList.remove("hidden");
+        $("replayNotice").textContent="Övning från Draft Review · endast tidigare picks/bans är inlästa. Förslagen använder dagens motor och metadata"+(replay.patch?" (matchen: "+replay.patch+")":"")+". Sparas inte i matchhistoriken.";
+        return true;
+      }
+    }catch{}
+    testMode=true;draftIsTest=true;renderTestMode();
+    $("replayNotice").classList.remove("hidden");$("replayNotice").textContent="Övningen kunde inte läsas. Välj ett beslut igen i Draft Review.";
+    return false;
+  }
   if(testMode)return false;
   try{
     const state=JSON.parse(localStorage.getItem("rs_draft_state")||"null");
     if(state&&state.userSide&&Array.isArray(state.events)){
       userSide=state.userSide;step=state.step||0;events=state.events;historySaved=!!state.historySaved;
+      pendingMatchResult=state.pendingMatchResult||null;pendingMatchType=state.pendingMatchType||null;
       $("startCard").classList.add("hidden");$("liveArea").classList.remove("hidden");
       return true;
     }
@@ -267,7 +286,11 @@ $("resetBtn").addEventListener("click",()=>{
   const msg=unsaved
     ?"Den färdiga matchen är inte sparad ännu. Starta ny draft ändå?"
     :"Starta en helt ny draft?";
-  if(confirm(msg)){clearState();location.reload()}
+  if(confirm(msg)){
+    if(new URLSearchParams(location.search).has("replay")){location.href="live.html?test=1";return;}
+    if(!testMode&&!draftIsTest)clearState();
+    location.reload();
+  }
 });
 
 function renderTestMode(){
@@ -282,7 +305,6 @@ $("testModeBtn")?.addEventListener("click",()=>{
   localStorage.setItem("rs_test_mode",testMode?"1":"0");
   if(testMode){
     draftIsTest=true;
-    clearState();
   }
   renderTestMode();
 });
@@ -292,6 +314,7 @@ function lockCurrent(){
   const turn=current(); if(!turn)return;
   const raw=$("championInput").value.trim(); if(!raw)return;
   const champ=normalizeName(raw);
+  if(!championRoster.includes(champ)){alert("Välj en champion från listan.");return;}
   if(unavailable().has(champ.toLowerCase())){alert("Championen är redan pickad eller bannad.");return}
   let role=null;
   if(turn.type==="pick"){
@@ -1464,8 +1487,10 @@ function scoreCandidateDetails(champ,role,compName){
   const add=(pts,label)=>{s+=pts;if(pts>=5&&label)reasons.push({pts,label})};
 
   add((comfort[role]?.[champ]||5)*3,"comfort");
-  if(c.core[role]===champ)add(28,"core i "+compName);
-  else if((c.alts[role]||[]).includes(champ))add(14,"passar "+compName);
+  // A tied/open comp is not evidence to force its core picks.
+  const anchorWeight=({öppen:0.25,låg:0.4,medel:0.7,hög:1})[compConfidence()]||0.25;
+  if(c.core[role]===champ)add(18*anchorWeight,"core i "+compName);
+  else if((c.alts[role]||[]).includes(champ))add(9*anchorWeight,"passar "+compName);
 
   if(need.front===0&&traits.frontline.has(champ))add(14,"ger frontline");
   if(need.engage===0&&traits.engage.has(champ))add(14,"ger engage");
@@ -1548,8 +1573,6 @@ function scoreCandidateDetails(champ,role,compName){
     }
   }
 
-  const recent=recentPicks();
-  if(role==="mid"&&champ==="Taliyah"&&recent.slice(-2).includes("Taliyah"))s-=8;
 
   return {ch:champ,score:s,reasons:reasons.sort((a,b)=>b.pts-a.pts)};
 }
@@ -2090,7 +2113,7 @@ function renderStatsStatus(){
     el.classList.add("live");
     const confidence=String(status.confidence||"").toUpperCase();
     const fallback=status.fallback?" · FALLBACK":"";
-    el.textContent=status.source+" · "+(status.patch||"?")+" · "+confidence+fallback;
+    el.textContent=status.source+" · data "+(status.metaPatch||"?")+" · "+confidence+fallback;
     el.title=(status.bracket||"Gold+")+" · "+(status.region||"")+" · "+status.coverage+" pool-picks · "+(status.blendText||"")+" · snapshot "+(status.updated||"");
   }else if(status.state==="loading"){
     el.classList.add("waiting");el.textContent="Laddar…";
@@ -2108,3 +2131,12 @@ loadChampionRoster();
 restoreState();
 renderStatsStatus();
 if(userSide)render();
+
+
+window.RiftChampionPicker?.attach({inputId:"championInput",roster:()=>championRoster,
+  used:unavailable,rolesFor:ch=>enemyRoleCandidates(ch),
+  imageFor:ch=>championMeta[ch]?.image,
+  onSelect:(champ,role)=>{
+    $("lockBtn").textContent="Lås "+champ;
+    if(current()?.type==="pick"&&role){selectedRole=role;renderTurn();renderRecommendation();}
+  }});

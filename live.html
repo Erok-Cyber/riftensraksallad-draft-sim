@@ -21,8 +21,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20260929-page-transition1" />
-  <link rel="stylesheet" href="live.css?v=20260929-layout2" />
+  <link rel="stylesheet" href="styles.css?v=20260929-qol1" />
+  <link rel="stylesheet" href="live.css?v=20260929-qol1" />
 </head>
 <body class="draft-os live-os" data-workspace="brain">
   <aside class="os-sidebar" id="osSidebar">
@@ -47,6 +47,7 @@
     </div>
   </aside>
   <main class="app os-main">
+    <p id="replayNotice" class="replay-notice hidden" role="status"></p>
     <header>
       <div class="brand-head"><img class="team-logo" alt="Riftens Räksallad" hidden><div>
         <p class="eyebrow">RIFTENSRÄKSALLAD · TEAM DRAFT OS</p>
@@ -125,6 +126,9 @@
             <h3 id="recommendRole">PICK</h3>
             <p id="recommendPicks" class="big-picks">—</p>
             <p id="recommendReason" class="muted"></p>
+            <p id="recommendStrength" class="recommend-strength"></p>
+            <div id="recommendAlternatives" class="recommend-alternatives" aria-label="Alternativa val"></div>
+            <p id="recommendChange" class="recommend-change" aria-live="polite"></p>
             <div id="scoreBreakdown" class="score-breakdown"></div>
           </div>
         </div>
@@ -138,7 +142,8 @@
         </div>
       </section>
 
-      <section id="allRoleRecsCard" class="card hidden">
+      <details id="allRoleRecsCard" class="card hidden">
+        <summary>Visa fler roller och picks</summary><div class="disclosure-body">
         <div class="analysis-head">
           <div>
             <p class="eyebrow">PICK OPTIONS</p>
@@ -147,13 +152,14 @@
           <div class="badge">Klicka champ → välj</div>
         </div>
         <div id="allRoleRecommendations" class="role-rec-grid"></div>
-      </section>
+      </div></details>
 
 
-      <section id="aiInsightCard" class="card ai-insight-card hidden">
+      <details id="aiInsightCard" class="card ai-insight-card hidden">
+        <summary>Visa beslutsunderlag</summary><div class="disclosure-body">
         <div class="analysis-head">
           <div>
-            <p class="eyebrow">HYBRID AI · LOOKAHEAD</p>
+            <p class="eyebrow">REGELBASERAD ANALYS</p>
             <h2 id="aiCall">—</h2>
           </div>
           <div id="aiConfidence" class="badge">—</div>
@@ -172,7 +178,7 @@
           <span class="mini-label">ALTERNATIV</span>
           <p id="aiAlternatives">—</p>
         </div>
-      </section>
+      </div></details>
 
       <section class="card live-coach-card">
         <div class="analysis-head">
@@ -190,7 +196,8 @@
         </div>
       </section>
 
-      <section id="autoReadCard" class="card auto-read-card">
+      <details id="autoReadCard" class="card auto-read-card">
+        <summary>Visa djupanalys</summary><div class="disclosure-body">
         <div class="analysis-head">
           <div>
             <p class="eyebrow">AUTO READ</p>
@@ -215,11 +222,12 @@
           <div><span class="mini-label">SIDE / VISION</span><p id="advSideVision">—</p></div>
           <div><span class="mini-label">TEAM PATTERN</span><p id="advTeamPattern">Ingen riktig draft sparad ännu.</p></div>
         </div>
-      </section>
+      </div></details>
 
 
 
-      <section id="draftMatchupCard" class="card draft-matchup-card">
+      <details id="draftMatchupCard" class="card draft-matchup-card">
+        <summary>Visa matchup och countervalue</summary><div class="disclosure-body">
         <div class="analysis-head">
           <div>
             <p class="eyebrow">DRAFT MATCHUP · COUNTERVALUE</p>
@@ -252,7 +260,7 @@
           <div><span class="mini-label">VARFÖR VI GILLAR MATCHUPEN</span><p id="matchupWhy">Väntar på picks från båda lagen.</p></div>
           <div><span class="mini-label">STÖRSTA RISKEN</span><p id="matchupRisk">Väntar på picks från båda lagen.</p></div>
         </div>
-      </section>
+      </div></details>
 
       <section id="finalGameplanCard" class="card final-gameplan loading-call hidden">
         <div class="analysis-head">
@@ -353,7 +361,8 @@
         <p id="matchSaveHint" class="hint">Välj både Win/Loss och Liga/Flex.</p>
       </section>
 
-      <section id="compCheckCard" class="card">
+      <details id="compCheckCard" class="card">
+        <summary>Visa comp-check</summary><div class="disclosure-body">
         <div class="analysis-head">
           <div>
             <p class="eyebrow">COMP CHECK</p>
@@ -363,7 +372,7 @@
         </div>
         <div id="compChecks" class="check-grid"></div>
         <div id="roleStatus" class="role-status"></div>
-      </section>
+      </div></details>
     </section>
 
     <section class="card live-playbook-card">
@@ -372,7 +381,7 @@
         <h2>Standardcomps & variationer</h2>
         <p class="sub">Öppna hela Comp Library för kärnpicks, rollalternativ, färdiga variationer och gameplan.</p>
       </div>
-      <a class="secondary link-btn" href="index.html?view=comps">Öppna Comp Library →</a>
+      <a class="secondary link-btn" href="index.html?workspace=comps">Öppna Comp Library →</a>
     </section>
   </main>
   <button class="os-mobile-toggle" id="osMobileToggle" type="button" aria-label="Öppna navigation">☰</button>
@@ -380,10 +389,12 @@
   <script src="db-config.js?v=20260928-publicread3"></script>
   <script src="shared-data.js?v=20260928-publicread3"></script>
   <script src="stats-engine.js?v=20260928-meta2"></script>
-  <script src="live.js?v=20260928-analysispack1"></script>
+  <script src="champion-picker.js?v=20260929-qol1"></script>
+  <script src="live.js?v=20260929-qol1"></script>
   <script src="advanced-engine.js?v=20260928-meta2"></script>
-  <script src="draft-ai.js?v=20260929-teamlearning2"></script>
+  <script src="draft-ai.js?v=20260929-qol1"></script>
   <script src="ui-shell.js?v=20260929-workspace1"></script>
   <div id="workspaceReady" hidden></div>
 </body>
 </html>
+

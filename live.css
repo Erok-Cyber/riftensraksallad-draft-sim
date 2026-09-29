@@ -354,3 +354,18 @@ body.live-os .live-playbook-card .secondary{
   }
 }
 
+
+
+/* Keep the decision readable; details are available on demand. */
+.live-os details.card{padding:0}
+.live-os details.card>summary{padding:18px 20px;cursor:pointer;font:600 15px Oxanium,sans-serif;color:var(--text)}
+.live-os details.card[open]>summary{border-bottom:1px solid var(--border);color:var(--gold)}
+.live-os .disclosure-body{padding:20px}
+.live-os .recommendation .big-picks .champ-suggestion{font-size:24px;font-weight:700;padding:10px 16px}
+.live-os .recommend-alternatives{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.live-os .recommend-strength{font-size:12px;color:var(--muted);line-height:1.5}
+.live-os .recommend-change{font-size:13px;line-height:1.55;color:var(--gold);margin:10px 0 0}
+.live-os .recommend-change:empty{display:none}
+.live-os #recommendReason,.live-os .live-call-grid p,.live-os .auto-read-grid p,.live-os .ai-explain p{font-size:14px;line-height:1.6}
+.live-os .recommendation h3{font-size:13px;margin-bottom:6px}
+.live-os .live-coach-card h2{font-size:clamp(18px,2vw,23px)}

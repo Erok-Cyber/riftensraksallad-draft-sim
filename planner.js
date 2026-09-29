@@ -5,6 +5,13 @@
   let plans=[];
   let selectedId=null;
   let editing=false;
+  let dirty=false,saving=false,matchView=false,editPlan=null;
+  let lastSavedId=null;
+  function mayDiscard(){return !dirty||confirm("Du har osparade ändringar. Lämna redigeringen ändå?");}
+  window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
+  document.addEventListener("click",e=>{
+    if(dirty&&e.target.closest(".os-sidebar a")&&!mayDiscard()){e.preventDefault();e.stopImmediatePropagation();}
+  },true);
   let loading=false;
   let cmPollTimer=null;
   let cmApiState={configured:null,error:""};
@@ -242,7 +249,8 @@
   }
   function getPlans(){return sortPlans(plans.map(normalize))}
   function selectPlan(id){
-    if(!plans.some(p=>p.id===id))return false;
+    if(!plans.some(p=>p.id===id)||!mayDiscard())return false;
+    dirty=false;editPlan=null;
     selectedId=id;editing=false;render();return true;
   }
   function sortPlans(list){
@@ -386,6 +394,7 @@
   }
   function renderRead(plan){
     const detail=$("plannerDetail");
+    detail.classList.toggle("planner-match-view",matchView);
     const bans=(plan.banPriority||[]).slice(0,5);
     const conditionals=plan.conditionalBans||[];
     const fallbacks=plan.ourFallbacks||[];
@@ -395,6 +404,8 @@
         '<div><p class="eyebrow">KOMMANDE MATCH</p><h2>'+esc(plan.opponent)+'</h2>'+
           '<div class="planner-meta">'+esc(dateText(plan.scheduledAt))+' · BO'+esc(plan.bestOf)+(plan.competition?' · '+esc(plan.competition):'')+' · '+esc(plan.status.toUpperCase())+'</div></div>'+
         '<div class="planner-detail-actions">'+
+          (lastSavedId===plan.id?'<span class="planner-save-status" role="status">Sparad ✓</span>':'')+
+          '<button type="button" class="secondary" data-planner-action="view" aria-pressed="'+matchView+'">'+(matchView?'Visa förberedelser':'Under match')+'</button>'+
           (plan.opggUrl?'<a class="planner-link" href="'+esc(plan.opggUrl)+'" target="_blank" rel="noopener">OP.GG ↗</a>':'')+
           (safeCmUrl(plan.challengermodeUrl)?'<a class="planner-link cm" href="'+esc(safeCmUrl(plan.challengermodeUrl))+'" target="_blank" rel="noopener">Challengermode ↗</a>':'')+
           (hasKey()&&plan.challengermodeUrl?'<button type="button" class="planner-cm-sync-btn" data-planner-action="cm-sync" '+(cmSyncingIds.has(plan.id)?'disabled':'')+'>'+(cmSyncingIds.has(plan.id)?'Synkar CM…':'Synka CM')+'</button>':'')+
@@ -407,7 +418,7 @@
         ['b1','b2','b3'].map((k,i)=>'<div class="planner-ban-call"><span>B'+(i+1)+'</span><strong>'+esc(plan.phase1Plan?.[k]||"Öppen")+'</strong></div>').join("")+
       '</div>'+
       '<p class="planner-ban-note">'+esc(plan.phase1Plan?.note||"")+'</p>'+
-      '<section class="planner-section">'+
+      '<section class="planner-section planner-preparation">'+
         '<div class="planner-section-head"><h3>Scouting</h3><span class="planner-scout-badge '+esc(plan.scoutingStatus||"")+'">'+esc((plan.scoutingConfidence||"preliminary").toUpperCase())+'</span></div>'+
         '<div class="planner-player-grid">'+(plan.players||[]).map(x=>'<span class="planner-player">'+esc(x)+'</span>').join("")+'</div>'+
         '<p class="analysis-note" style="margin:9px 0 0">'+
@@ -417,7 +428,7 @@
         (plan.scoutingError?'<div class="planner-scout-warning">'+esc(plan.scoutingError)+'</div>':'')+
         (scoutLineup(plan).length?'<div class="planner-scout-profile-grid">'+scoutLineup(plan).map(scoutProfileCard).join("")+'</div>':'')+
       '</section>'+
-      (plan.challengermode?cmRosterHtml(plan):(plan.challengermodeUrl?'<section class="planner-section planner-cm-section"><div class="planner-section-head"><h3>Challengermode Live</h3><span class="planner-cm-badge pending">VÄNTAR</span></div><p class="analysis-note">'+esc(cmApiState.error||'Turneringen är länkad. Synka för roster, subs och matchhistorik.')+'</p></section>':''))+
+      '<div class="planner-preparation">'+(plan.challengermode?cmRosterHtml(plan):(plan.challengermodeUrl?'<section class="planner-section planner-cm-section"><div class="planner-section-head"><h3>Challengermode Live</h3><span class="planner-cm-badge pending">VÄNTAR</span></div><p class="analysis-note">'+esc(cmApiState.error||'Turneringen är länkad. Synka för roster, subs och matchhistorik.')+'</p></section>':''))+'</div>'+
       '<section class="planner-section">'+
         '<div class="planner-section-head"><h3>Ban-prioritet</h3><span class="analysis-note">3–5 champs</span></div>'+
         '<div class="planner-ban-list">'+(bans.length?bans.map((b,i)=>'<div class="planner-ban-row">'+
@@ -450,6 +461,7 @@
   }
   function renderEdit(plan){
     const detail=$("plannerDetail");
+    detail.classList.remove("planner-match-view");
     const bans=[...(plan.banPriority||[])];
     while(bans.length<5)bans.push({champ:"",type:"watch",priority:bans.length+1,why:""});
     const conditionals=[...(plan.conditionalBans||[])];
@@ -459,7 +471,7 @@
     const notes=plan.gameNotes||{};
     detail.innerHTML=
       '<div class="planner-detail-head"><div><p class="eyebrow">REDIGERA PLAN</p><h2>'+esc(plan.opponent)+'</h2></div>'+
-        '<div class="planner-detail-actions"><span id="plannerSaveStatus" class="planner-save-status"></span>'+
+        '<div class="planner-detail-actions"><span id="plannerSaveStatus" class="planner-save-status" role="status">Inga ändringar</span>'+
           (hasKey()?'<button type="button" class="planner-delete-btn" data-planner-action="delete">Radera match</button>':'')+
           '<button type="button" class="planner-cancel-btn" data-planner-action="cancel">Avbryt</button>'+
           '<button type="button" class="planner-save-btn" data-planner-action="save">Spara</button></div></div>'+
@@ -548,8 +560,9 @@
     return normalize(out);
   }
   async function saveCurrent(){
-    if(!(await ensureWrite()))return;
-    const plan=collect(current());
+    if(saving||!(await ensureWrite()))return;
+    saving=true;
+    const plan=collect(editPlan||current());
     const status=$("plannerSaveStatus");
     if(status)status.textContent="Sparar…";
     try{
@@ -557,14 +570,14 @@
       const i=plans.findIndex(p=>p.id===plan.id);
       if(i>=0)plans[i]=plan;else plans.push(plan);
       plans=sortPlans(plans);writeCache(plans);
-      editing=false;
+      editing=false;dirty=false;editPlan=null;lastSavedId=plan.id;
       if(status)status.textContent="Sparad ✓";
       render();
       await load();
     }catch(err){
       if(status)status.textContent="Kunde inte spara";
       alert("Kunde inte spara Ban Planner: "+err.message);
-    }
+    }finally{saving=false;}
   }
   function parseOpggPlayers(url){
     const raw=(url||"").trim();
@@ -838,7 +851,9 @@
   function render(){
     updateDbBadge();
     renderList();
-    const p=plans.find(x=>x.id===selectedId);
+    // Background sync must never replace a form the user is editing.
+    if(editing&&$("peOpponent"))return;
+    const p=editing&&editPlan?editPlan:plans.find(x=>x.id===selectedId);
     if(!p){
       $("plannerDetail").innerHTML='<div class="planner-empty"><strong>Välj en match</strong><p>Banplan, scouting och BO3-notes visas här.</p></div>';
       return;
@@ -855,21 +870,27 @@
   $("plannerMatchList")?.addEventListener("click",e=>{
     const card=e.target.closest("[data-plan-id]");
     if(!card)return;
-    selectedId=card.dataset.planId;editing=false;render();
+    selectPlan(card.dataset.planId);
   });
   $("plannerDetail")?.addEventListener("click",async e=>{
     const btn=e.target.closest("[data-planner-action]");
     if(!btn)return;
     const action=btn.dataset.plannerAction;
-    if(action==="edit"){if(await ensureWrite()){editing=true;render();}}
-    if(action==="cancel"){editing=false;render();}
+    if(action==="edit"){if(await ensureWrite()){editing=true;dirty=false;editPlan=normalize(current());render();}}
+    if(action==="cancel"&&mayDiscard()){editing=false;dirty=false;editPlan=null;render();}
+    if(action==="view"){matchView=!matchView;render();}
     if(action==="save")await saveCurrent();
     if(action==="scout")await scoutPlan();
     if(action==="cm-sync")await syncChallengermodePlan();
     if(action==="delete")await deleteCurrent();
   });
+  $("plannerDetail")?.addEventListener("input",()=>{
+    if(!editing)return;
+    dirty=true;lastSavedId=null;
+    if($("plannerSaveStatus"))$("plannerSaveStatus").textContent="Osparade ändringar";
+  });
   $("plannerNewMatchBtn")?.addEventListener("click",async()=>{
-    if(await ensureWrite())showNewMatchModal();
+    if(mayDiscard()&&await ensureWrite())showNewMatchModal();
   });
   $("plannerNewMatchCancel")?.addEventListener("click",hideNewMatchModal);
   $("plannerNewMatchCancelBottom")?.addEventListener("click",hideNewMatchModal);

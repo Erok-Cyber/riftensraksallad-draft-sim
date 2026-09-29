@@ -16,6 +16,13 @@ const AI_CONFIG = {
   beamDepth: 2
 };
 
+let aiContextKey="";
+const aiRoleCache=new Map(),aiStateCache=new Map();
+function aiEnsureContext(){
+  const key=JSON.stringify([userSide,events.map(e=>[e.side,e.type,e.role,e.champ]),
+    window.RiftStats?.getStatus?.(),localStorage.getItem("rs_draft_archive"),Object.keys(championMeta).length]);
+  if(key!==aiContextKey){aiContextKey=key;aiRoleCache.clear();aiStateCache.clear();}
+}
 let aiHistoryCacheRaw=null;
 let aiHistoryCache=[];
 function aiHistoryArchive(){
@@ -141,6 +148,8 @@ function aiCompRankForMap(map){
 }
 
 function aiStateScore(map){
+  const key=roles.map(r=>map[r]||"").join("|");
+  if(aiStateCache.has(key))return aiStateCache.get(key);
   const n=aiNeeds(map),p=enemyProfile();
   let s=48;
 
@@ -190,16 +199,19 @@ function aiStateScore(map){
   const ranked=aiCompRankForMap(map);
   if(ranked[0])s+=Math.min(11,ranked[0].score*AI_CONFIG.coreAnchorWeight);
 
-  return Math.max(0,Math.min(100,s));
+  const score=Math.max(0,Math.min(100,s));
+  aiStateCache.set(key,score);
+  return score;
 }
 
 function aiCandidatePoolForMap(role,map,used){
   return (teamPool[role]||[])
     .filter(ch=>!used.has(ch.toLowerCase()))
     .map(ch=>{
-      const base=deterministicCandidateScoreDetails(ch,role,desiredComp()).score;
+      // Evaluate the hypothetical map itself, not the live draft's old needs.
       const next={...map,[role]:ch};
-      return {ch,score:base+aiStateScore(next)*0.18};
+      const gain=aiStateScore(next)-aiStateScore(map);
+      return {ch,score:gain*3+(comfort[role]?.[ch]||5)*2};
     })
     .sort((a,b)=>b.score-a.score)
     .slice(0,AI_CONFIG.beamChoicesPerRole);
@@ -226,7 +238,13 @@ function aiLookaheadScore(startMap,startUsed){
       });
     });
     if(!expanded.length)break;
-    beam=expanded.sort((a,b)=>b.score-a.score).slice(0,AI_CONFIG.beamWidth);
+    // Different role orders can reach the same map; do not waste beam slots on duplicates.
+    const unique=new Map();
+    expanded.forEach(node=>{
+      const key=roles.map(r=>node.map[r]||"").join("|");
+      if(!unique.has(key)||unique.get(key).score<node.score)unique.set(key,node);
+    });
+    beam=[...unique.values()].sort((a,b)=>b.score-a.score).slice(0,AI_CONFIG.beamWidth);
   }
   return beam.length?Math.max(...beam.map(x=>aiStateScore(x.map))):aiStateScore(startMap);
 }
@@ -238,10 +256,10 @@ function aiFlexibility(map,used){
   open.forEach(role=>{
     const vals=(teamPool[role]||[])
       .filter(ch=>!used.has(ch.toLowerCase()))
-      .map(ch=>deterministicCandidateScoreDetails(ch,role,desiredComp()).score)
+      .map(ch=>(comfort[role]?.[ch]||5)*3+(aiStateScore({...map,[role]:ch})-aiStateScore(map))*2)
       .sort((a,b)=>b-a);
-    if(vals[0]>=55)goodBranches++;
-    if(vals[1]>=50)goodBranches+=0.5;
+    if(vals[0]>=30)goodBranches++;
+    if(vals[1]>=25)goodBranches+=0.5;
   });
 
   const compsOpen=aiCompRankForMap(map).filter(x=>x.score>=8).length;
@@ -296,15 +314,12 @@ function aiCandidate(champ,role){
   score+=history.bonus;
 
   // Preserve the current core direction, but reward a useful second pivot.
-  const current=desiredComp();
-  if(comps[current].core[role]===champ)score+=6;
-  else if((comps[current].alts[role]||[]).includes(champ))score+=3;
   if(compRanks[1]&&compRanks[1].score>=9)score+=2;
 
   const reasons=base.reasons.filter(x=>x.pts>0).slice(0,3).map(x=>x.label);
   if(history.n>=3&&history.bonus>=.35)reasons.unshift("teamdata "+history.w+"W/"+history.l+"L · "+history.label);
   if(flex>=4)reasons.push("håller flera pivots öppna");
-  if(lookahead>=70)reasons.push("stark 1–2 picks framåt");
+  if(lookahead>=70)reasons.push("bra struktur efter egna följdpicks");
 
   return {
     ch:champ,role,score,state,lookahead,flex,risk,history,
@@ -315,20 +330,16 @@ function aiCandidate(champ,role){
 
 function aiRoleCandidates(role){
   if(!role||role==="unknown")return[];
+  aiEnsureContext();
+  if(ownRoleMap()[role])return [];
+  if(aiRoleCache.has(role))return aiRoleCache.get(role);
   const used=unavailable();
-  return (teamPool[role]||[])
+  const ranked=(teamPool[role]||[])
     .filter(ch=>!used.has(ch.toLowerCase()))
     .map(ch=>aiCandidate(ch,role))
     .sort((a,b)=>b.score-a.score);
-}
-
-function aiSoftmaxConfidence(list,index=0){
-  if(!list.length)return 0;
-  const top=list.slice(0,5);
-  const max=Math.max(...top.map(x=>x.score));
-  const exps=top.map(x=>Math.exp((x.score-max)/AI_CONFIG.temperature));
-  const sum=exps.reduce((a,b)=>a+b,0)||1;
-  return Math.round((exps[index]||0)/sum*100);
+  aiRoleCache.set(role,ranked);
+  return ranked;
 }
 
 function aiRoleTimingBonus(role){
@@ -357,7 +368,6 @@ function aiDecision(forcedRole=null){
   });
 
   options.sort((a,b)=>b.total-a.total);
-  options.forEach((x,i)=>x.confidence=aiSoftmaxConfidence(options,i));
   return options;
 }
 
@@ -380,10 +390,8 @@ function recommendedNextRole(){
   return d[0]?.role||firstOpenRole();
 }
 
-function aiConfidenceLabel(pct,gap){
-  if(pct>=60&&gap>=8)return "HÖG";
-  if(pct>=43&&gap>=3)return "MEDEL";
-  return "LÅG";
+function aiConfidenceLabel(gap){
+  return gap>=8?"Tydligt förstaval":gap>=3?"Litet försprång":"Jämna alternativ";
 }
 
 function renderAIInsight(){
@@ -401,49 +409,58 @@ function renderAIInsight(){
 
   const best=list[0],second=list[1];
   const gap=second?best.total-second.total:20;
-  const confidence=aiConfidenceLabel(best.confidence,gap);
+  const confidence=aiConfidenceLabel(gap);
   const anchor=best.anchors[0]?.name||desiredComp();
   const pivot=best.anchors[1]?.name||"—";
 
   document.getElementById("aiCall").textContent=roleNames[best.role]+": "+best.ch;
-  document.getElementById("aiConfidence").textContent=confidence+" · "+best.confidence+"% relativ confidence";
+  document.getElementById("aiConfidence").textContent=confidence;
   document.getElementById("aiAnchor").textContent=anchor;
   document.getElementById("aiPivot").textContent=pivot;
-  document.getElementById("aiLookahead").textContent=Math.round(best.lookahead)+"/100";
+  document.getElementById("aiLookahead").textContent=Math.round(best.lookahead)+"/100 · struktur, inte vinstchans";
   document.getElementById("aiRisk").textContent=best.risk.label+(best.risk.reasons.length?" · "+best.risk.reasons.join(", "):"");
   document.getElementById("aiWhy").textContent=(best.reasons.join(" · ")||"Bäst total balans mellan comfort, comp och enemy draft.")+
-    ". Core comps används som ankare, inte som hårda lås.";
+    ". Lookahead testar egna följdpicks; motståndarens framtida svar simuleras inte.";
 
-  const alternatives=list.slice(1,4).map(x=>roleNames[x.role]+" "+x.ch).join(" · ");
+  const alternatives=list.slice(1,3).map(x=>roleNames[x.role]+" "+x.ch).join(" · ");
   document.getElementById("aiAlternatives").textContent=alternatives||"—";
 }
 
-// Keep the familiar recommendation box, but let the hybrid score drive it.
+// One primary call, two alternatives. Extra analysis stays behind disclosure controls.
+let aiPreviousCall=null;
 function renderRecommendation(){
   const t=current(),box=$("recommendationBox");
-  if(!t||t.side!==userSide){box.classList.add("hidden");return}
-
-  if(t.type==="ban"){
-    const bans=banRecommendations();box.classList.remove("hidden");
-    $("recommendEyebrow").textContent="BANFÖRSLAG";$("recommendRole").textContent="BAN:";
-    $("recommendPicks").textContent=bans.join(" / ");
-    $("recommendReason").textContent="Core comp + enemy threats + phase-2 rollvärde.";
-    return;
-  }
-
-  const role=selectedRole||recommendedNextRole();
-  const recs=aiRoleCandidates(role).slice(0,3);
-  if(!role||!recs.length){box.classList.add("hidden");return;}
+  if(!t||t.side!==userSide){box.classList.add("hidden");return;}
   box.classList.remove("hidden");
-  $("recommendEyebrow").textContent=selectedRole?"HYBRID PICK":"HYBRID NÄSTA ROLL";
-  $("recommendRole").textContent=roleNames[role]+":";
-  $("recommendPicks").textContent=recs.map(x=>x.ch).join(" / ");
-  const top=recs[0];
-  $("recommendReason").textContent=
-    "Core: "+(top.anchors[0]?.name||desiredComp())+
-    " · Lookahead "+Math.round(top.lookahead)+
-    " · Risk "+top.risk.label+
-    " · "+(top.reasons.slice(0,2).join(" + ")||"stark helhetsfit");
+  $("scoreBreakdown").replaceChildren();
+  const list=t.type==="ban"?banRecommendations().slice(0,3).map(ch=>({ch})):aiDecision(selectedRole||null).slice(0,3);
+  if(!list.length){box.classList.add("hidden");return;}
+  const top=list[0];
+  $("recommendEyebrow").textContent=t.type==="ban"?"BANFÖRSLAG":"REKOMMENDERAT PICK";
+  $("recommendRole").textContent=top.role?roleNames[top.role]:"BAN";
+  $("recommendPicks").replaceChildren();
+  const addButton=(item,parent)=>{
+    const b=document.createElement("button");b.type="button";b.className="champ-suggestion";
+    b.dataset.suggestChamp=encodeURIComponent(item.ch);
+    if(item.role)b.dataset.suggestRole=item.role;
+    b.textContent=item.ch;parent.appendChild(b);
+  };
+  addButton(top,$("recommendPicks"));
+  $("recommendReason").textContent=top.reasons?.slice(0,2).join(" · ")||"Baserat på comp och visade hot.";
+  const alternatives=$("recommendAlternatives");alternatives.replaceChildren();
+  list.slice(1).forEach(x=>addButton(x,alternatives));
+  $("recommendStrength").textContent=t.type==="pick"?aiConfidenceLabel(list[1]?top.total-list[1].total:20)+" · regelbaserat stöd":"Alternativ om banplanen ändras";
+  const change=$("recommendChange");
+  const context=JSON.stringify(events.map(e=>[e.side,e.type,e.champ,e.role]));
+  const prior=aiPreviousCall;
+  if(t.type==="pick"){
+    if(prior&&prior.side===userSide&&prior.context!==context&&prior.ch!==top.ch){
+      const unavailableNow=unavailable().has(prior.ch.toLowerCase());
+      change.textContent=prior.ch+" → "+top.ch+": "+(unavailableNow?"tidigare förstaval är pickat eller bannat":(top.reasons?.[0]||"bättre balans i den nya draften"))+".";
+    }else if(!prior||prior.context!==context||prior.role!==selectedRole){change.textContent="";}
+    aiPreviousCall={side:userSide,context,ch:top.ch,role:selectedRole};
+  }else change.textContent="";
+  renderAIInsight();
 }
 
 const deterministicRender = render;
@@ -466,3 +483,4 @@ render = function(){
 };
 
 if(userSide)render();
+

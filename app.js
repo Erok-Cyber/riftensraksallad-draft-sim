@@ -2,11 +2,13 @@ const fallbackChampions = [
 "Aatrox","Ahri","Akali","Alistar","Ambessa","Amumu","Anivia","Annie","Aphelios","Ashe","Aurora","Azir","Braum","Caitlyn","Camille","Cassiopeia","Darius","Ezreal","Fiora","Galio","Garen","Gnar","Gragas","Graves","Heimerdinger","Hwei","Ivern","Janna","Jarvan IV","Jax","Jayce","Jinx","K'Sante","Kai'Sa","Kalista","Kayle","Kayn","Kennen","Kindred","Lee Sin","Leona","Lillia","Lucian","Lulu","Malphite","Maokai","Milio","Miss Fortune","Mordekaiser","Nami","Nautilus","Nocturne","Olaf","Orianna","Ornn","Poppy","Rakan","Rell","Renekton","Rumble","Ryze","Samira","Sejuani","Senna","Shen","Sion","Sivir","Skarner","Smolder","Sylas","Syndra","Tahm Kench","Taliyah","Tristana","Trundle","Tryndamere","Twisted Fate","Udyr","Varus","Vex","Vi","Viego","Viktor","Volibear","Wukong","Xayah","Xin Zhao","Yone","Yunara","Zac","Zeri"
 ].sort();
 let champions=[...fallbackChampions];
+let championImages={};
 
 async function loadChampionRoster(){
   try{
     const versions=await fetch("https://ddragon.leagueoflegends.com/api/versions.json").then(r=>r.json());
     const data=await fetch("https://ddragon.leagueoflegends.com/cdn/"+versions[0]+"/data/en_US/champion.json").then(r=>r.json());
+    championImages=Object.fromEntries(Object.values(data.data).map(c=>[c.name,"https://ddragon.leagueoflegends.com/cdn/"+versions[0]+"/img/champion/"+c.image.full]));
     champions=Object.values(data.data).map(c=>c.name).sort((a,b)=>a.localeCompare(b));
     const list=document.getElementById("champions");
     list.innerHTML="";
@@ -355,6 +357,26 @@ const early = new Set(["Renekton","Xin Zhao","Ahri","Ashe","Nautilus","Leona","J
 let mode=null,userSide=null,picks=[],step=0,currentScenario=null;
 let selectedTestOpponentId="";
 
+// One independent practice session per mode, kept across workspace/page changes.
+const practiceSessions={};
+function rememberPractice(){
+  if(!mode)return;
+  practiceSessions[mode]={userSide,picks,step,currentScenario,selectedTestOpponentId,
+    enemyRoleOrder,scenarioEnemyPlan,search:$("championSearch").value};
+  try{sessionStorage.setItem("rs_practice_v1",JSON.stringify(practiceSessions));
+    $("practiceStatus").textContent="Sparad i den här fliken";
+  }catch{$("practiceStatus").textContent="Behålls tills sidan laddas om";}
+}
+try{Object.assign(practiceSessions,JSON.parse(sessionStorage.getItem("rs_practice_v1")||"{}"));}catch{}
+window.addEventListener("pagehide",rememberPractice);
+function leavePractice(){
+  rememberPractice();
+  mode=null;
+  ["practiceToolbar","setup","testBrief","draftArea","analysis","scoreCard","testFeedback","testGrade"]
+    .forEach(id=>$(id)?.classList.add("hidden"));
+  setTrainerNav(false);
+}
+
 const $=id=>document.getElementById(id);
 
 function setWorkspace(name){
@@ -593,7 +615,7 @@ async function refreshPlannerData(){
 }
 
 function showHomeView(){
-  if(mode)return goHome();
+  if(mode)leavePractice();
   $("analysisDashboard").classList.add("hidden");
   $("banPlannerDashboard")?.classList.add("hidden");
   $("modeSelect").classList.remove("hidden");
@@ -606,7 +628,7 @@ function showHomeView(){
   setWorkspace("home");
 }
 async function showAnalysisView(){
-  if(mode)goHome();
+  if(mode)leavePractice();
   $("matchDayDashboard")?.classList.add("hidden");
   $("modeSelect").classList.add("hidden");
   document.querySelector(".comps").classList.add("hidden");
@@ -625,7 +647,7 @@ async function showAnalysisView(){
   }
 }
 function showBanPlannerView(){
-  if(mode)goHome();
+  if(mode)leavePractice();
   $("matchDayDashboard")?.classList.add("hidden");
   $("modeSelect").classList.add("hidden");
   $("analysisDashboard").classList.add("hidden");
@@ -640,7 +662,7 @@ function showBanPlannerView(){
 }
 
 function showCompLibraryView(){
-  if(mode)goHome();
+  if(mode)leavePractice();
   $("matchDayDashboard")?.classList.add("hidden");
   $("modeSelect").classList.add("hidden");
   $("analysisDashboard").classList.add("hidden");
@@ -866,7 +888,8 @@ function openDraftReview(id){
         '<span class="review-step-num">'+(i+1)+'</span>'+
         '<div><small>'+reviewEscape(e.label||((e.side||"").toUpperCase()+" "+e.type))+' · '+(ours?"VI":"ENEMY")+'</small>'+
         '<strong>'+reviewEscape(e.champ)+'</strong>'+
-        (e.role?'<em>'+reviewEscape(String(e.role).toUpperCase())+'</em>':'')+brain+'</div>'+
+        (e.role?'<em>'+reviewEscape(String(e.role).toUpperCase())+'</em>':'')+brain+
+        (ours&&e.type==="pick"?'<button type="button" class="secondary replay-decision" data-replay-match="'+reviewEscape(id)+'" data-replay-step="'+i+'">Öva härifrån</button>':'')+'</div>'+
       '</div>';
     }).join("");
   }else{
@@ -932,31 +955,7 @@ function setTrainerNav(active){
   $("undoBtn").classList.toggle("hidden",!active);
 }
 
-function goHome(){
-  mode=null;userSide=null;picks=[];step=0;currentScenario=null;selectedTestOpponentId="";
-  enemyRoleOrder=[];scenarioEnemyPlan=[];
-  if($("testOpponentSelect"))$("testOpponentSelect").disabled=false;
-  $("modeSelect").classList.remove("hidden");
-  $("setup").classList.add("hidden");
-  $("testBrief").classList.add("hidden");
-  $("draftArea").classList.add("hidden");
-  $("analysis").classList.add("hidden");
-  $("scoreCard").classList.add("hidden");
-  $("testFeedback").classList.add("hidden");
-  $("testGrade").classList.add("hidden");
-  $("championSearch").value="";
-  setTrainerNav(false);
-  $("analysisDashboard").classList.add("hidden");
-  $("banPlannerDashboard")?.classList.add("hidden");
-  $("modeSelect").classList.remove("hidden");
-  document.querySelector(".comps")?.classList.add("hidden");
-  $("startTabBtn").classList.add("active");
-  $("analysisTabBtn").classList.remove("active");
-  $("plannerTabBtn")?.classList.remove("active");
-  $("compLibraryTabBtn")?.classList.remove("active");
-  setWorkspace("home");
-  renderMatchDayDashboard();
-}
+function goHome(){showHomeView();}
 
 function undoPick(){
   if(!userSide||!picks.length)return;
@@ -986,37 +985,38 @@ function undoPick(){
   render();
 }
 
-function selectMode(m){
-  // Enter either training mode from any workspace without routing through Home.
-  // Clear the previous draft and hide every unrelated view before revealing setup.
-  mode=null;userSide=null;picks=[];step=0;currentScenario=null;
-  selectedTestOpponentId="";enemyRoleOrder=[];scenarioEnemyPlan=[];
-  $("championSearch").value="";
-  if($("testOpponentSelect"))$("testOpponentSelect").disabled=false;
+function selectMode(m,fresh=false){
+  rememberPractice();
+  const saved=fresh?null:practiceSessions[m];
+  mode=m;
+  userSide=saved?.userSide||null;picks=saved?.picks||[];step=picks.length;
+  currentScenario=saved?.currentScenario||(m==="test"?scenarios[Math.floor(Math.random()*scenarios.length)]:null);
+  selectedTestOpponentId=saved?.selectedTestOpponentId||"";
+  enemyRoleOrder=saved?.enemyRoleOrder||[];scenarioEnemyPlan=saved?.scenarioEnemyPlan||[];
+  $("championSearch").value=saved?.search||"";
   ["analysisDashboard","banPlannerDashboard","draftArea","analysis","scoreCard",
-    "testFeedback","testGrade"].forEach(id=>$(id)?.classList.add("hidden"));
+    "testFeedback","testGrade","setup","testBrief","modeSelect","matchDayDashboard"]
+    .forEach(id=>$(id)?.classList.add("hidden"));
   ["startTabBtn","analysisTabBtn","plannerTabBtn","compLibraryTabBtn"]
     .forEach(id=>$(id)?.classList.remove("active"));
-  mode=m;
-  setWorkspace(m==="test"?"test":"trainer");
-  setTrainerNav(true);
   document.querySelector(".comps")?.classList.add("hidden");
-  $("compLibraryTabBtn")?.classList.remove("active");
-  $("matchDayDashboard")?.classList.add("hidden");
-  $("modeSelect").classList.add("hidden");
-  $("setup").classList.remove("hidden");
+  setWorkspace(m==="test"?"test":"trainer");setTrainerNav(true);
+  $("practiceToolbar").classList.remove("hidden");
+  $("practiceTitle").textContent=m==="test"?"Draft Test":"Draft Trainer";
+  $("setupTitle").textContent="Välj sida";
+  $("setup").classList.toggle("hidden",!!userSide);
+  $("draftArea").classList.toggle("hidden",!userSide);
+  $("analysis").classList.toggle("hidden",!userSide||m!=="sim");
   $("testBrief").classList.toggle("hidden",m!=="test");
-  $("setupTitle").textContent=m==="test"?"Draft Test — välj sida":"Draft Sim — välj sida";
-  if(m==="test"){
-    currentScenario=scenarios[Math.floor(Math.random()*scenarios.length)];
-    selectedTestOpponentId="";
-    if($("testOpponentSelect"))$("testOpponentSelect").disabled=false;
-    $("testBrief").classList.remove("hidden");
-    renderScenarioBrief();
-    refreshTestOpponentOptions();
-  }
+  if(m==="test"){renderScenarioBrief();refreshTestOpponentOptions();}
+  $("testOpponentSelect").disabled=!!userSide;
+  if(userSide)render();
+  rememberPractice();
   window.scrollTo({top:0,behavior:"instant"});
 }
+$("newPracticeBtn").addEventListener("click",()=>{
+  if(!picks.length||confirm("Börja om med en ny draft i den här vyn?"))selectMode(mode,true);
+});
 
 function seedScenarioEnemyPicks(){
   picks=[];step=0;
@@ -1063,6 +1063,7 @@ function autoEnemy(){
 }
 
 function render(){
+  rememberPractice();
   renderSide("blue","bluePicks"); renderSide("red","redPicks");
   const canUndo=mode==="test"
     ? picks.some(p=>p.side===userSide)
@@ -1177,3 +1178,22 @@ function finishTest(){
   $("goodFeedback").textContent=good.length?good.join(", ")+" passade matchupen bra.":"Du hittade inte riktigt de tydligaste comp-picksen den här gången.";
   $("improveFeedback").textContent=bad.length?"Undvik helst "+bad.join(", ")+" i just detta scenario.":"Titta främst på om din comp-riktning matchade "+reference.ideal+" mot det enemy faktiskt visade.";
 }
+
+
+$("draftReviewTimeline").addEventListener("click",e=>{
+  const button=e.target.closest("[data-replay-match]");if(!button)return;
+  const match=matchHistoryData().find(m=>String(m.id)===button.dataset.replayMatch);
+  const index=Number(button.dataset.replayStep);
+  if(!match||!Number.isInteger(index)||index<0)return;
+  // Send only what was visible BEFORE this decision. Never send future picks or the result.
+  const prefix=match.draftTimeline.slice(0,index).map(({type,side,label,champ,role})=>({type,side,label,champ,role}));
+  try{
+    sessionStorage.setItem("rs_review_replay",JSON.stringify({side:match.side,events:prefix,patch:match.patch||null}));
+    location.href="live.html?replay=1";
+  }catch{alert("Kunde inte öppna övningen. Webbläsarens sessionslagring är inte tillgänglig.");}
+});
+
+window.RiftChampionPicker?.attach({inputId:"championSearch",roster:()=>champions,
+  used:()=>new Set(picks.map(p=>p.champ.toLowerCase())),
+  rolesFor:ch=>trainerRoles.filter(r=>(trainerRolePools[r]||[]).includes(ch)),
+  imageFor:ch=>championImages[ch],onSelect:()=>{}});

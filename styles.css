@@ -1429,3 +1429,22 @@ body.comp-guide-open .os-sidebar{
 @media(prefers-reduced-motion:reduce){
   @view-transition{navigation:none}
 }
+
+
+/* Shared practice controls and accessible champion search. */
+.practice-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 20px}
+.practice-toolbar strong{font-family:Oxanium,sans-serif;font-size:20px;color:var(--gold)}
+.practice-toolbar small{display:block;margin-top:4px;font-size:13px;color:var(--muted)}
+.champion-picker{border:1px solid var(--border);border-radius:12px;padding:12px;margin:8px 0 12px;background:var(--panel2);text-align:left}
+.champion-picker select{width:100%;margin-bottom:8px;min-height:36px}
+.champion-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:230px;overflow:auto}
+.champion-result{display:flex;align-items:center;gap:8px;min-width:0;padding:7px;font:13px Inter,sans-serif;text-align:left;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)}
+.champion-result span{overflow-wrap:anywhere}.champion-result img{border-radius:5px;flex-shrink:0}
+.champion-result:disabled{opacity:.4;cursor:not-allowed}.champion-picker small{display:block;font-size:12px;line-height:1.5;color:var(--muted);margin-top:8px}
+button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+.planner-match-view .planner-preparation{display:none}
+.planner-save-status{font-size:13px;color:var(--gold)}
+.planner-ban-why,.planner-note p,.planner-condition p{font-size:14px;line-height:1.6}
+.replay-decision{display:block;margin-top:10px;font-size:13px}
+.replay-notice{padding:14px 18px;border:1px solid var(--gold);border-radius:12px;background:var(--panel);font-size:14px;line-height:1.6}
+@media(max-width:600px){.champion-results{grid-template-columns:1fr}.practice-toolbar{align-items:flex-start}}
