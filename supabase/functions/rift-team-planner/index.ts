@@ -313,8 +313,9 @@ async function syncChallengermodePlan(plan:any){
     (p.userId&&a.userId&&p.userId===a.userId)||nameLooksSame(p.username,a.username)
   ));
   const activeRiotIds=activePlayers.map((p:any)=>p.riotId).filter(Boolean);
+  const registeredRiotIds=registeredPlayers.map((p:any)=>p.riotId).filter(Boolean);
   const cmRegion=clean(plan?.challengermodeRegion||"euw",12).toLowerCase()||"euw";
-  const generatedOpgg=cmOpggUrl(cmRegion,activeRiotIds);
+  const generatedOpgg=cmOpggUrl(cmRegion,registeredRiotIds);
 
   const evidenceGames=Array.isArray(plan?.competitiveEvidence?.games)?plan.competitiveEvidence.games:[];
   const competitiveEvidence={
@@ -330,7 +331,7 @@ async function syncChallengermodePlan(plan:any){
 
   return {
     ...plan,
-    players:activeRiotIds.length?activeRiotIds:(plan?.players||[]),
+    players:registeredRiotIds.length?registeredRiotIds:(plan?.players||[]),
     opggUrl:generatedOpgg||plan?.opggUrl||"",
     challengermodeUrl:plan?.challengermodeUrl||"",
     challengermodeTournamentId:tournamentId,
@@ -350,7 +351,9 @@ async function syncChallengermodePlan(plan:any){
       activePlayers,
       substitutePlayers,
       generatedOpggUrl:generatedOpgg,
-      riotIdsResolved:activeRiotIds.length,
+      riotIdsResolved:registeredRiotIds.length,
+      activeRiotIdsResolved:activeRiotIds.length,
+      rosterSize:registeredPlayers.length,
       rosterChanged,
       latestMatchId:latest?.id||"",
       latestMatchState:latest?.state||"",
@@ -576,7 +579,7 @@ async function scoutPlan(plan:any){
   const matchedActive=activeRoster.length
     ?allSuccessful.filter(p=>activeRoster.some((name:string)=>nameLooksSame(name,p.riotId)))
     :allSuccessful;
-  const successful=rosterChanged&&activeRoster.length?matchedActive:allSuccessful;
+  const successful=activeRoster.length?matchedActive:allSuccessful;
   const generated=buildBanList(successful,plan?.competitiveEvidence);
   const updatedDate=new Date().toISOString().slice(0,10);
   const totalEvidence=successful.reduce((n,p)=>n+p.topChampions.reduce((sum,c)=>sum+c.seasonGames+c.recentGames,0),0);
