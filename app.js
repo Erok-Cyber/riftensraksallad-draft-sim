@@ -217,7 +217,14 @@ function shuffled(list){
 }
 
 function scenarioRoleEntries(){
-  return trainerRoles.map((role,i)=>({role,champ:currentScenario.enemy[i]}));
+  if(currentScenario?.scoutLineup?.length){
+    return trainerRoles.map(role=>{
+      const entry=currentScenario.scoutLineup.find(x=>x.role===role);
+      const pool=(entry?.pool||[]).map(c=>c.champ).filter(Boolean);
+      return {role,champ:pool[0]||currentScenario.enemy?.[trainerRoles.indexOf(role)]||null,pool};
+    });
+  }
+  return trainerRoles.map((role,i)=>({role,champ:currentScenario.enemy[i],pool:[currentScenario.enemy[i]]}));
 }
 
 let enemyRoleOrder=[],scenarioEnemyPlan=[];
@@ -248,12 +255,96 @@ function nextEnemyChampion(){
   const role=nextEnemyRole();
 
   if(mode==="test"){
-    const planned=scenarioEnemyPlan[enemyIndex]?.champ;
+    const plannedEntry=scenarioEnemyPlan[enemyIndex]||{};
+    const pool=(plannedEntry.pool||[plannedEntry.champ]).filter(ch=>ch&&champions.includes(ch)&&!used.has(ch));
+    if(pool.length){
+      const r=Math.random();
+      const idx=r<0.62?0:r<0.88?Math.min(1,pool.length-1):Math.min(2,pool.length-1);
+      return {champ:pool[idx]||pool[0],role};
+    }
+    const planned=plannedEntry.champ;
     if(planned&&champions.includes(planned)&&!used.has(planned))return {champ:planned,role};
     return {champ:randomChampionForRole(role,used),role};
   }
 
   return {champ:randomChampionForRole(role,used),role};
+}
+
+function opponentIdealFromPicks(enemyChamps){
+  const enemy=new Set(enemyChamps||[]);
+  const poke=new Set(["Jayce","Hwei","Xerath","Ezreal","Varus","Caitlyn","Zoe","Lux","Vel'Koz","Syndra"]);
+  const immobile=new Set(["Jinx","Aphelios","Ashe","Varus","Hwei","Viktor","Syndra","Smolder","Caitlyn","Miss Fortune"]);
+  const melee=new Set(["Darius","Garen","Renekton","Mordekaiser","Shen","Sion","Malphite","Jarvan IV","Vi","Wukong","Xin Zhao","Udyr","Volibear","Nautilus","Leona","Maokai","Rakan","Tahm Kench","Yorick"]);
+  const tanks=new Set(["Sion","Ornn","Malphite","Shen","Maokai","Sejuani","Skarner","Tahm Kench","Dr. Mundo","K'Sante"]);
+  const scalingJungle=new Set(["Kayn","Kindred","Graves","Viego","Lillia","Nunu & Willump"]);
+  const earlyJungle=new Set(["Xin Zhao","Volibear","Jarvan IV","Lee Sin","Vi","Wukong","Poppy"]);
+  const count=set=>[...enemy].filter(ch=>set.has(ch)).length;
+  const scores={
+    "EARLY SKIRMISH":count(scalingJungle)*3+(count(earlyJungle)===0?2:0),
+    "PRESS R":count(poke)*2.2+count(immobile)*2.3,
+    "OBJECTIVE CONTROL":count(melee)*1.8+count(tanks)*2.2,
+    "JUNGLE CARRY":(count(earlyJungle)===0?3:0)+(count(melee)<=2?1:0)
+  };
+  return Object.entries(scores).sort((a,b)=>b[1]-a[1])[0]?.[0]||"EARLY SKIRMISH";
+}
+function buildOpponentScenario(plan){
+  const lineup=window.RiftBanPlanner?.roleLineup?.(plan)||[];
+  const enemy=trainerRoles.map(role=>{
+    const entry=lineup.find(x=>x.role===role);
+    return entry?.pool?.[0]?.champ||null;
+  }).filter(Boolean);
+  const ideal=opponentIdealFromPicks(enemy);
+  const threats=(plan.banPriority||[]).slice(0,3).map(x=>x.champ).filter(Boolean);
+  return {
+    title:"Scout-test · "+plan.opponent,
+    brief:"Motståndaren draftar från de champion pools som autoscoutats i Ban Planner. Picks varierar mellan deras högst prioriterade roll-champs.",
+    difficulty:(plan.scoutingConfidence||"preliminary").toLowerCase()==="high"?"Svår":(plan.scoutingConfidence||"").toLowerCase()==="medium"?"Medel":"Scoutad",
+    goal:"Anpassa vår comp efter deras riktiga comfort. Håll extra koll på "+(threats.length?threats.join(" / "):"deras topp-picks")+".",
+    enemy,
+    ideal,
+    recommended:[...comps[ideal].core],
+    key:[...new Set([...comps[ideal].core,...comps[ideal].alts])],
+    avoid:[],
+    opponentPlanId:plan.id,
+    opponentName:plan.opponent,
+    scoutLineup:lineup
+  };
+}
+function renderScenarioBrief(){
+  if(!currentScenario)return;
+  $("scenarioTitle").textContent=currentScenario.title;
+  $("scenarioBrief").textContent=currentScenario.brief;
+  $("scenarioGoal").textContent="Mål: "+currentScenario.goal;
+  $("scenarioDifficulty").textContent=currentScenario.opponentPlanId
+    ?"Scout: "+currentScenario.difficulty
+    :"Svårighet: "+currentScenario.difficulty;
+  if($("testOpponentHint")){
+    $("testOpponentHint").textContent=currentScenario.opponentPlanId
+      ?"Enemy picks hämtas från "+currentScenario.opponentName+"s scoutade roll-pools."
+      :"Välj ett scoutat lag från Ban Planner eller kör ett vanligt scenario.";
+  }
+}
+async function refreshTestOpponentOptions(){
+  const select=$("testOpponentSelect");
+  if(!select)return;
+  try{await window.RiftBanPlanner?.load?.()}catch{}
+  const plans=(window.RiftBanPlanner?.getPlans?.()||[])
+    .filter(p=>p.status==="upcoming"&&(p.scoutingPlayers||[]).length)
+    .sort((a,b)=>new Date(a.scheduledAt)-new Date(b.scheduledAt));
+  const keep=selectedTestOpponentId&&plans.some(p=>p.id===selectedTestOpponentId)?selectedTestOpponentId:"";
+  select.innerHTML='<option value="">Slumpat träningsscenario</option>'+
+    plans.map(p=>'<option value="'+p.id+'">'+p.opponent+' · '+(p.scoutingConfidence||"preliminary").toUpperCase()+'</option>').join("");
+  select.value=keep;
+}
+function applyTestOpponentSelection(id){
+  selectedTestOpponentId=id||"";
+  if(selectedTestOpponentId){
+    const plan=(window.RiftBanPlanner?.getPlans?.()||[]).find(p=>p.id===selectedTestOpponentId);
+    currentScenario=plan?buildOpponentScenario(plan):scenarios[Math.floor(Math.random()*scenarios.length)];
+  }else{
+    currentScenario=scenarios[Math.floor(Math.random()*scenarios.length)];
+  }
+  renderScenarioBrief();
 }
 
 const engage = new Set(["Malphite","Jarvan IV","Annie","Leona","Nautilus","Maokai","Vi","Wukong","Amumu","Sion","Rakan","Rell","Sejuani","Zac"]);
@@ -262,6 +353,7 @@ const damage = new Set(["Jinx","Varus","Xayah","Ashe","Viego","Kindred","Graves"
 const early = new Set(["Renekton","Xin Zhao","Ahri","Ashe","Nautilus","Leona","Jarvan IV","Volibear","Darius","Olaf","Taliyah","Varus","Vi","Wukong","Poppy","Lee Sin","Lucian","Caitlyn"]);
 
 let mode=null,userSide=null,picks=[],step=0,currentScenario=null;
+let selectedTestOpponentId="";
 
 const $=id=>document.getElementById(id);
 champions.forEach(c=>{const o=document.createElement("option");o.value=c;$("champions").appendChild(o)});
@@ -307,6 +399,7 @@ $("matchHistory").addEventListener("click",async e=>{
 
 $("simModeBtn").addEventListener("click",()=>selectMode("sim"));
 $("testModeBtn").addEventListener("click",()=>selectMode("test"));
+$("testOpponentSelect")?.addEventListener("change",e=>applyTestOpponentSelection(e.target.value));
 $("resetBtn").addEventListener("click",()=>location.reload());
 $("homeBtn").addEventListener("click",goHome);
 $("undoBtn").addEventListener("click",undoPick);
@@ -321,7 +414,10 @@ document.querySelectorAll(".side-btn").forEach(btn=>btn.addEventListener("click"
   $("draftArea").classList.remove("hidden");
   if(mode==="sim") $("analysis").classList.remove("hidden");
   prepareEnemyPlan();
-  if(mode==="test") seedScenarioEnemyPicks();
+  if(mode==="test"){
+    if($("testOpponentSelect"))$("testOpponentSelect").disabled=true;
+    seedScenarioEnemyPicks();
+  }
   else render();
 }));
 
@@ -752,8 +848,9 @@ function setTrainerNav(active){
 }
 
 function goHome(){
-  mode=null;userSide=null;picks=[];step=0;currentScenario=null;
+  mode=null;userSide=null;picks=[];step=0;currentScenario=null;selectedTestOpponentId="";
   enemyRoleOrder=[];scenarioEnemyPlan=[];
+  if($("testOpponentSelect"))$("testOpponentSelect").disabled=false;
   $("modeSelect").classList.remove("hidden");
   $("setup").classList.add("hidden");
   $("testBrief").classList.add("hidden");
@@ -804,16 +901,17 @@ function undoPick(){
 function selectMode(m){
   mode=m;
   setTrainerNav(true);
+  $("matchDayDashboard")?.classList.add("hidden");
   $("modeSelect").classList.add("hidden");
   $("setup").classList.remove("hidden");
   $("setupTitle").textContent=m==="test"?"Draft Test — välj sida":"Draft Sim — välj sida";
   if(m==="test"){
     currentScenario=scenarios[Math.floor(Math.random()*scenarios.length)];
+    selectedTestOpponentId="";
+    if($("testOpponentSelect"))$("testOpponentSelect").disabled=false;
     $("testBrief").classList.remove("hidden");
-    $("scenarioTitle").textContent=currentScenario.title;
-    $("scenarioBrief").textContent=currentScenario.brief;
-    $("scenarioGoal").textContent="Mål: "+currentScenario.goal;
-    $("scenarioDifficulty").textContent="Svårighet: "+currentScenario.difficulty;
+    renderScenarioBrief();
+    refreshTestOpponentOptions();
   }
 }
 
