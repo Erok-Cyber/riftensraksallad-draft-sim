@@ -16,6 +16,57 @@ const AI_CONFIG = {
   beamDepth: 2
 };
 
+function aiHistoryArchive(){
+  try{
+    return JSON.parse(localStorage.getItem("rs_draft_archive")||"[]")
+      .filter(m=>m&&(m.result==="win"||m.result==="loss"));
+  }catch{return[]}
+}
+function aiHistoryTier(n){
+  if(n>=10)return {label:"established",cap:3};
+  if(n>=6)return {label:"emerging",cap:2};
+  if(n>=3)return {label:"low confidence",cap:1};
+  return {label:"observation",cap:0};
+}
+function aiPatchWeight(matchPatch){
+  const current=String(window.RiftStats?.getStatus?.()?.patch||"");
+  if(!current||!matchPatch)return .65;
+  if(String(matchPatch)===current)return 1;
+  const [a,b]=current.split(".").map(Number);
+  const [ma,mb]=String(matchPatch).split(".").map(Number);
+  if(Number.isFinite(a)&&Number.isFinite(b)&&a===ma&&Math.abs(b-mb)<=1)return .8;
+  return .5;
+}
+function aiTeamHistorySignal(champ,role){
+  const rows=aiHistoryArchive().filter(m=>(m.ourPicks||[]).some(p=>p?.champ===champ&&p?.role===role));
+  const n=rows.length,tier=aiHistoryTier(n);
+  if(!n||tier.cap===0)return {n,w:rows.filter(m=>m.result==="win").length,l:rows.filter(m=>m.result==="loss").length,bonus:0,label:tier.label};
+  let games=0,wins=0;
+  rows.forEach(m=>{
+    const weight=aiPatchWeight(m.patch);
+    games+=weight;
+    if(m.result==="win")wins+=weight;
+  });
+  const smoothed=(wins+1.5)/(games+3);
+  const raw=(smoothed-.5)*8;
+  const bonus=Math.max(-tier.cap,Math.min(tier.cap,raw));
+  const w=rows.filter(m=>m.result==="win").length;
+  return {n,w,l:n-w,bonus,label:tier.label};
+}
+function aiCompHistoryBonus(name){
+  const rows=aiHistoryArchive().filter(m=>m.comp===name);
+  const tier=aiHistoryTier(rows.length);
+  if(tier.cap===0)return 0;
+  let games=0,wins=0;
+  rows.forEach(m=>{
+    const weight=aiPatchWeight(m.patch);
+    games+=weight;
+    if(m.result==="win")wins+=weight;
+  });
+  const smoothed=(wins+1.5)/(games+3);
+  return Math.max(-tier.cap*.8,Math.min(tier.cap*.8,(smoothed-.5)*6));
+}
+
 function aiSimList(map){
   return roles.filter(r=>map[r]).map(r=>({role:r,champ:map[r]}));
 }
@@ -74,6 +125,7 @@ function aiCompFitForMap(map,name){
     if(["Nautilus","Maokai","Leona"].includes(map.support))s+=3;
     if(p.earlyJungle)s-=2;
   }
+  s+=aiCompHistoryBonus(name);
   return s;
 }
 
@@ -229,12 +281,14 @@ function aiCandidate(champ,role){
   const flex=aiFlexibility(map,used);
   const risk=aiRisk(champ,role,map);
   const compRanks=aiCompRankForMap(map);
+  const history=aiTeamHistorySignal(champ,role);
 
   let score=base.score*AI_CONFIG.baseWeight;
   score+=(state-50)*AI_CONFIG.stateWeight;
   score+=(lookahead-50)*AI_CONFIG.lookaheadWeight;
   score+=flex*AI_CONFIG.flexibilityWeight;
   score-=risk.value*2.4;
+  score+=history.bonus;
 
   // Preserve the current core direction, but reward a useful second pivot.
   const current=desiredComp();
@@ -243,11 +297,12 @@ function aiCandidate(champ,role){
   if(compRanks[1]&&compRanks[1].score>=9)score+=2;
 
   const reasons=base.reasons.filter(x=>x.pts>0).slice(0,3).map(x=>x.label);
+  if(history.n>=3&&history.bonus>=.35)reasons.unshift("teamdata "+history.w+"W/"+history.l+"L · "+history.label);
   if(flex>=4)reasons.push("håller flera pivots öppna");
   if(lookahead>=70)reasons.push("stark 1–2 picks framåt");
 
   return {
-    ch:champ,role,score,state,lookahead,flex,risk,
+    ch:champ,role,score,state,lookahead,flex,risk,history,
     reasons:[...new Set(reasons)].slice(0,4),
     anchors:compRanks.slice(0,2)
   };
