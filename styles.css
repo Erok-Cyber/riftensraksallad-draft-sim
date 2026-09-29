@@ -1359,3 +1359,45 @@ body.draft-os{
   min-height:92px!important;
   max-height:92px!important;
 }
+
+
+/* Draft turn controls */
+.draft-os .turn-box{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  text-align:left;
+}
+.draft-os .turn-box-main{
+  min-width:0;
+  display:flex;
+  flex-direction:column;
+  gap:3px;
+}
+.draft-os .turn-box .small{
+  margin:0;
+}
+.draft-os .draft-undo{
+  flex:0 0 auto;
+  min-height:34px;
+  padding:7px 10px;
+  border-radius:8px;
+  border:1px solid #314966;
+  background:#0e1b2b;
+  color:#aebdd0;
+  font-family:var(--font-display)!important;
+  font-size:10px;
+  font-weight:600;
+  cursor:pointer;
+  transition:border-color .14s ease,background .14s ease,color .14s ease,opacity .14s ease;
+}
+.draft-os .draft-undo:hover:not(:disabled){
+  border-color:#6487b1;
+  background:#14253a;
+  color:#f3f7fb;
+}
+.draft-os .draft-undo:disabled{
+  opacity:.35!important;
+  cursor:not-allowed!important;
+}
