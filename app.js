@@ -447,7 +447,7 @@ function openCompGuide(name){
 
   $("compGuideRoleAlts").innerHTML=compGuideRoles.map(role=>
     '<div class="comp-role-alt"><span>'+compGuideRoleNames[role]+'</span><div>'+
-      (g.roles[role]||[]).map((ch,i)=>'<b class="'+(i===0?"primary":"")+'">'+compGuideEscape(ch)+'</b>').join("")+
+      (g.roles[role]||[]).map((ch,i)=>'<b class="'+(i===0?"comp-role-primary":"")+'">'+compGuideEscape(ch)+'</b>').join("")+
     '</div></div>'
   ).join("");
 
