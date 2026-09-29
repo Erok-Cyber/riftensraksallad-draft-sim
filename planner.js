@@ -100,58 +100,123 @@
     },0);
   }
   function scoutLineup(plan){
-    const players=(plan?.scoutingPlayers||[]).filter(p=>p?.found!==false&&Array.isArray(p?.topChampions)&&p.topChampions.length).slice(0,8);
-    if(!players.length)return [];
+    const players=(plan?.scoutingPlayers||[])
+      .filter(p=>p?.found!==false&&Array.isArray(p?.topChampions))
+      .slice(0,12);
+    const cmRoster=Array.isArray(plan?.competitiveEvidence?.currentRoster)
+      ?plan.competitiveEvidence.currentRoster.filter(Boolean).slice(0,5)
+      :[];
 
-    const cmRoster=Array.isArray(plan?.competitiveEvidence?.currentRoster)?plan.competitiveEvidence.currentRoster:[];
-    const exact=cmRoster.filter(x=>x?.role&&x?.riotId).map(row=>{
-      const player=players.find(p=>String(p.riotId||"").toLowerCase()===String(row.riotId||"").toLowerCase())
-        ||{riotId:row.riotId,found:false,tier:"",topChampions:[]};
-      const role=String(row.role||"").toLowerCase();
-      let pool=(player.topChampions||[]).filter(c=>SCOUT_ROLE_POOLS[role]?.has(c.champ));
-      if(pool.length<2)pool=[...(player.topChampions||[])];
-      pool=pool.filter((c,idx,arr)=>c?.champ&&arr.findIndex(x=>x.champ===c.champ)===idx).slice(0,6);
+    const playerForRow=row=>{
+      const riot=String(row?.riotId||"").trim().toLowerCase();
+      if(riot){
+        const exact=players.find(p=>String(p?.riotId||"").trim().toLowerCase()===riot);
+        if(exact)return exact;
+      }
+      return {
+        riotId:row?.riotId||row?.player||"Okänd spelare",
+        found:false,
+        tier:"",
+        topChampions:[]
+      };
+    };
+    const makeEntry=(row,player,role,source,confidence)=>{
+      let pool=(player?.topChampions||[]).filter(c=>SCOUT_ROLE_POOLS[role]?.has(c.champ));
+      if(pool.length<2)pool=[...(player?.topChampions||[])];
+      pool=pool
+        .filter((c,idx,arr)=>c?.champ&&arr.findIndex(x=>x.champ===c.champ)===idx)
+        .slice(0,6);
       return {
         role,
-        roleName:SCOUT_ROLE_NAMES[role]||role.toUpperCase(),
-        roleConfidence:100,
-        source:"challengermode",
-        cmUsername:row.player||"",
+        roleName:SCOUT_ROLE_NAMES[role]||String(role||"").toUpperCase(),
+        roleConfidence:confidence,
+        source,
+        cmUsername:row?.player||"",
         player,
         pool
       };
-    }).filter(Boolean);
-    if(exact.length>=3)return exact.sort((a,b)=>SCOUT_ROLES.indexOf(a.role)-SCOUT_ROLES.indexOf(b.role));
+    };
+
+    // Challengermode owns the five starters. Never let a sub enter the
+    // displayed starting five just because OP.GG makes its pool look plausible.
+    if(cmRoster.length){
+      const starterRows=cmRoster.map(row=>({
+        row,
+        player:playerForRow(row),
+        lockedRole:SCOUT_ROLES.includes(String(row?.role||"").toLowerCase())
+          ?String(row.role).toLowerCase()
+          :""
+      }));
+
+      const lockedRoles=new Set(starterRows.map(x=>x.lockedRole).filter(Boolean));
+      const remainingRoles=SCOUT_ROLES.filter(role=>!lockedRoles.has(role));
+      const unresolved=starterRows.filter(x=>!x.lockedRole);
+
+      let best={score:-Infinity,assign:[]};
+      const walk=(i,left,assign,score)=>{
+        if(i>=unresolved.length){
+          if(score>best.score)best={score,assign:[...assign]};
+          return;
+        }
+        if(!left.length){
+          if(score>best.score)best={score,assign:[...assign]};
+          return;
+        }
+        left.forEach((role,idx)=>{
+          const next=left.slice();
+          next.splice(idx,1);
+          walk(i+1,next,[...assign,role],score+scoutRoleScore(unresolved[i].player,role));
+        });
+      };
+      walk(0,remainingRoles,[],0);
+
+      let unresolvedIndex=0;
+      const entries=starterRows.map(item=>{
+        if(item.lockedRole){
+          return makeEntry(item.row,item.player,item.lockedRole,"challengermode",100);
+        }
+        const role=best.assign[unresolvedIndex++]||remainingRoles[unresolvedIndex-1]||"";
+        const candidateScores=remainingRoles.map(r=>scoutRoleScore(item.player,r));
+        const total=candidateScores.reduce((a,b)=>a+b,0);
+        const score=scoutRoleScore(item.player,role);
+        const confidence=total?Math.max(1,Math.round(score/total*100)):0;
+        return makeEntry(item.row,item.player,role,"challengermode-inferred",confidence);
+      });
+
+      return entries.sort((a,b)=>SCOUT_ROLES.indexOf(a.role)-SCOUT_ROLES.indexOf(b.role));
+    }
+
+    // No competitive lineup yet: fall back to the old OP.GG-only inference.
+    const usable=players.filter(p=>Array.isArray(p?.topChampions)&&p.topChampions.length).slice(0,5);
+    if(!usable.length)return [];
 
     const roles=SCOUT_ROLES.slice();
     let best={score:-1,assign:[]};
     const walk=(i,left,assign,score)=>{
-      if(i>=players.length||!left.length){
+      if(i>=usable.length||!left.length){
         if(score>best.score)best={score,assign:[...assign]};
         return;
       }
       left.forEach((role,idx)=>{
-        const next=left.slice();next.splice(idx,1);
-        walk(i+1,next,[...assign,role],score+scoutRoleScore(players[i],role));
+        const next=left.slice();
+        next.splice(idx,1);
+        walk(i+1,next,[...assign,role],score+scoutRoleScore(usable[i],role));
       });
     };
     walk(0,roles,[],0);
-    return players.slice(0,5).map((player,i)=>{
+
+    return usable.map((player,i)=>{
       const role=best.assign[i]||roles[i]||"";
       const scores=SCOUT_ROLES.map(r=>scoutRoleScore(player,r));
       const total=scores.reduce((a,b)=>a+b,0);
       const roleScore=scoutRoleScore(player,role);
-      let pool=(player.topChampions||[]).filter(c=>SCOUT_ROLE_POOLS[role]?.has(c.champ));
-      if(pool.length<2)pool=[...(player.topChampions||[])];
-      pool=pool.filter((c,idx,arr)=>c?.champ&&arr.findIndex(x=>x.champ===c.champ)===idx).slice(0,6);
-      return {
-        role,
-        roleName:SCOUT_ROLE_NAMES[role]||role.toUpperCase(),
-        roleConfidence:total?Math.round(roleScore/total*100):0,
-        source:"opgg-inferred",
+      return makeEntry(
+        {player:player.riotId,riotId:player.riotId},
         player,
-        pool
-      };
+        role,
+        "opgg-inferred",
+        total?Math.round(roleScore/total*100):0
+      );
     }).sort((a,b)=>SCOUT_ROLES.indexOf(a.role)-SCOUT_ROLES.indexOf(b.role));
   }
   function scoutProfileCard(entry){
@@ -163,7 +228,15 @@
     }).join("");
     return '<article class="planner-scout-profile">'+
       '<div class="planner-scout-profile-head"><div><span class="planner-role-chip">'+esc(entry.roleName)+'</span><strong>'+esc(p.riotId||"Okänd spelare")+'</strong></div>'+
-      '<small>'+esc(p.tier||"UNRANKED")+(entry.source==="challengermode"?' · RIVALS-roll':entry.roleConfidence?' · rollsignal '+esc(entry.roleConfidence)+'%':' · roll osäker')+'</small></div>'+
+      '<small>'+esc(p.tier||"UNRANKED")+
+        (entry.source==="challengermode"
+          ?' · RIVALS-roll'
+          :entry.source==="challengermode-inferred"
+            ?' · CM-starter · rollsignal '+esc(entry.roleConfidence||0)+'%'
+            :entry.roleConfidence
+              ?' · rollsignal '+esc(entry.roleConfidence)+'%'
+              :' · roll osäker')+
+      '</small></div>'+
       '<div class="planner-profile-champs">'+(champRows||'<span class="analysis-note">Ingen championdata.</span>')+'</div>'+
     '</article>';
   }
