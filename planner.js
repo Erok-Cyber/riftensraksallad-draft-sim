@@ -58,6 +58,7 @@
       bestOf:Number(plan.bestOf)||3,
       opggUrl:plan.opggUrl||"",
       challengermodeUrl:plan.challengermodeUrl||"",
+      challengermodeTeamUrl:plan.challengermodeTeamUrl||"",
       challengermodeTournamentId:plan.challengermodeTournamentId||"",
       challengermodeTeamName:plan.challengermodeTeamName||plan.opponent||"",
       challengermode:plan.challengermode||null,
@@ -179,6 +180,17 @@
     if(isNaN(d))return iso||"—";
     return d.toLocaleString("sv-SE",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
   }
+  function cmLinkKind(raw){
+    try{
+      const u=new URL(String(raw||""));
+      const p=u.pathname.toLowerCase();
+      if(p.includes("/tournaments/"))return "tournament";
+      if(p.includes("/teams/"))return "team";
+      return "unknown";
+    }catch{
+      return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(String(raw||"").trim())?"tournament":"unknown";
+    }
+  }
   function safeCmUrl(raw){
     try{
       const u=new URL(String(raw||""));
@@ -263,7 +275,7 @@
       const data=await request("GET");
       if(data?.capabilities&&typeof data.capabilities.challengermode==="boolean"){
         cmApiState.configured=data.capabilities.challengermode;
-        cmApiState.error=data.capabilities.challengermode?"":"Challengermode API väntar på server-side refresh key.";
+        cmApiState.error="";
       }
       plans=sortPlans((data.plans||[]).map(rowToPlan).map(normalize));
       writeCache(plans);
@@ -386,8 +398,10 @@
           field("Status",'<select id="peStatus"><option value="upcoming" '+(plan.status==="upcoming"?"selected":"")+'>Kommande</option><option value="completed" '+(plan.status==="completed"?"selected":"")+'>Klar</option><option value="cancelled" '+(plan.status==="cancelled"?"selected":"")+'>Inställd</option></select>')+
           field("Best of",'<select id="peBestOf"><option value="1" '+(plan.bestOf===1?"selected":"")+'>BO1</option><option value="3" '+(plan.bestOf===3?"selected":"")+'>BO3</option><option value="5" '+(plan.bestOf===5?"selected":"")+'>BO5</option></select>')+
           field("Liga / turnering",'<input id="peCompetition" value="'+esc(plan.competition||'')+'" placeholder="Rivals">')+
-          field("OP.GG",'<input id="peOpgg" value="'+esc(plan.opggUrl||'')+'">')+
-          field("Challengermode-turnering",'<input id="peCmUrl" value="'+esc(plan.challengermodeUrl||'')+'" placeholder="https://www.challengermode.com/s/.../tournaments/UUID">')+
+          field("OP.GG"+(plan.challengermodeUrl?" · auto-genererad":""),'<input id="peOpgg" '+(plan.challengermodeUrl?'readonly ':'')+'value="'+esc(plan.opggUrl||'')+'">')+
+          field("Challengermode lagprofil",'<input id="peCmTeamUrl" value="'+esc(plan.challengermodeTeamUrl||'')+'" placeholder="https://www.challengermode.com/teams/UUID">')+
+          field("Rivals-turnering",'<input id="peCmUrl" value="'+esc(plan.challengermodeUrl||'')+'" placeholder="https://www.challengermode.com/.../tournaments/UUID">')+
+          '<div class="planner-form-hint">Live-sync använder <b>/tournaments/...</b>-länken. En <b>/teams/...</b>-länk är bara lagprofilen och räcker inte för roster/matchhistorik.</div>'+
           field("Lagnamn på Challengermode",'<input id="peCmTeamName" value="'+esc(plan.challengermodeTeamName||plan.opponent||'')+'" placeholder="'+esc(plan.opponent||'')+'">')+
           field("Spelare · en per rad",'<textarea id="pePlayers">'+esc((plan.players||[]).join("\n"))+'</textarea>')+
         '</section>'+
@@ -434,6 +448,7 @@
     out.status=$("peStatus")?.value||"upcoming";
     out.bestOf=Number($("peBestOf")?.value)||3;
     out.opggUrl=val("peOpgg");
+    out.challengermodeTeamUrl=val("peCmTeamUrl");
     out.challengermodeUrl=val("peCmUrl");
     out.challengermodeTeamName=val("peCmTeamName")||out.opponent;
     out.competition=val("peCompetition");
@@ -557,7 +572,11 @@
     const plan=plans.find(p=>p.id===id);
     if(!plan||cmSyncingIds.has(id))return false;
     if(!plan.challengermodeUrl){
-      if(!silent)alert("Lägg till Challengermode-turneringslänken först.");
+      if(!silent)alert("Lägg till Rivals-turneringens Challengermode-länk först. Den ska innehålla /tournaments/.");
+      return false;
+    }
+    if(cmLinkKind(plan.challengermodeUrl)==="team"){
+      if(!silent)alert("Det där är lagprofilen (/teams/...). Live-sync behöver länken till själva Rivals-turneringen (/tournaments/...).");
       return false;
     }
     if(!hasKey()&&!(await ensureWrite()))return false;
@@ -576,9 +595,13 @@
       writeCache(plans);
       render();
       if(data.challengermodeError){
-        if(!silent)alert(data.challengermodeError==="CHALLENGERMODE_NOT_CONFIGURED"
-          ?"Challengermode API är förberett men serverns refresh key är inte ansluten ännu."
-          :"Challengermode-sync: "+data.challengermodeError);
+        if(!silent){
+          let msg=data.challengermodeError;
+          if(msg==="CHALLENGERMODE_NOT_CONFIGURED")msg="Challengermode kräver auth för den här datan och serverns refresh key är inte ansluten ännu.";
+          if(String(msg).startsWith("CM_TEAM_LINK:"))msg="Det där är en /teams/-länk. Lägg in Rivals-turneringens /tournaments/-länk i fältet Rivals-turnering.";
+          if(String(msg).startsWith("CM_TOURNAMENT_LINK:"))msg="Fel länktyp. Fältet Rivals-turnering måste innehålla en Challengermode-länk med /tournaments/.";
+          alert("Challengermode-sync: "+msg);
+        }
         return false;
       }
       return true;
@@ -598,8 +621,7 @@
     if(dashboard?.classList.contains("hidden"))return;
     const targets=plans.filter(p=>p.status==="upcoming"&&p.challengermodeUrl).slice(0,8);
     for(const plan of targets){
-      const ok=await syncChallengermodePlan(plan.id,{silent});
-      if(!ok&&cmApiState.configured===false)break;
+      await syncChallengermodePlan(plan.id,{silent});
     }
   }
   function startCmPolling(){
