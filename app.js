@@ -356,13 +356,32 @@ let mode=null,userSide=null,picks=[],step=0,currentScenario=null;
 let selectedTestOpponentId="";
 
 const $=id=>document.getElementById(id);
+
+function setWorkspace(name){
+  const workspace=name||"home";
+  document.body.dataset.workspace=workspace;
+  const next=workspace==="home"
+    ?location.pathname
+    :location.pathname+"?workspace="+encodeURIComponent(workspace);
+  history.replaceState({workspace},"",next);
+}
+
+function applyInitialWorkspaceRoute(workspace){
+  switch(workspace){
+    case "trainer": selectMode("sim"); break;
+    case "test": selectMode("test"); break;
+    case "planner": showBanPlannerView(); break;
+    case "analysis": showAnalysisView(); break;
+    case "comps": showCompLibraryView(); break;
+    default: showHomeView(); break;
+  }
+}
+
 champions.forEach(c=>{const o=document.createElement("option");o.value=c;$("champions").appendChild(o)});
 loadChampionRoster();
 setTrainerNav(false);
-const requestedView=new URLSearchParams(location.search).get("view");
-if(requestedView==="analysis")queueMicrotask(()=>showAnalysisView());
-if(requestedView==="planner")queueMicrotask(()=>showBanPlannerView());
-if(requestedView==="comps")queueMicrotask(()=>showCompLibraryView());
+const requestedWorkspace=new URLSearchParams(location.search).get("workspace")||"home";
+queueMicrotask(()=>applyInitialWorkspaceRoute(requestedWorkspace));
 
 $("startTabBtn").addEventListener("click",()=>showHomeView());
 $("analysisTabBtn").addEventListener("click",()=>showAnalysisView());
@@ -584,6 +603,7 @@ function showHomeView(){
   $("analysisTabBtn").classList.remove("active");
   $("plannerTabBtn")?.classList.remove("active");
   $("compLibraryTabBtn")?.classList.remove("active");
+  setWorkspace("home");
 }
 async function showAnalysisView(){
   if(mode)goHome();
@@ -596,6 +616,7 @@ async function showAnalysisView(){
   $("analysisTabBtn").classList.add("active");
   $("plannerTabBtn")?.classList.remove("active");
   $("compLibraryTabBtn")?.classList.remove("active");
+  setWorkspace("analysis");
   renderAnalysis();
   if(window.RiftSharedData){
     await window.RiftSharedData.sync();
@@ -614,6 +635,7 @@ function showBanPlannerView(){
   $("analysisTabBtn").classList.remove("active");
   $("plannerTabBtn")?.classList.add("active");
   $("compLibraryTabBtn")?.classList.remove("active");
+  setWorkspace("planner");
   window.RiftBanPlanner?.show?.();
 }
 
@@ -628,6 +650,7 @@ function showCompLibraryView(){
   $("analysisTabBtn").classList.remove("active");
   $("plannerTabBtn")?.classList.remove("active");
   $("compLibraryTabBtn")?.classList.add("active");
+  setWorkspace("comps");
   window.scrollTo({top:0,behavior:"smooth"});
 }
 
@@ -931,6 +954,7 @@ function goHome(){
   $("analysisTabBtn").classList.remove("active");
   $("plannerTabBtn")?.classList.remove("active");
   $("compLibraryTabBtn")?.classList.remove("active");
+  setWorkspace("home");
   renderMatchDayDashboard();
 }
 
@@ -964,12 +988,14 @@ function undoPick(){
 
 function selectMode(m){
   mode=m;
+  setWorkspace(m==="test"?"test":"trainer");
   setTrainerNav(true);
   document.querySelector(".comps")?.classList.add("hidden");
   $("compLibraryTabBtn")?.classList.remove("active");
   $("matchDayDashboard")?.classList.add("hidden");
   $("modeSelect").classList.add("hidden");
   $("setup").classList.remove("hidden");
+  $("testBrief").classList.toggle("hidden",m!=="test");
   $("setupTitle").textContent=m==="test"?"Draft Test — välj sida":"Draft Sim — välj sida";
   if(m==="test"){
     currentScenario=scenarios[Math.floor(Math.random()*scenarios.length)];
