@@ -174,18 +174,30 @@
   function cmRosterHtml(plan){
     const cm=plan?.challengermode;
     if(!cm)return "";
-    const active=Array.isArray(cm.activeRoster)?cm.activeRoster:[];
-    const registered=Array.isArray(cm.registeredRoster)?cm.registeredRoster:[];
-    const subs=Array.isArray(cm.substitutes)?cm.substitutes:[];
+    const activePlayers=Array.isArray(cm.activePlayers)&&cm.activePlayers.length
+      ?cm.activePlayers
+      :(Array.isArray(cm.activeRoster)?cm.activeRoster.map(username=>({username,riotId:""})):[]);
+    const registeredPlayers=Array.isArray(cm.registeredPlayers)&&cm.registeredPlayers.length
+      ?cm.registeredPlayers
+      :(Array.isArray(cm.registeredRoster)?cm.registeredRoster.map(username=>({username,riotId:""})):[]);
+    const subPlayers=Array.isArray(cm.substitutePlayers)&&cm.substitutePlayers.length
+      ?cm.substitutePlayers
+      :(Array.isArray(cm.substitutes)?cm.substitutes.map(username=>({username,riotId:""})):[]);
     const recent=(cm.series||[]).slice(-4).reverse();
+    const person=row=>'<div class="planner-cm-person"><strong>'+esc(row.username||"Okänd")+'</strong>'+
+      '<span>'+(row.riotId?'Playing as '+esc(row.riotId):'Riot ID saknas')+'</span></div>';
     return '<section class="planner-section planner-cm-section">'+
       '<div class="planner-section-head"><h3>Challengermode Live</h3><span class="planner-cm-badge '+(cm.rosterChanged?'changed':'live')+'">'+(cm.rosterChanged?'ROSTER ÄNDRAD':'LIVE')+'</span></div>'+
       '<div class="planner-cm-meta"><strong>'+esc(cm.teamName||plan.challengermodeTeamName||plan.opponent)+'</strong>'+
         '<span>'+esc(cm.tournamentName||"Rivals")+' · '+esc(cm.tournamentState||"")+'</span>'+
         '<small>Senast synkad '+esc(cmTime(cm.lastSyncedAt))+'</small></div>'+
+      '<div class="planner-cm-resolve">'+
+        '<strong>'+esc(cm.riotIdsResolved||0)+'/5 Riot IDs lösta</strong>'+
+        '<span>'+(cm.generatedOpggUrl?'OP.GG Multisearch byggs automatiskt från aktuell lineup.':'När Riot IDs hittas byggs OP.GG Multisearch automatiskt.')+'</span>'+
+      '</div>'+
       '<div class="planner-cm-grid">'+
-        '<div><span>AKTIV LINEUP</span><div class="planner-player-grid">'+(active.length?active.map(x=>'<b class="planner-player">'+esc(x)+'</b>').join(""):'<em>Ingen spelad lineup ännu</em>')+'</div></div>'+
-        '<div><span>SUBS / ÖVRIG ROSTER</span><div class="planner-player-grid">'+(subs.length?subs.map(x=>'<b class="planner-player sub">'+esc(x)+'</b>').join(""):(registered.length?'<em>Inga subs identifierade ännu</em>':'<em>Ingen rosterdata</em>'))+'</div></div>'+
+        '<div><span>AKTIV LINEUP</span><div class="planner-cm-people">'+(activePlayers.length?activePlayers.map(person).join(""):'<em>Ingen spelad lineup ännu</em>')+'</div></div>'+
+        '<div><span>SUBS / ÖVRIG ROSTER</span><div class="planner-cm-people">'+(subPlayers.length?subPlayers.map(person).join(""):(registeredPlayers.length?'<em>Inga subs identifierade ännu</em>':'<em>Ingen rosterdata</em>'))+'</div></div>'+
       '</div>'+
       (recent.length?'<div class="planner-cm-history">'+recent.map(series=>'<div><strong>Serie '+esc(series.ordinal||"—")+'</strong><span>'+esc(series.state||"")+(series.score!=null?' · score '+esc(series.score):'')+'</span><small>'+esc((series.matches||[]).map(m=>m.state||"").filter(Boolean).join(" / "))+'</small></div>').join("")+'</div>':'')+
     '</section>';
