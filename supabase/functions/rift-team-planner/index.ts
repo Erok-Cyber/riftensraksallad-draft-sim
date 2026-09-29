@@ -140,6 +140,33 @@ async function cmGraphql(query:string,variables:Record<string,unknown>){
   if(Array.isArray(first.body?.errors)&&first.body.errors.length)throw new Error(clean(first.body.errors[0]?.message||"Challengermode GraphQL error",220));
   return first.body?.data||{};
 }
+const CM_SERIES_FIELDS=`
+  id
+  title
+  bestOf
+  state
+  startedAt
+  results {
+    final
+    draw
+    lineupResults { lineupNumber placement score }
+  }
+  lineups {
+    name
+    seed
+    members { user { id username } }
+  }
+  matches(includeFailed: true) {
+    id
+    state
+    results { lineupResults { lineupNumber score } }
+    lineups {
+      number
+      members { user { id username } }
+    }
+  }
+`;
+
 const CM_TOURNAMENT_QUERY=`query TournamentLive($id: UUID!) {
   tournament(tournamentId: $id) {
     id
@@ -148,48 +175,85 @@ const CM_TOURNAMENT_QUERY=`query TournamentLive($id: UUID!) {
     attendance {
       roster {
         lineups(limit: 100) {
-          name
-          team { id name }
-          members {
-            captain
-            gameAccountId
-            user { userId username }
-          }
+          members { user { id username } }
         }
       }
     }
-    matchSeries {
-      id
-      state
-      ordinal
-      results {
-        final
-        draw
-        lineupResults {
-          lineupNumber
-          position
-          score
+    stages {
+      index
+      format
+      ... on TournamentEliminationStage {
+        brackets {
+          rounds {
+            roundNumber
+            title
+            matchSeriesPage(first: 100) {
+              nodes { ${CM_SERIES_FIELDS} }
+            }
+          }
         }
       }
-      matches(includeFailed: false) {
-        id
-        state
-        lineups {
-          number
-          name
-          team { id name }
-          members {
-            gameAccountId
-            user { userId username }
+      ... on TournamentGroupStage {
+        groups {
+          title
+          matchSeriesPage(first: 100) {
+            nodes { ${CM_SERIES_FIELDS} }
+          }
+        }
+      }
+      ... on TournamentSwissStage {
+        rounds {
+          roundNumber
+          title
+          matchSeriesPage(first: 100) {
+            nodes { ${CM_SERIES_FIELDS} }
           }
         }
       }
     }
   }
 }`;
+
+function cmTournamentSeries(tournament:any){
+  const out:any[]=[];
+  const pushNodes=(nodes:any[],context:any={})=>{
+    for(const node of nodes||[])out.push({...node,...context});
+  };
+  for(const stage of tournament?.stages||[]){
+    for(const [bracketIndex,bracket] of (stage?.brackets||[]).entries()){
+      for(const round of bracket?.rounds||[]){
+        pushNodes(round?.matchSeriesPage?.nodes||[],{
+          stageIndex:stage?.index??null,
+          stageFormat:stage?.format||"",
+          bracketIndex,
+          roundNumber:round?.roundNumber??null,
+          roundTitle:round?.title||""
+        });
+      }
+    }
+    for(const group of stage?.groups||[]){
+      pushNodes(group?.matchSeriesPage?.nodes||[],{
+        stageIndex:stage?.index??null,
+        stageFormat:stage?.format||"",
+        groupTitle:group?.title||""
+      });
+    }
+    if(!stage?.brackets&&!stage?.groups){
+      for(const round of stage?.rounds||[]){
+        pushNodes(round?.matchSeriesPage?.nodes||[],{
+          stageIndex:stage?.index??null,
+          stageFormat:stage?.format||"",
+          roundNumber:round?.roundNumber??null,
+          roundTitle:round?.title||""
+        });
+      }
+    }
+  }
+  return out;
+}
 function cmMembers(lineup:any){
   return (lineup?.members||[]).map((m:any)=>({
-    userId:clean(m?.user?.userId||m?.user?.id,80),
+    userId:clean(m?.user?.id||m?.user?.userId,80),
     username:clean(m?.user?.username,80)
   })).filter((m:any)=>m.userId||m.username);
 }
@@ -204,7 +268,7 @@ async function cmLolAccount(userId:string){
       gameAccounts(first: 10) {
         nodes {
           displayName
-          gameTitle { slug name }
+          gameTitle { slug }
         }
       }
     }
@@ -213,7 +277,7 @@ async function cmLolAccount(userId:string){
   const nodes=Array.isArray(user?.gameAccounts?.nodes)?user.gameAccounts.nodes:[];
   const scored=nodes.map((n:any)=>{
     const displayName=clean(n?.displayName,120);
-    const title=(clean(n?.gameTitle?.slug,80)+" "+clean(n?.gameTitle?.name,80)).toLowerCase();
+    const title=clean(n?.gameTitle?.slug,80).toLowerCase();
     let score=0;
     if(displayName.includes("#"))score+=10;
     if(title.includes("league"))score+=8;
@@ -234,24 +298,36 @@ function cmOpggUrl(region:string,riotIds:string[]){
   return "https://op.gg/lol/multisearch/"+encodeURIComponent(region.toLowerCase())+
     "?summoners="+encodeURIComponent(riotIds.join(","));
 }
-function cmTargetLineup(tournament:any,teamName:string){
-  const lineups=tournament?.attendance?.roster?.lineups||[];
+function cmSeriesTargetLineup(series:any,teamName:string){
   const wanted=nameKey(teamName);
-  return lineups.find((l:any)=>nameKey(l?.team?.name)===wanted||nameKey(l?.name)===wanted)
-    ||lineups.find((l:any)=>nameKey(l?.team?.name).includes(wanted)||wanted.includes(nameKey(l?.team?.name)))
-    ||lineups.find((l:any)=>nameKey(l?.name).includes(wanted)||wanted.includes(nameKey(l?.name)))
+  const lineups=series?.lineups||[];
+  return lineups.find((l:any)=>nameKey(l?.name)===wanted)
+    ||lineups.find((l:any)=>{
+      const got=nameKey(l?.name);
+      return got&&wanted&&(got.includes(wanted)||wanted.includes(got));
+    })
     ||null;
 }
-function cmMatchTargetLineup(match:any,teamId:string,registered:string[]){
-  const lineups=match?.lineups||[];
-  if(teamId){
-    const byTeam=lineups.find((l:any)=>String(l?.team?.id||"")===teamId);
-    if(byTeam)return byTeam;
-  }
+function cmBestRosterLineup(tournament:any,targetMembers:any[]){
+  const targetIds=new Set((targetMembers||[]).map((m:any)=>m.userId).filter(Boolean));
+  const targetNames=(targetMembers||[]).map((m:any)=>m.username).filter(Boolean);
   let best:any=null,bestScore=-1;
-  for(const lineup of lineups){
-    const users=cmUsers(lineup);
-    const score=users.filter((u:string)=>registered.some(r=>nameLooksSame(r,u))).length;
+  for(const lineup of tournament?.attendance?.roster?.lineups||[]){
+    const members=cmMembers(lineup);
+    let score=members.filter((m:any)=>targetIds.has(m.userId)).length*10;
+    score+=members.filter((m:any)=>targetNames.some((n:string)=>nameLooksSame(n,m.username))).length;
+    if(score>bestScore){bestScore=score;best=lineup}
+  }
+  return bestScore>0?best:null;
+}
+function cmMatchTargetLineup(match:any,targetMembers:any[]){
+  const targetIds=new Set((targetMembers||[]).map((m:any)=>m.userId).filter(Boolean));
+  const targetNames=(targetMembers||[]).map((m:any)=>m.username).filter(Boolean);
+  let best:any=null,bestScore=-1;
+  for(const lineup of match?.lineups||[]){
+    const members=cmMembers(lineup);
+    let score=members.filter((m:any)=>targetIds.has(m.userId)).length*10;
+    score+=members.filter((m:any)=>targetNames.some((n:string)=>nameLooksSame(n,m.username))).length;
     if(score>bestScore){bestScore=score;best=lineup}
   }
   return bestScore>0?best:null;
@@ -262,21 +338,35 @@ async function syncChallengermodePlan(plan:any){
   if(kind==="team")throw new Error("CM_TEAM_LINK: Du har lagt in en lagprofil (/teams/...). Live-sync behöver Rivals-turneringens /tournaments/...-länk.");
   const tournamentId=cmTournamentId(rawLink);
   if(!tournamentId)throw new Error("CM_TOURNAMENT_LINK: Lägg in Challengermode-länken som innehåller /tournaments/ och turneringens UUID.");
+
   const data=await cmGraphql(CM_TOURNAMENT_QUERY,{id:tournamentId});
   const tournament=data?.tournament;
   if(!tournament)throw new Error("Challengermode-turneringen hittades inte.");
 
   const teamName=clean(plan?.challengermodeTeamName||plan?.opponent,100);
-  const rosterLineup=cmTargetLineup(tournament,teamName);
-  if(!rosterLineup)throw new Error("Kunde inte hitta laget '"+teamName+"' i turneringens roster.");
+  const allSeries=cmTournamentSeries(tournament);
+  const targetSeries=allSeries.filter((series:any)=>!!cmSeriesTargetLineup(series,teamName));
+  if(!targetSeries.length)throw new Error("Kunde inte hitta laget '"+teamName+"' bland turneringens matchserier.");
 
-  const registeredMembers=cmMembers(rosterLineup);
-  const registered=registeredMembers.map((m:any)=>m.username).filter(Boolean);
-  const teamId=String(rosterLineup?.team?.id||"");
-  const series=(tournament?.matchSeries||[]).map((ms:any)=>{
+  targetSeries.sort((a:any,b:any)=>{
+    const ad=Date.parse(String(a?.startedAt||""));
+    const bd=Date.parse(String(b?.startedAt||""));
+    if(Number.isFinite(ad)&&Number.isFinite(bd)&&ad!==bd)return ad-bd;
+    return 0;
+  });
+  const latestSeries=targetSeries[targetSeries.length-1];
+  const seriesTarget=cmSeriesTargetLineup(latestSeries,teamName);
+  const seriesMembers=cmMembers(seriesTarget);
+
+  const rosterLineup=cmBestRosterLineup(tournament,seriesMembers);
+  const registeredMembers=rosterLineup?cmMembers(rosterLineup):seriesMembers;
+
+  const series=targetSeries.map((ms:any)=>{
+    const target=cmSeriesTargetLineup(ms,teamName);
+    const targetMembers=cmMembers(target);
     let targetLineupNumber:any=null;
     const matches=(ms?.matches||[]).map((m:any)=>{
-      const lineup=cmMatchTargetLineup(m,teamId,registered);
+      const lineup=cmMatchTargetLineup(m,targetMembers);
       if(lineup?.number!=null&&targetLineupNumber==null)targetLineupNumber=lineup.number;
       return {
         id:String(m?.id||""),
@@ -290,22 +380,26 @@ async function syncChallengermodePlan(plan:any){
     const targetResult=targetLineupNumber==null?null:lineupResults.find((r:any)=>Number(r?.lineupNumber)===Number(targetLineupNumber))||null;
     return {
       id:String(ms?.id||""),
+      title:clean(ms?.title,140),
       ordinal:Number(ms?.ordinal)||0,
       state:clean(ms?.state,40),
+      startedAt:ms?.startedAt||"",
       final:!!ms?.results?.final,
       draw:!!ms?.results?.draw,
       score:targetResult?.score??null,
-      position:targetResult?.position??null,
+      position:targetResult?.placement??targetResult?.position??null,
       matches
     };
   });
 
-  const allMatches=series.flatMap((x:any)=>x.matches.map((m:any)=>({...m,seriesId:x.id,seriesOrdinal:x.ordinal,seriesState:x.state})));
-  const withLineup=allMatches.filter((m:any)=>Array.isArray(m.lineup)&&m.lineup.length);
+  const allMatches=series.flatMap((x:any)=>x.matches.map((m:any)=>({...m,seriesId:x.id,seriesTitle:x.title,seriesState:x.state})));
+  const withLineup=allMatches.filter((m:any)=>Array.isArray(m.lineupMembers)&&m.lineupMembers.length);
   const latest=withLineup[withLineup.length-1]||null;
-  const activeMembers=(latest?.lineupMembers||[]).slice(0,10);
+  const activeMembers=(latest?.lineupMembers?.length?latest.lineupMembers:seriesMembers).slice(0,10);
   const active=activeMembers.map((m:any)=>m.username).filter(Boolean);
+  const registered=registeredMembers.map((m:any)=>m.username).filter(Boolean);
   const substitutes=registered.filter((u:string)=>!active.some((a:string)=>nameLooksSame(a,u)));
+
   const previousActive=plan?.challengermode?.activeRoster||plan?.competitiveEvidence?.currentRoster?.map((x:any)=>x?.player||x)||[];
   const rosterChanged=!!active.length&&!!previousActive.length&&(
     active.length!==previousActive.length||
@@ -335,7 +429,7 @@ async function syncChallengermodePlan(plan:any){
       riotId:clean(hit?.riotId,120)
     };
   };
-  const activePlayers=(activeMembers.length?activeMembers:registeredMembers.slice(0,5)).map(decorate);
+  const activePlayers=activeMembers.map(decorate);
   const registeredPlayers=registeredMembers.map(decorate);
   const substitutePlayers=registeredPlayers.filter((p:any)=>!activePlayers.some((a:any)=>
     (p.userId&&a.userId&&p.userId===a.userId)||nameLooksSame(p.username,a.username)
@@ -370,8 +464,7 @@ async function syncChallengermodePlan(plan:any){
       tournamentId,
       tournamentName:clean(tournament?.name,120),
       tournamentState:clean(tournament?.state,40),
-      teamId,
-      teamName:clean(rosterLineup?.team?.name||rosterLineup?.name||teamName,100),
+      teamName:clean(seriesTarget?.name||teamName,100),
       registeredRoster:registered,
       activeRoster:active,
       substitutes,
