@@ -69,8 +69,18 @@ function parsePlayersFromOpgg(urlValue:unknown){
   }catch{return []}
 }
 function pct(wins:number,games:number){return games>0?Math.round(wins/games*100):0}
+function cmLinkKind(value:unknown){
+  const raw=String(value||"").trim().toLowerCase();
+  if(!raw)return "";
+  if(raw.includes("/tournaments/"))return "tournament";
+  if(raw.includes("/teams/"))return "team";
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(raw))return "uuid";
+  return "unknown";
+}
 function cmTournamentId(value:unknown){
   const raw=String(value||"").trim();
+  const kind=cmLinkKind(raw);
+  if(kind!=="tournament"&&kind!=="uuid")return "";
   const match=raw.match(/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i);
   return match?.[0]||"";
 }
@@ -104,16 +114,31 @@ async function cmAccessToken(){
   return value;
 }
 async function cmGraphql(query:string,variables:Record<string,unknown>){
-  const token=await cmAccessToken();
-  const res=await fetch(CM_GRAPHQL_URL,{
-    method:"POST",
-    headers:{"Content-Type":"application/json","Authorization":"Bearer "+token},
-    body:JSON.stringify({query,variables})
-  });
-  const body=await res.json().catch(()=>null);
-  if(!res.ok)throw new Error("Challengermode GraphQL HTTP "+res.status);
-  if(Array.isArray(body?.errors)&&body.errors.length)throw new Error(clean(body.errors[0]?.message||"Challengermode GraphQL error",220));
-  return body?.data||{};
+  const call=async(token?:string)=>{
+    const headers:Record<string,string>={"Content-Type":"application/json"};
+    if(token)headers.Authorization="Bearer "+token;
+    const res=await fetch(CM_GRAPHQL_URL,{
+      method:"POST",
+      headers,
+      body:JSON.stringify({query,variables})
+    });
+    const body=await res.json().catch(()=>null);
+    return {res,body};
+  };
+
+  let first=await call();
+  const publicDenied=first.res.status===401||first.res.status===403||
+    (Array.isArray(first.body?.errors)&&first.body.errors.some((e:any)=>
+      /auth|unauthor|forbidden|access/i.test(String(e?.message||""))
+    ));
+  if(publicDenied){
+    const token=await cmAccessToken();
+    first=await call(token);
+  }
+
+  if(!first.res.ok)throw new Error("Challengermode GraphQL HTTP "+first.res.status);
+  if(Array.isArray(first.body?.errors)&&first.body.errors.length)throw new Error(clean(first.body.errors[0]?.message||"Challengermode GraphQL error",220));
+  return first.body?.data||{};
 }
 const CM_TOURNAMENT_QUERY=`query TournamentLive($id: UUID!) {
   tournament(tournamentId: $id) {
@@ -232,8 +257,11 @@ function cmMatchTargetLineup(match:any,teamId:string,registered:string[]){
   return bestScore>0?best:null;
 }
 async function syncChallengermodePlan(plan:any){
-  const tournamentId=cmTournamentId(plan?.challengermodeTournamentId||plan?.challengermodeUrl);
-  if(!tournamentId)throw new Error("Saknar giltig Challengermode-turneringslänk eller tournament ID.");
+  const rawLink=plan?.challengermodeTournamentId||plan?.challengermodeUrl;
+  const kind=cmLinkKind(rawLink);
+  if(kind==="team")throw new Error("CM_TEAM_LINK: Du har lagt in en lagprofil (/teams/...). Live-sync behöver Rivals-turneringens /tournaments/...-länk.");
+  const tournamentId=cmTournamentId(rawLink);
+  if(!tournamentId)throw new Error("CM_TOURNAMENT_LINK: Lägg in Challengermode-länken som innehåller /tournaments/ och turneringens UUID.");
   const data=await cmGraphql(CM_TOURNAMENT_QUERY,{id:tournamentId});
   const tournament=data?.tournament;
   if(!tournament)throw new Error("Challengermode-turneringen hittades inte.");
