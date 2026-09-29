@@ -348,13 +348,10 @@ async function syncChallengermodePlan(plan:any){
   const targetSeries=allSeries.filter((series:any)=>!!cmSeriesTargetLineup(series,teamName));
   if(!targetSeries.length)throw new Error("Kunde inte hitta laget '"+teamName+"' bland turneringens matchserier.");
 
-  targetSeries.sort((a:any,b:any)=>{
-    const ad=Date.parse(String(a?.startedAt||""));
-    const bd=Date.parse(String(b?.startedAt||""));
-    if(Number.isFinite(ad)&&Number.isFinite(bd)&&ad!==bd)return ad-bd;
-    return 0;
-  });
-  const latestSeries=targetSeries[targetSeries.length-1];
+  const playedSeries=targetSeries
+    .filter((x:any)=>String(x?.state||"").toUpperCase()==="COMPLETED"&&Number.isFinite(Date.parse(String(x?.startedAt||""))))
+    .sort((a:any,b:any)=>Date.parse(String(b.startedAt))-Date.parse(String(a.startedAt)));
+  const latestSeries=playedSeries[0]||targetSeries.find((x:any)=>String(x?.state||"").toUpperCase()==="COMPLETED")||targetSeries[0];
   const seriesTarget=cmSeriesTargetLineup(latestSeries,teamName);
   const seriesMembers=cmMembers(seriesTarget);
 
@@ -392,9 +389,24 @@ async function syncChallengermodePlan(plan:any){
     };
   });
 
-  const allMatches=series.flatMap((x:any)=>x.matches.map((m:any)=>({...m,seriesId:x.id,seriesTitle:x.title,seriesState:x.state})));
-  const withLineup=allMatches.filter((m:any)=>Array.isArray(m.lineupMembers)&&m.lineupMembers.length);
-  const latest=withLineup[withLineup.length-1]||null;
+  const allMatches=series.flatMap((x:any)=>x.matches.map((m:any)=>({
+    ...m,
+    seriesId:x.id,
+    seriesTitle:x.title,
+    seriesState:x.state,
+    seriesStartedAt:x.startedAt||""
+  })));
+  const playedMatches=allMatches
+    .filter((m:any)=>String(m?.state||"").toUpperCase()==="COMPLETED"&&Array.isArray(m.lineupMembers)&&m.lineupMembers.length)
+    .sort((a:any,b:any)=>{
+      const ad=Date.parse(String(a.seriesStartedAt||""));
+      const bd=Date.parse(String(b.seriesStartedAt||""));
+      if(Number.isFinite(ad)&&Number.isFinite(bd)&&ad!==bd)return bd-ad;
+      if(Number.isFinite(bd)&&!Number.isFinite(ad))return 1;
+      if(Number.isFinite(ad)&&!Number.isFinite(bd))return -1;
+      return 0;
+    });
+  const latest=playedMatches[0]||allMatches.find((m:any)=>Array.isArray(m.lineupMembers)&&m.lineupMembers.length)||null;
   const activeMembers=(latest?.lineupMembers?.length?latest.lineupMembers:seriesMembers).slice(0,10);
   const active=activeMembers.map((m:any)=>m.username).filter(Boolean);
   const registered=registeredMembers.map((m:any)=>m.username).filter(Boolean);
@@ -406,6 +418,19 @@ async function syncChallengermodePlan(plan:any){
     active.some((u:string)=>!previousActive.some((p:string)=>nameLooksSame(p,u)))
   );
 
+  const knownMappings=[
+    ...(Array.isArray(plan?.challengermode?.activePlayers)?plan.challengermode.activePlayers:[]),
+    ...(Array.isArray(plan?.challengermode?.substitutePlayers)?plan.challengermode.substitutePlayers:[]),
+    ...(Array.isArray(plan?.competitiveEvidence?.currentRoster)?plan.competitiveEvidence.currentRoster:[]),
+    ...(Array.isArray(plan?.competitiveEvidence?.substitutes)?plan.competitiveEvidence.substitutes:[])
+  ];
+  const knownRiotId=(member:any)=>{
+    const hit=knownMappings.find((x:any)=>
+      (x?.userId&&member?.userId&&String(x.userId)===String(member.userId))||
+      nameLooksSame(x?.username||x?.player,member?.username)
+    );
+    return clean(hit?.riotId,120);
+  };
   const uniqueMembers=new Map<string,any>();
   for(const member of [...registeredMembers,...activeMembers]){
     const key=member.userId||nameKey(member.username);
@@ -414,9 +439,9 @@ async function syncChallengermodePlan(plan:any){
   const accountRows=await Promise.all([...uniqueMembers.values()].map(async(member:any)=>{
     try{
       const account=member.userId?await cmLolAccount(member.userId):null;
-      return {...member,riotId:clean(account?.riotId,120),gameTitle:clean(account?.gameTitle,80)};
+      return {...member,riotId:clean(account?.riotId,120)||knownRiotId(member),gameTitle:clean(account?.gameTitle,80)};
     }catch{
-      return {...member,riotId:"",gameTitle:""};
+      return {...member,riotId:knownRiotId(member),gameTitle:""};
     }
   }));
   const byUserId=new Map(accountRows.filter((x:any)=>x.userId).map((x:any)=>[x.userId,x]));
@@ -440,14 +465,27 @@ async function syncChallengermodePlan(plan:any){
   const generatedOpgg=cmOpggUrl(cmRegion,registeredRiotIds);
 
   const evidenceGames=Array.isArray(plan?.competitiveEvidence?.games)?plan.competitiveEvidence.games:[];
+  const roleFor=(player:any)=>{
+    for(let i=evidenceGames.length-1;i>=0;i--){
+      const pick=(evidenceGames[i]?.picks||[]).find((x:any)=>
+        nameLooksSame(x?.player,player?.username)||nameLooksSame(x?.riotId,player?.riotId)
+      );
+      if(pick?.role)return clean(pick.role,24).toLowerCase();
+    }
+    const known=knownMappings.find((x:any)=>
+      nameLooksSame(x?.username||x?.player,player?.username)||
+      (x?.riotId&&player?.riotId&&same(x.riotId,player.riotId))
+    );
+    return clean(known?.role,24).toLowerCase();
+  };
   const competitiveEvidence={
     ...(plan?.competitiveEvidence||{}),
     source:"Challengermode / Rivals League",
     tournamentId,
     rosterChanged:rosterChanged||!!plan?.competitiveEvidence?.rosterChanged,
     observedAt:new Date().toISOString(),
-    currentRoster:activePlayers.map((p:any)=>({player:p.username,riotId:p.riotId})),
-    substitutes:substitutePlayers.map((p:any)=>({player:p.username,riotId:p.riotId})),
+    currentRoster:activePlayers.map((p:any)=>({player:p.username,riotId:p.riotId,role:roleFor(p)})),
+    substitutes:substitutePlayers.map((p:any)=>({player:p.username,riotId:p.riotId,role:roleFor(p)})),
     games:evidenceGames
   };
 
