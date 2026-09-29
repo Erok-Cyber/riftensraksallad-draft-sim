@@ -1148,3 +1148,147 @@ body.comp-guide-open .os-sidebar{
   font-size:12px!important;
   color:inherit!important;
 }
+
+
+/* =========================================================
+   DRAFT OS TYPOGRAPHY + COMPONENT CONSISTENCY
+   One display face + one UI face across every workspace.
+   ========================================================= */
+.draft-os{
+  --font-display:"Oxanium",Inter,system-ui,sans-serif;
+  --font-ui:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  --radius-card:14px;
+  --radius-control:9px;
+}
+.draft-os,
+.draft-os button,
+.draft-os input,
+.draft-os select,
+.draft-os textarea{
+  font-family:var(--font-ui)!important;
+}
+.draft-os h1,
+.draft-os h2,
+.draft-os h3,
+.draft-os h4,
+.draft-os .mode-btn strong,
+.draft-os .comp-card h3,
+.draft-os .panel-head h3,
+.draft-os .planner-section-head h3,
+.draft-os .comp-guide-columns h3,
+.draft-os .comp-guide-section h3,
+.draft-os .os-brand strong{
+  font-family:var(--font-display)!important;
+  font-weight:700;
+  letter-spacing:-.025em;
+}
+.draft-os h1{font-weight:700}
+.draft-os h2{font-weight:700}
+.draft-os .eyebrow,
+.draft-os .mini-label,
+.draft-os .os-nav-label,
+.draft-os .badge,
+.draft-os .planner-role-chip,
+.draft-os .comp-core-slot span,
+.draft-os .comp-role-alt>span,
+.draft-os .comp-variant-picks small,
+.draft-os .comp-plan-grid span,
+.draft-os .match-type,
+.draft-os .analysis-kpis span{
+  font-family:var(--font-display)!important;
+  font-weight:700;
+  letter-spacing:.10em;
+}
+.draft-os .os-nav-item b,
+.draft-os .top-tab,
+.draft-os .primary,
+.draft-os .secondary,
+.draft-os .side-btn,
+.draft-os .danger-btn,
+.draft-os .review-match,
+.draft-os .analysis-filter,
+.draft-os .db-action{
+  font-family:var(--font-display)!important;
+  font-weight:600;
+  letter-spacing:.005em;
+}
+
+/* Normalize visual language */
+.draft-os .card,
+.draft-os .analysis-panel,
+.draft-os .analysis-kpis article,
+.draft-os .planner-section,
+.draft-os .planner-scout-profile,
+.draft-os .comp-variant,
+.draft-os .comp-core-slot,
+.draft-os .analysis-mini-grid>div,
+.draft-os .champ-stat{
+  border-radius:var(--radius-card)!important;
+}
+.draft-os .primary,
+.draft-os .secondary,
+.draft-os .side-btn,
+.draft-os .danger-btn,
+.draft-os input,
+.draft-os select,
+.draft-os textarea{
+  border-radius:var(--radius-control)!important;
+}
+.draft-os .card,
+.draft-os .analysis-panel,
+.draft-os .planner-section,
+.draft-os .planner-scout-profile{
+  border-color:rgba(65,92,124,.58)!important;
+}
+.draft-os .os-nav-item{
+  min-height:42px;
+}
+.draft-os .os-nav-item b{
+  font-size:11px;
+}
+.draft-os .os-brand strong{
+  font-size:12px;
+  letter-spacing:-.01em;
+}
+.draft-os .os-brand span{
+  font-family:var(--font-display)!important;
+  letter-spacing:.14em;
+}
+
+/* Headings feel like one product, not separate themes */
+.draft-os header h1{
+  font-size:32px!important;
+  line-height:1.05!important;
+}
+.draft-os .analysis-dashboard-head h2,
+.draft-os .planner-dashboard-head h2,
+.draft-os .comp-library-page-head h2{
+  font-size:32px!important;
+}
+.draft-os .os-home-copy h2{
+  font-family:var(--font-display)!important;
+  font-size:42px;
+  font-weight:700;
+  letter-spacing:-.04em;
+}
+.draft-os .os-live-hero-head h2{
+  font-family:var(--font-display)!important;
+  font-size:30px;
+  font-weight:700;
+  letter-spacing:-.035em;
+}
+.draft-os .comp-guide-head h2{
+  font-family:var(--font-display)!important;
+  font-size:31px;
+}
+
+/* Cleaner section titles */
+.draft-os .panel-head h3,
+.draft-os .planner-section h3,
+.draft-os .comp-guide-columns h3,
+.draft-os .comp-guide-section h3{
+  font-size:17px!important;
+}
+.draft-os .comp-library-grid .comp-card h3{
+  font-size:18px!important;
+}
