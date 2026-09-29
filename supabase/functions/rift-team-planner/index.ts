@@ -127,6 +127,7 @@ const CM_TOURNAMENT_QUERY=`query TournamentLive($id: UUID!) {
           team { id name }
           members {
             captain
+            gameAccountId
             user { userId username }
           }
         }
@@ -153,6 +154,7 @@ const CM_TOURNAMENT_QUERY=`query TournamentLive($id: UUID!) {
           name
           team { id name }
           members {
+            gameAccountId
             user { userId username }
           }
         }
@@ -160,8 +162,52 @@ const CM_TOURNAMENT_QUERY=`query TournamentLive($id: UUID!) {
     }
   }
 }`;
+function cmMembers(lineup:any){
+  return (lineup?.members||[]).map((m:any)=>({
+    userId:clean(m?.user?.userId||m?.user?.id,80),
+    username:clean(m?.user?.username,80)
+  })).filter((m:any)=>m.userId||m.username);
+}
 function cmUsers(lineup:any){
-  return (lineup?.members||[]).map((m:any)=>clean(m?.user?.username,80)).filter(Boolean);
+  return cmMembers(lineup).map((m:any)=>m.username).filter(Boolean);
+}
+async function cmLolAccount(userId:string){
+  if(!userId)return null;
+  const data=await cmGraphql(`query CmLolAccount($id: UUID!) {
+    user(userId: $id) {
+      username
+      gameAccounts(first: 10) {
+        nodes {
+          displayName
+          gameTitle { slug name }
+        }
+      }
+    }
+  }`,{id:userId});
+  const user=data?.user;
+  const nodes=Array.isArray(user?.gameAccounts?.nodes)?user.gameAccounts.nodes:[];
+  const scored=nodes.map((n:any)=>{
+    const displayName=clean(n?.displayName,120);
+    const title=(clean(n?.gameTitle?.slug,80)+" "+clean(n?.gameTitle?.name,80)).toLowerCase();
+    let score=0;
+    if(displayName.includes("#"))score+=10;
+    if(title.includes("league"))score+=8;
+    if(title.includes("legend"))score+=4;
+    if(title.includes("lol"))score+=4;
+    return {displayName,title,score};
+  }).filter((x:any)=>x.displayName);
+  const best=scored.sort((a:any,b:any)=>b.score-a.score)[0]||null;
+  return {
+    userId,
+    username:clean(user?.username,80),
+    riotId:best&&best.score>=10?best.displayName:"",
+    gameTitle:best?.title||""
+  };
+}
+function cmOpggUrl(region:string,riotIds:string[]){
+  if(!riotIds.length)return "";
+  return "https://op.gg/lol/multisearch/"+encodeURIComponent(region.toLowerCase())+
+    "?summoners="+encodeURIComponent(riotIds.join(","));
 }
 function cmTargetLineup(tournament:any,teamName:string){
   const lineups=tournament?.attendance?.roster?.lineups||[];
@@ -196,7 +242,8 @@ async function syncChallengermodePlan(plan:any){
   const rosterLineup=cmTargetLineup(tournament,teamName);
   if(!rosterLineup)throw new Error("Kunde inte hitta laget '"+teamName+"' i turneringens roster.");
 
-  const registered=cmUsers(rosterLineup);
+  const registeredMembers=cmMembers(rosterLineup);
+  const registered=registeredMembers.map((m:any)=>m.username).filter(Boolean);
   const teamId=String(rosterLineup?.team?.id||"");
   const series=(tournament?.matchSeries||[]).map((ms:any)=>{
     let targetLineupNumber:any=null;
@@ -207,7 +254,8 @@ async function syncChallengermodePlan(plan:any){
         id:String(m?.id||""),
         state:clean(m?.state,40),
         lineupNumber:lineup?.number??null,
-        lineup:lineup?cmUsers(lineup):[]
+        lineup:lineup?cmUsers(lineup):[],
+        lineupMembers:lineup?cmMembers(lineup):[]
       };
     });
     const lineupResults=Array.isArray(ms?.results?.lineupResults)?ms.results.lineupResults:[];
@@ -227,13 +275,46 @@ async function syncChallengermodePlan(plan:any){
   const allMatches=series.flatMap((x:any)=>x.matches.map((m:any)=>({...m,seriesId:x.id,seriesOrdinal:x.ordinal,seriesState:x.state})));
   const withLineup=allMatches.filter((m:any)=>Array.isArray(m.lineup)&&m.lineup.length);
   const latest=withLineup[withLineup.length-1]||null;
-  const active=latest?.lineup?.slice(0,10)||[];
+  const activeMembers=(latest?.lineupMembers||[]).slice(0,10);
+  const active=activeMembers.map((m:any)=>m.username).filter(Boolean);
   const substitutes=registered.filter((u:string)=>!active.some((a:string)=>nameLooksSame(a,u)));
   const previousActive=plan?.challengermode?.activeRoster||plan?.competitiveEvidence?.currentRoster?.map((x:any)=>x?.player||x)||[];
   const rosterChanged=!!active.length&&!!previousActive.length&&(
     active.length!==previousActive.length||
     active.some((u:string)=>!previousActive.some((p:string)=>nameLooksSame(p,u)))
   );
+
+  const uniqueMembers=new Map<string,any>();
+  for(const member of [...registeredMembers,...activeMembers]){
+    const key=member.userId||nameKey(member.username);
+    if(key&&!uniqueMembers.has(key))uniqueMembers.set(key,member);
+  }
+  const accountRows=await Promise.all([...uniqueMembers.values()].map(async(member:any)=>{
+    try{
+      const account=member.userId?await cmLolAccount(member.userId):null;
+      return {...member,riotId:clean(account?.riotId,120),gameTitle:clean(account?.gameTitle,80)};
+    }catch{
+      return {...member,riotId:"",gameTitle:""};
+    }
+  }));
+  const byUserId=new Map(accountRows.filter((x:any)=>x.userId).map((x:any)=>[x.userId,x]));
+  const byName=new Map(accountRows.filter((x:any)=>x.username).map((x:any)=>[nameKey(x.username),x]));
+  const decorate=(member:any)=>{
+    const hit=(member?.userId&&byUserId.get(member.userId))||byName.get(nameKey(member?.username))||member;
+    return {
+      userId:clean(member?.userId||hit?.userId,80),
+      username:clean(member?.username||hit?.username,80),
+      riotId:clean(hit?.riotId,120)
+    };
+  };
+  const activePlayers=(activeMembers.length?activeMembers:registeredMembers.slice(0,5)).map(decorate);
+  const registeredPlayers=registeredMembers.map(decorate);
+  const substitutePlayers=registeredPlayers.filter((p:any)=>!activePlayers.some((a:any)=>
+    (p.userId&&a.userId&&p.userId===a.userId)||nameLooksSame(p.username,a.username)
+  ));
+  const activeRiotIds=activePlayers.map((p:any)=>p.riotId).filter(Boolean);
+  const cmRegion=clean(plan?.challengermodeRegion||"euw",12).toLowerCase()||"euw";
+  const generatedOpgg=cmOpggUrl(cmRegion,activeRiotIds);
 
   const evidenceGames=Array.isArray(plan?.competitiveEvidence?.games)?plan.competitiveEvidence.games:[];
   const competitiveEvidence={
@@ -242,16 +323,19 @@ async function syncChallengermodePlan(plan:any){
     tournamentId,
     rosterChanged:rosterChanged||!!plan?.competitiveEvidence?.rosterChanged,
     observedAt:new Date().toISOString(),
-    currentRoster:(active.length?active:registered).map((player:string)=>({player})),
-    substitutes,
+    currentRoster:activePlayers.map((p:any)=>({player:p.username,riotId:p.riotId})),
+    substitutes:substitutePlayers.map((p:any)=>({player:p.username,riotId:p.riotId})),
     games:evidenceGames
   };
 
   return {
     ...plan,
+    players:activeRiotIds.length?activeRiotIds:(plan?.players||[]),
+    opggUrl:generatedOpgg||plan?.opggUrl||"",
     challengermodeUrl:plan?.challengermodeUrl||"",
     challengermodeTournamentId:tournamentId,
     challengermodeTeamName:teamName,
+    challengermodeRegion:cmRegion,
     challengermode:{
       configured:true,
       tournamentId,
@@ -262,6 +346,11 @@ async function syncChallengermodePlan(plan:any){
       registeredRoster:registered,
       activeRoster:active,
       substitutes,
+      registeredPlayers,
+      activePlayers,
+      substitutePlayers,
+      generatedOpggUrl:generatedOpgg,
+      riotIdsResolved:activeRiotIds.length,
       rosterChanged,
       latestMatchId:latest?.id||"",
       latestMatchState:latest?.state||"",
@@ -474,7 +563,7 @@ async function scoutPlan(plan:any){
   const inputPlayers=Array.isArray(plan?.players)&&plan.players.length
     ?plan.players.map((x:unknown)=>clean(x,120)).filter(Boolean).slice(0,10)
     :parsePlayersFromOpgg(plan?.opggUrl);
-  const activeRoster=(plan?.competitiveEvidence?.currentRoster||[]).map((x:any)=>clean(x?.player||x,80)).filter(Boolean);
+  const activeRoster=(plan?.competitiveEvidence?.currentRoster||[]).map((x:any)=>clean(x?.riotId||x?.player||x,120)).filter(Boolean);
   const evidenceGames=Array.isArray(plan?.competitiveEvidence?.games)?plan.competitiveEvidence.games:[];
   const hasCompetitive=activeRoster.length>0||evidenceGames.length>0;
   if(!inputPlayers.length&&!hasCompetitive)throw new Error("Ingen OP.GG- eller Challengermode-data att scouta.");
