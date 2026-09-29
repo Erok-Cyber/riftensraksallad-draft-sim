@@ -536,6 +536,7 @@
     $("pnOpponent").value="";
     $("pnScheduled").value=defaultNewMatchTime();
     $("pnBestOf").value="3";
+    $("pnCmTeamUrl").value="";
     $("pnCmUrl").value="";
     $("pnCmTeamName").value="";
     $("pnCompetition").value="";
@@ -677,6 +678,7 @@
     if(!(await ensureWrite()))return;
     const opponent=$("pnOpponent")?.value?.trim()||"";
     const dt=$("pnScheduled")?.value||"";
+    const challengermodeTeamUrl=$("pnCmTeamUrl")?.value?.trim()||"";
     const challengermodeUrl=$("pnCmUrl")?.value?.trim()||"";
     const challengermodeTeamName=$("pnCmTeamName")?.value?.trim()||opponent;
     const bestOf=Number($("pnBestOf")?.value)||3;
@@ -701,6 +703,7 @@
       bestOf,
       competition,
       opggUrl:"",
+      challengermodeTeamUrl,
       challengermodeUrl,
       challengermodeTeamName,
       players,
