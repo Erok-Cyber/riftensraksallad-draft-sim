@@ -6,6 +6,9 @@
   let selectedId=null;
   let editing=false;
   let loading=false;
+  let cmPollTimer=null;
+  let cmApiState={configured:null,error:""};
+  const cmSyncingIds=new Set();
   const scoutingIds=new Set();
   const autoScoutAttempted=new Set();
 
@@ -154,6 +157,15 @@
     if(isNaN(d))return iso||"—";
     return d.toLocaleString("sv-SE",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
   }
+  function safeCmUrl(raw){
+    try{
+      const u=new URL(String(raw||""));
+      const host=u.hostname.toLowerCase();
+      if(!["http:","https:"].includes(u.protocol))return "";
+      if(host!=="challengermode.com"&&host!=="www.challengermode.com"&&!host.endsWith(".challengermode.com"))return "";
+      return u.href;
+    }catch{return ""}
+  }
   function cmTime(iso){
     const d=new Date(iso);
     if(isNaN(d))return "—";
@@ -261,6 +273,8 @@
           '<div class="planner-meta">'+esc(dateText(plan.scheduledAt))+' · BO'+esc(plan.bestOf)+(plan.competition?' · '+esc(plan.competition):'')+' · '+esc(plan.status.toUpperCase())+'</div></div>'+
         '<div class="planner-detail-actions">'+
           (plan.opggUrl?'<a class="planner-link" href="'+esc(plan.opggUrl)+'" target="_blank" rel="noopener">OP.GG ↗</a>':'')+
+          (safeCmUrl(plan.challengermodeUrl)?'<a class="planner-link cm" href="'+esc(safeCmUrl(plan.challengermodeUrl))+'" target="_blank" rel="noopener">Challengermode ↗</a>':'')+
+          (hasKey()&&plan.challengermodeUrl?'<button type="button" class="planner-cm-sync-btn" data-planner-action="cm-sync" '+(cmSyncingIds.has(plan.id)?'disabled':'')+'>'+(cmSyncingIds.has(plan.id)?'Synkar CM…':'Synka CM')+'</button>':'')+
           (hasKey()&&plan.opggUrl&&(plan.players||[]).length?'<button type="button" class="planner-scout-btn" data-planner-action="scout" '+(scoutingIds.has(plan.id)?'disabled':'')+'>'+(scoutingIds.has(plan.id)?'Scoutar…':'Scouta om')+'</button>':'')+
           '<button type="button" class="planner-edit-btn" data-planner-action="edit">Redigera plan</button>'+
           (hasKey()?'<button type="button" class="planner-delete-btn" data-planner-action="delete">Radera match</button>':'')+
@@ -280,6 +294,7 @@
         (plan.scoutingError?'<div class="planner-scout-warning">'+esc(plan.scoutingError)+'</div>':'')+
         (scoutLineup(plan).length?'<div class="planner-scout-profile-grid">'+scoutLineup(plan).map(scoutProfileCard).join("")+'</div>':'')+
       '</section>'+
+      (plan.challengermode?cmRosterHtml(plan):(plan.challengermodeUrl?'<section class="planner-section planner-cm-section"><div class="planner-section-head"><h3>Challengermode Live</h3><span class="planner-cm-badge pending">VÄNTAR</span></div><p class="analysis-note">'+esc(cmApiState.error||'Turneringen är länkad. Synka för roster, subs och matchhistorik.')+'</p></section>':''))+
       '<section class="planner-section">'+
         '<div class="planner-section-head"><h3>Ban-prioritet</h3><span class="analysis-note">3–5 champs</span></div>'+
         '<div class="planner-ban-list">'+(bans.length?bans.map((b,i)=>'<div class="planner-ban-row">'+
