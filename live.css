@@ -307,3 +307,33 @@ body.live-os .loading-script strong{
 }
 body.live-os .section-gap{margin-top:12px}
 body.live-os .live-layout{margin-top:12px}
+
+
+body.live-os .live-playbook-card{
+  margin-top:12px;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:24px;
+  padding:18px 20px!important;
+}
+body.live-os .live-playbook-card h2{
+  margin:2px 0 5px;
+  font-family:var(--font-display)!important;
+  font-size:20px!important;
+}
+body.live-os .live-playbook-card .sub{
+  margin:0;
+  max-width:780px;
+  font-size:11px;
+}
+body.live-os .live-playbook-card .secondary{
+  flex:0 0 auto;
+  margin:0;
+}
+@media(max-width:760px){
+  body.live-os .live-playbook-card{
+    align-items:flex-start;
+    flex-direction:column;
+  }
+}
