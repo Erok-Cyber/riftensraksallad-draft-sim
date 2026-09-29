@@ -517,6 +517,60 @@
     box.innerHTML='<span class="planner-preview-label">'+players.length+' spelare hittade</span>'+
       '<div class="planner-preview-players">'+players.map(p=>'<b>'+esc(p)+'</b>').join("")+'</div>';
   }
+  async function syncChallengermodePlan(id=selectedId,{silent=false}={}){
+    const plan=plans.find(p=>p.id===id);
+    if(!plan||cmSyncingIds.has(id))return false;
+    if(!plan.challengermodeUrl){
+      if(!silent)alert("Lägg till Challengermode-turneringslänken först.");
+      return false;
+    }
+    if(!hasKey()&&!(await ensureWrite()))return false;
+    cmSyncingIds.add(id);
+    render();
+    try{
+      const data=await request("POST","",{plan,syncChallengermode:true,scout:true});
+      cmApiState={
+        configured:data.challengermodeConfigured!==false,
+        error:data.challengermodeError||""
+      };
+      const updated=normalize(data.plan||plan);
+      const i=plans.findIndex(p=>p.id===id);
+      if(i>=0)plans[i]=updated;
+      plans=sortPlans(plans);
+      writeCache(plans);
+      render();
+      if(data.challengermodeError){
+        if(!silent)alert(data.challengermodeError==="CHALLENGERMODE_NOT_CONFIGURED"
+          ?"Challengermode API är förberett men serverns refresh key är inte ansluten ännu."
+          :"Challengermode-sync: "+data.challengermodeError);
+        return false;
+      }
+      return true;
+    }catch(err){
+      cmApiState={configured:cmApiState.configured,error:String(err?.message||err)};
+      console.error("Challengermode sync failed:",err);
+      if(!silent)alert("Kunde inte synka Challengermode: "+err.message);
+      return false;
+    }finally{
+      cmSyncingIds.delete(id);
+      render();
+    }
+  }
+  async function syncAllChallengermode({silent=true}={}){
+    if(!hasKey()||document.hidden)return;
+    const dashboard=$("banPlannerDashboard");
+    if(dashboard?.classList.contains("hidden"))return;
+    const targets=plans.filter(p=>p.status==="upcoming"&&p.challengermodeUrl).slice(0,8);
+    for(const plan of targets){
+      const ok=await syncChallengermodePlan(plan.id,{silent});
+      if(!ok&&cmApiState.configured===false)break;
+    }
+  }
+  function startCmPolling(){
+    if(cmPollTimer)clearInterval(cmPollTimer);
+    cmPollTimer=setInterval(()=>syncAllChallengermode({silent:true}),5*60*1000);
+  }
+
   async function scoutPlan(id=selectedId,{silent=false}={}){
     const plan=plans.find(p=>p.id===id);
     if(!plan||scoutingIds.has(id))return false;
@@ -662,6 +716,8 @@
   function show(){
     updateDbBadge();
     if(!plans.length)load();else{render();load();}
+    startCmPolling();
+    queueMicrotask(()=>syncAllChallengermode({silent:true}));
   }
 
   $("plannerMatchList")?.addEventListener("click",e=>{
@@ -677,6 +733,7 @@
     if(action==="cancel"){editing=false;render();}
     if(action==="save")await saveCurrent();
     if(action==="scout")await scoutPlan();
+    if(action==="cm-sync")await syncChallengermodePlan();
     if(action==="delete")await deleteCurrent();
   });
   $("plannerNewMatchBtn")?.addEventListener("click",async()=>{
@@ -693,5 +750,5 @@
   window.addEventListener("storage",e=>{if(e.key===TEAM_KEY_STORAGE)updateDbBadge()});
   window.RiftSharedData?.subscribe?.(()=>updateDbBadge());
 
-  window.RiftBanPlanner={show,load,render,deleteCurrent,scoutPlan,getPlans,selectPlan,roleLineup:scoutLineup};
+  window.RiftBanPlanner={show,load,render,deleteCurrent,scoutPlan,syncChallengermodePlan,getPlans,selectPlan,roleLineup:scoutLineup};
 })();
