@@ -9,6 +9,7 @@
 
   function revealRoutedPage(){
     document.documentElement.classList.remove("route-pending");
+    document.documentElement.style.visibility="";
   }
 
   document.querySelectorAll("[data-shell-click]").forEach(btn=>{
@@ -87,37 +88,30 @@
 
   const params=new URLSearchParams(location.search);
   const requestedOpen=params.get("open");
-  if(requestedOpen==="comps"||location.hash==="#comps"){
-    window.addEventListener("load",()=>{
-      setTimeout(()=>{
-        document.getElementById("compLibraryTabBtn")?.click();
-        history.replaceState(null,"",location.pathname+"?view=comps");
-        revealRoutedPage();
-      },120);
-    },{once:true});
-  }
+  const requestedView=params.get("view");
+  let routed=false;
+
   if(requestedOpen==="sim"){
-    window.addEventListener("load",()=>{
-      setTimeout(()=>{
-        document.getElementById("simModeBtn")?.click();
-        history.replaceState(null,"",location.pathname);
-        revealRoutedPage();
-      },120);
-    },{once:true});
-  }
-  if(requestedOpen==="test"){
-    window.addEventListener("load",()=>{
-      setTimeout(()=>{
-        document.getElementById("testModeBtn")?.click();
-        history.replaceState(null,"",location.pathname);
-        revealRoutedPage();
-      },120);
-    },{once:true});
+    document.getElementById("simModeBtn")?.click();
+    history.replaceState(null,"",location.pathname);
+    routed=true;
+  }else if(requestedOpen==="test"){
+    document.getElementById("testModeBtn")?.click();
+    history.replaceState(null,"",location.pathname);
+    routed=true;
+  }else if(requestedView==="planner"){
+    document.getElementById("plannerTabBtn")?.click();
+    routed=true;
+  }else if(requestedView==="analysis"){
+    document.getElementById("analysisTabBtn")?.click();
+    routed=true;
+  }else if(requestedView==="comps"||location.hash==="#comps"){
+    document.getElementById("compLibraryTabBtn")?.click();
+    if(location.hash==="#comps")history.replaceState(null,"",location.pathname+"?view=comps");
+    routed=true;
   }
 
-  // Views such as ?view=planner / analysis / comps are switched by app.js.
-  // Keep the old page hidden until that initial route has been applied.
-  window.addEventListener("load",()=>{
-    setTimeout(revealRoutedPage,requestedOpen?180:60);
-  },{once:true});
+  if(document.documentElement.classList.contains("route-pending")||routed){
+    revealRoutedPage();
+  }
 })();
