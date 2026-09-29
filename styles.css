@@ -569,3 +569,11 @@ body.planner-modal-open{overflow:hidden}
 .planner-cm-history strong,.planner-cm-history span,.planner-cm-history small{display:block}
 .planner-cm-history strong{font-size:10px}.planner-cm-history span{font-size:9px;color:#cfc6f0;margin-top:3px}.planner-cm-history small{font-size:8px;color:var(--muted);margin-top:3px}
 @media(max-width:760px){.planner-cm-grid{grid-template-columns:1fr}.planner-cm-history{grid-template-columns:1fr 1fr}}
+
+.planner-cm-resolve{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 10px;padding:9px 10px;border:1px solid #3d4b68;border-radius:9px;background:#101b2d}
+.planner-cm-resolve strong{font-size:10px;color:#dcd6ff}
+.planner-cm-resolve span{font-size:9px;color:var(--muted);text-align:right}
+.planner-cm-people{display:grid;gap:6px}
+.planner-cm-person{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 7px;border:1px solid rgba(255,255,255,.06);border-radius:7px;background:#101c2d}
+.planner-cm-person strong{font-size:10px}
+.planner-cm-person span{font-size:9px;color:#9fc9ff;text-align:right}
