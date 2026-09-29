@@ -334,6 +334,8 @@
           field("Best of",'<select id="peBestOf"><option value="1" '+(plan.bestOf===1?"selected":"")+'>BO1</option><option value="3" '+(plan.bestOf===3?"selected":"")+'>BO3</option><option value="5" '+(plan.bestOf===5?"selected":"")+'>BO5</option></select>')+
           field("Liga / turnering",'<input id="peCompetition" value="'+esc(plan.competition||'')+'" placeholder="Rivals">')+
           field("OP.GG",'<input id="peOpgg" value="'+esc(plan.opggUrl||'')+'">')+
+          field("Challengermode-turnering",'<input id="peCmUrl" value="'+esc(plan.challengermodeUrl||'')+'" placeholder="https://www.challengermode.com/s/.../tournaments/UUID">')+
+          field("Lagnamn på Challengermode",'<input id="peCmTeamName" value="'+esc(plan.challengermodeTeamName||plan.opponent||'')+'" placeholder="'+esc(plan.opponent||'')+'">')+
           field("Spelare · en per rad",'<textarea id="pePlayers">'+esc((plan.players||[]).join("\n"))+'</textarea>')+
         '</section>'+
         '<section class="planner-section planner-edit-grid">'+
@@ -379,6 +381,8 @@
     out.status=$("peStatus")?.value||"upcoming";
     out.bestOf=Number($("peBestOf")?.value)||3;
     out.opggUrl=val("peOpgg");
+    out.challengermodeUrl=val("peCmUrl");
+    out.challengermodeTeamName=val("peCmTeamName")||out.opponent;
     out.competition=val("peCompetition");
     out.players=val("pePlayers").split(/\n+/).map(x=>x.trim()).filter(Boolean);
     out.phase1Plan={b1:val("peB1"),b2:val("peB2"),b3:val("peB3"),note:val("pePhaseNote")};
@@ -465,6 +469,8 @@
     $("pnScheduled").value=defaultNewMatchTime();
     $("pnBestOf").value="3";
     $("pnOpgg").value="";
+    $("pnCmUrl").value="";
+    $("pnCmTeamName").value="";
     $("pnCompetition").value="";
     $("pnPreNotes").value="";
     $("pnPlayerPreview").innerHTML='<span class="analysis-note">Klistra in en OP.GG Multisearch-länk så läser vi Riot IDs automatiskt.</span>';
@@ -545,6 +551,8 @@
     const opponent=$("pnOpponent")?.value?.trim()||"";
     const dt=$("pnScheduled")?.value||"";
     const opggUrl=$("pnOpgg")?.value?.trim()||"";
+    const challengermodeUrl=$("pnCmUrl")?.value?.trim()||"";
+    const challengermodeTeamName=$("pnCmTeamName")?.value?.trim()||opponent;
     const bestOf=Number($("pnBestOf")?.value)||3;
     const competition=$("pnCompetition")?.value?.trim()||"";
     const preNotes=$("pnPreNotes")?.value?.trim()||"";
@@ -568,6 +576,8 @@
       bestOf,
       competition,
       opggUrl,
+      challengermodeUrl,
+      challengermodeTeamName,
       players,
       scoutingConfidence:"preliminary",
       scoutingUpdatedAt:"",
@@ -582,9 +592,9 @@
         general:""
       }
     });
-    if(status)status.textContent=opggUrl?"Skapar match & scoutar OP.GG…":"Skapar match…";
+    if(status)status.textContent=challengermodeUrl?"Skapar match & kopplar Challengermode…":opggUrl?"Skapar match & scoutar OP.GG…":"Skapar match…";
     try{
-      const data=await request("POST","",{plan,scout:!!opggUrl});
+      const data=await request("POST","",{plan,scout:!!opggUrl,syncChallengermode:!!challengermodeUrl});
       const savedPlan=normalize(data.plan||plan);
       plans.push(savedPlan);
       plans=sortPlans(plans);
