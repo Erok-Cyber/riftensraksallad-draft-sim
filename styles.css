@@ -545,3 +545,27 @@ body.planner-modal-open{overflow:hidden}
   .test-opponent-picker small{grid-column:auto}
   .planner-scout-profile-grid{grid-template-columns:1fr}
 }
+
+
+/* Challengermode live scouting */
+.planner-link.cm{border-color:#5b4a8a;color:#d7ccff}
+.planner-cm-sync-btn{background:#1a1430;border:1px solid #5c4b8b;color:#e0d8ff;border-radius:8px;padding:8px 10px;font:inherit;font-size:10px;font-weight:900;cursor:pointer}
+.planner-cm-sync-btn:disabled{opacity:.55;cursor:wait}
+.planner-cm-help{margin:-4px 0 14px;color:var(--muted);font-size:10px}
+.planner-cm-section{border-color:#4a3f6d;background:linear-gradient(135deg,rgba(83,61,139,.08),rgba(10,22,37,.92))}
+.planner-cm-badge{border:1px solid #675995;border-radius:999px;padding:4px 7px;font-size:8px;font-weight:950;letter-spacing:.08em;color:#d9d0ff;background:#1a1630}
+.planner-cm-badge.live{border-color:#2d6e58;color:#8ef0c0;background:#10291f}
+.planner-cm-badge.changed{border-color:#8b5e28;color:#ffd58b;background:#30230f}
+.planner-cm-badge.pending{border-color:#45566e;color:#a9bdd8;background:#132033}
+.planner-cm-meta{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:4px 0 12px}
+.planner-cm-meta strong{font-size:14px}
+.planner-cm-meta span,.planner-cm-meta small{color:var(--muted);font-size:10px}
+.planner-cm-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.planner-cm-grid>div{background:#0c192a;border:1px solid #2c3f5a;border-radius:10px;padding:10px}
+.planner-cm-grid>div>span{display:block;color:#a89bd1;font-size:8px;font-weight:950;letter-spacing:.08em;margin-bottom:7px}
+.planner-player.sub{opacity:.72;border-style:dashed}
+.planner-cm-history{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin-top:10px}
+.planner-cm-history>div{background:#0c192a;border:1px solid #293b54;border-radius:9px;padding:8px}
+.planner-cm-history strong,.planner-cm-history span,.planner-cm-history small{display:block}
+.planner-cm-history strong{font-size:10px}.planner-cm-history span{font-size:9px;color:#cfc6f0;margin-top:3px}.planner-cm-history small{font-size:8px;color:var(--muted);margin-top:3px}
+@media(max-width:760px){.planner-cm-grid{grid-template-columns:1fr}.planner-cm-history{grid-template-columns:1fr 1fr}}
