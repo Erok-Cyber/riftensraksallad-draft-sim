@@ -987,6 +987,16 @@ function undoPick(){
 }
 
 function selectMode(m){
+  // Enter either training mode from any workspace without routing through Home.
+  // Clear the previous draft and hide every unrelated view before revealing setup.
+  mode=null;userSide=null;picks=[];step=0;currentScenario=null;
+  selectedTestOpponentId="";enemyRoleOrder=[];scenarioEnemyPlan=[];
+  $("championSearch").value="";
+  if($("testOpponentSelect"))$("testOpponentSelect").disabled=false;
+  ["analysisDashboard","banPlannerDashboard","draftArea","analysis","scoreCard",
+    "testFeedback","testGrade"].forEach(id=>$(id)?.classList.add("hidden"));
+  ["startTabBtn","analysisTabBtn","plannerTabBtn","compLibraryTabBtn"]
+    .forEach(id=>$(id)?.classList.remove("active"));
   mode=m;
   setWorkspace(m==="test"?"test":"trainer");
   setTrainerNav(true);
@@ -1005,6 +1015,7 @@ function selectMode(m){
     renderScenarioBrief();
     refreshTestOpponentOptions();
   }
+  window.scrollTo({top:0,behavior:"instant"});
 }
 
 function seedScenarioEnemyPicks(){
