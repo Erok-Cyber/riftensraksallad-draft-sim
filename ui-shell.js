@@ -33,6 +33,19 @@
       closeSidebar();
     });
   });
+  document.querySelectorAll('a[href="#comps"],a[href="index.html#comps"]').forEach(link=>{
+    link.addEventListener("click",e=>{
+      const home=document.getElementById("startTabBtn");
+      if(!home)return;
+      e.preventDefault();
+      home.click();
+      history.replaceState(null,"",location.pathname+"#comps");
+      setTimeout(()=>{
+        document.getElementById("comps")?.scrollIntoView({behavior:"smooth",block:"start"});
+      },40);
+      closeSidebar();
+    });
+  });
 
   toggle?.addEventListener("click",()=>{
     document.body.classList.toggle("os-nav-open");
