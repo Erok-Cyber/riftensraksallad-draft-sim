@@ -521,12 +521,10 @@
     $("pnOpponent").value="";
     $("pnScheduled").value=defaultNewMatchTime();
     $("pnBestOf").value="3";
-    $("pnOpgg").value="";
     $("pnCmUrl").value="";
     $("pnCmTeamName").value="";
     $("pnCompetition").value="";
     $("pnPreNotes").value="";
-    $("pnPlayerPreview").innerHTML='<span class="analysis-note">Klistra in en OP.GG Multisearch-länk så läser vi Riot IDs automatiskt.</span>';
     $("pnCreateStatus").textContent="";
     const modal=$("plannerNewMatchOverlay");
     modal.classList.remove("hidden");
@@ -657,7 +655,6 @@
     if(!(await ensureWrite()))return;
     const opponent=$("pnOpponent")?.value?.trim()||"";
     const dt=$("pnScheduled")?.value||"";
-    const opggUrl=$("pnOpgg")?.value?.trim()||"";
     const challengermodeUrl=$("pnCmUrl")?.value?.trim()||"";
     const challengermodeTeamName=$("pnCmTeamName")?.value?.trim()||opponent;
     const bestOf=Number($("pnBestOf")?.value)||3;
@@ -667,8 +664,7 @@
     if(!opponent){if(status)status.textContent="Skriv motståndarlag.";return}
     const d=new Date(dt);
     if(!dt||isNaN(d)){if(status)status.textContent="Välj giltigt datum och tid.";return}
-    const players=parseOpggPlayers(opggUrl);
-    if(opggUrl&&!players.length){if(status)status.textContent="OP.GG-länken kunde inte läsas.";return}
+    const players=[];
 
     const baseId=slugify(opponent)+"-"+d.toISOString().slice(0,10);
     let id=baseId;
@@ -682,7 +678,7 @@
       status:"upcoming",
       bestOf,
       competition,
-      opggUrl,
+      opggUrl:"",
       challengermodeUrl,
       challengermodeTeamName,
       players,
@@ -699,9 +695,9 @@
         general:""
       }
     });
-    if(status)status.textContent=challengermodeUrl?"Skapar match & kopplar Challengermode…":opggUrl?"Skapar match & scoutar OP.GG…":"Skapar match…";
+    if(status)status.textContent=challengermodeUrl?"Skapar match, hämtar roster & bygger OP.GG…":"Skapar match…";
     try{
-      const data=await request("POST","",{plan,scout:!!opggUrl,syncChallengermode:!!challengermodeUrl});
+      const data=await request("POST","",{plan,scout:!!challengermodeUrl,syncChallengermode:!!challengermodeUrl});
       const savedPlan=normalize(data.plan||plan);
       plans.push(savedPlan);
       plans=sortPlans(plans);
@@ -780,7 +776,6 @@
   $("plannerNewMatchCancel")?.addEventListener("click",hideNewMatchModal);
   $("plannerNewMatchCancelBottom")?.addEventListener("click",hideNewMatchModal);
   $("plannerNewMatchCreate")?.addEventListener("click",createMatchFromForm);
-  $("pnOpgg")?.addEventListener("input",renderOpggPreview);
   $("plannerNewMatchOverlay")?.addEventListener("click",e=>{if(e.target===$("plannerNewMatchOverlay"))hideNewMatchModal()});
   document.addEventListener("keydown",e=>{
     if(e.key==="Escape"&&!$("plannerNewMatchOverlay")?.classList.contains("hidden"))hideNewMatchModal();
