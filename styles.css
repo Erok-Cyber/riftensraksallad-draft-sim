@@ -1435,12 +1435,21 @@ body.comp-guide-open .os-sidebar{
 .practice-toolbar{display:flex;align-items:center;justify-content:space-between;gap:16px;margin:0 0 20px}
 .practice-toolbar strong{font-family:Oxanium,sans-serif;font-size:20px;color:var(--gold)}
 .practice-toolbar small{display:block;margin-top:4px;font-size:13px;color:var(--muted)}
-.champion-picker{border:1px solid var(--border);border-radius:12px;padding:12px;margin:8px 0 12px;background:var(--panel2);text-align:left}
-.champion-picker select{width:100%;margin-bottom:8px;min-height:36px}
-.champion-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:230px;overflow:auto}
-.champion-result{display:flex;align-items:center;gap:8px;min-width:0;padding:7px;font:13px Inter,sans-serif;text-align:left;border:1px solid var(--border);border-radius:8px;background:var(--panel);color:var(--text)}
+.champion-picker{border:1px solid #40546d;border-radius:12px;padding:12px;margin:8px 0 12px;background:#111f31;text-align:left;box-shadow:0 8px 24px rgba(0,0,0,.18)}
+.champion-picker:not(.hidden){animation:champion-picker-in 140ms ease-out}
+.champion-picker select{appearance:none;color-scheme:dark;width:100%;margin-bottom:10px;min-height:42px;padding:10px 38px 10px 12px;border:1px solid #566b84;border-radius:8px;background-color:#182b41;color:#f4f0e7;font:500 14px Inter,sans-serif;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23e7b85b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;transition:border-color 140ms ease,background-color 140ms ease,box-shadow 140ms ease}
+.champion-picker select option{background:#182b41;color:#f4f0e7}
+.champion-picker select:hover{background-color:#20364e;border-color:#91a4bc}
+.champion-picker select:focus-visible{outline:2px solid var(--gold);outline-offset:2px;border-color:var(--gold);box-shadow:0 0 0 4px rgba(231,184,91,.12)}
+.champion-results{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;max-height:230px;overflow:auto;scrollbar-color:#63768e #111f31;scrollbar-width:thin}
+.champion-result{display:flex;align-items:center;gap:8px;min-width:0;min-height:44px;padding:7px;font:500 13px Inter,sans-serif;text-align:left;border:1px solid #40546d;border-radius:8px;background:#101d2e;color:#f4f0e7;cursor:pointer;transition:background-color 140ms ease,border-color 140ms ease,box-shadow 140ms ease}
+.champion-result:not(:disabled):hover,.champion-result:focus-visible{background:#23394f;border-color:var(--gold);box-shadow:inset 0 0 0 1px rgba(231,184,91,.12)}
 .champion-result span{overflow-wrap:anywhere}.champion-result img{border-radius:5px;flex-shrink:0}
-.champion-result:disabled{opacity:.4;cursor:not-allowed}.champion-picker small{display:block;font-size:12px;line-height:1.5;color:var(--muted);margin-top:8px}
+.champion-result:disabled{opacity:1;color:#aab7c8;background:#122033;border-color:#304157;cursor:not-allowed}
+.champion-result:disabled img{opacity:.5;filter:grayscale(.8)}
+.champion-picker small{display:block;font-size:12px;line-height:1.5;color:#bdc9d8;margin-top:10px}
+@keyframes champion-picker-in{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.champion-picker:not(.hidden){animation:none}.champion-picker select,.champion-result{transition:none}}
 button:focus-visible,summary:focus-visible,a:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .planner-match-view .planner-preparation{display:none}
 .planner-save-status{font-size:13px;color:var(--gold)}
