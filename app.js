@@ -624,11 +624,11 @@ function renderAnalysis(){
 
   $("statMatches").textContent=c.n;
   $("statWinrate").textContent=percent(c.w,c.n);
-  $("statRecord").textContent=c.w+"W · "+c.l+"L";
-  $("statLeagueWr").textContent=percent(league.w,league.n);$("statLeagueCount").textContent=league.n+" matcher";
-  $("statFlexWr").textContent=percent(flex.w,flex.n);$("statFlexCount").textContent=flex.n+" matcher";
+  $("statRecord").textContent=c.w+"W · "+c.l+"L"+(c.n?" · "+sampleConfidence(c.n).label:"");
+  $("statLeagueWr").textContent=percent(league.w,league.n);$("statLeagueCount").textContent=league.n?league.n+" matcher · "+sampleConfidence(league.n).label:"0 matcher";
+  $("statFlexWr").textContent=percent(flex.w,flex.n);$("statFlexCount").textContent=flex.n?flex.n+" matcher · "+sampleConfidence(flex.n).label:"0 matcher";
   $("statRecent").textContent=recent.length?percent(rc.w,rc.n):"—";
-  $("statRecentRecord").textContent=recent.length?rc.w+"W · "+rc.l+"L":"Ingen data";
+  $("statRecentRecord").textContent=recent.length?rc.w+"W · "+rc.l+"L · "+sampleConfidence(rc.n).label:"Ingen data";
   const typeLabel=currentAnalysisFilter==="all"?"Alla matcher":currentAnalysisFilter==="league"?"Ligamatcher":"Flex / 5v5";
   $("statFilterLabel").textContent=typeLabel+(currentAnalysisPatch==="all"?"":" · patch "+currentAnalysisPatch);
 
@@ -641,7 +641,7 @@ function renderAnalysis(){
   const compRows=Object.entries(compsMap).sort((a,b)=>b[1].n-a[1].n);
   $("compStats").innerHTML=compRows.length?compRows.map(([name,x])=>{
     const wr=x.n?Math.round(x.w/x.n*100):0;
-    return '<div class="stat-row"><span class="stat-name">'+name+'</span><span class="stat-bar"><i style="width:'+wr+'%"></i></span><span class="stat-value">'+wr+'% <small>('+x.n+')</small></span></div>';
+    return '<div class="stat-row"><span class="stat-name">'+name+'</span><span class="stat-bar"><i style="width:'+wr+'%"></i></span><span class="stat-value">'+wr+'% <small>('+x.n+' · '+sampleConfidence(x.n).label+')</small></span></div>';
   }).join(""):'<span class="analysis-note">Ingen data i filtret.</span>';
   const eligible=compRows.slice().sort((a,b)=>(b[1].w/b[1].n)-(a[1].w/a[1].n)||b[1].n-a[1].n)[0];
   $("bestCompStat").textContent=eligible?"Bäst observerad: "+eligible[0]+" · "+percent(eligible[1].w,eligible[1].n)+" · "+sampleConfidence(eligible[1].n).label:"Ingen sample ännu";
@@ -649,7 +649,7 @@ function renderAnalysis(){
   const blue=resultCounts(list.filter(m=>m.side==="blue")),red=resultCounts(list.filter(m=>m.side==="red"));
   $("sideStats").innerHTML=[
     ["Blue side",blue],["Red side",red]
-  ].map(([name,x])=>'<div class="stat-row"><span class="stat-name">'+name+'</span><span class="stat-bar"><i style="width:'+(x.n?Math.round(x.w/x.n*100):0)+'%"></i></span><span class="stat-value">'+percent(x.w,x.n)+' <small>('+x.n+')</small></span></div>').join("");
+  ].map(([name,x])=>'<div class="stat-row"><span class="stat-name">'+name+'</span><span class="stat-bar"><i style="width:'+(x.n?Math.round(x.w/x.n*100):0)+'%"></i></span><span class="stat-value">'+percent(x.w,x.n)+' <small>('+x.n+(x.n?' · '+sampleConfidence(x.n).label:'')+')</small></span></div>').join("");
 
   const leagueShare=list.length?Math.round(list.filter(m=>m.matchType==="league").length/list.length*100):0;
   const compKinds=new Set(list.map(m=>m.comp).filter(Boolean)).size;
