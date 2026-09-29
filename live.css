@@ -236,7 +236,7 @@ body.live-os .auto-read-grid,
 body.live-os .advanced-auto-grid,
 body.live-os .advanced-final-grid,
 body.live-os .loading-call-grid{
-  gap:10px;
+  gap:var(--space-grid);
 }
 body.live-os .live-layout>.card,
 body.live-os .live-call-grid>div,
@@ -305,12 +305,28 @@ body.live-os .loading-script strong{
   font-family:var(--font-display)!important;
   font-weight:700!important;
 }
-body.live-os .section-gap{margin-top:12px}
-body.live-os .live-layout{margin-top:12px}
+body.live-os .section-gap{margin-top:20px}
+body.live-os .live-layout{margin-top:0;grid-template-columns:minmax(0,1fr) minmax(300px,360px) minmax(0,1fr)}
+body.live-os .live-layout>.card{min-width:0;padding:var(--space-panel)}
+body.live-os #liveArea>section+section{margin-top:var(--space-grid)}
+body.live-os .stats-bar{align-items:stretch;gap:12px}
+body.live-os .stats-bar>div{display:flex;flex-direction:column;justify-content:center;min-width:0;flex:0 1 auto}
+body.live-os .meta-source-link{display:inline-flex;align-items:center;align-self:stretch;font-size:12px}
+body.live-os .os-live-hero .sub,body.live-os .os-live-hero .hint{font-size:13px;line-height:1.6}
+body.live-os .role-status,body.live-os .role-rec-grid{grid-template-columns:repeat(5,minmax(0,1fr))}
+body.live-os .role-slot,body.live-os .role-rec{min-width:0;overflow-wrap:anywhere}
+@media(max-width:1180px){
+  body.live-os .live-layout{grid-template-columns:1fr}
+  body.live-os .role-status,body.live-os .role-rec-grid{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media(max-width:620px){
+  body.live-os .role-status,body.live-os .role-rec-grid{grid-template-columns:1fr}
+  body.live-os .stats-bar{flex-direction:column}
+}
 
 
 body.live-os .live-playbook-card{
-  margin-top:12px;
+  margin-top:var(--space-grid);
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -337,3 +353,4 @@ body.live-os .live-playbook-card .secondary{
     flex-direction:column;
   }
 }
+
