@@ -7,6 +7,10 @@
     document.body.classList.remove("os-nav-open");
   }
 
+  function revealRoutedPage(){
+    document.documentElement.classList.remove("route-pending");
+  }
+
   document.querySelectorAll("[data-shell-click]").forEach(btn=>{
     btn.addEventListener("click",()=>{
       const target=document.getElementById(btn.dataset.shellClick||"");
@@ -88,6 +92,7 @@
       setTimeout(()=>{
         document.getElementById("compLibraryTabBtn")?.click();
         history.replaceState(null,"",location.pathname+"?view=comps");
+        revealRoutedPage();
       },120);
     },{once:true});
   }
@@ -96,6 +101,7 @@
       setTimeout(()=>{
         document.getElementById("simModeBtn")?.click();
         history.replaceState(null,"",location.pathname);
+        revealRoutedPage();
       },120);
     },{once:true});
   }
@@ -104,7 +110,14 @@
       setTimeout(()=>{
         document.getElementById("testModeBtn")?.click();
         history.replaceState(null,"",location.pathname);
+        revealRoutedPage();
       },120);
     },{once:true});
   }
+
+  // Views such as ?view=planner / analysis / comps are switched by app.js.
+  // Keep the old page hidden until that initial route has been applied.
+  window.addEventListener("load",()=>{
+    setTimeout(revealRoutedPage,requestedOpen?180:60);
+  },{once:true});
 })();
