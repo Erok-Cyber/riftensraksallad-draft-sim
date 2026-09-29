@@ -229,7 +229,7 @@ function buildBanList(players:ScoutPlayer[],evidence:any){
   const byChamp=new Map<string,any>();
   const comp=competitiveSignals(evidence);
   const rosterChanged=!!evidence?.rosterChanged||Array.isArray(evidence?.currentRoster)&&evidence.currentRoster.length>=5;
-  const soloScale=rosterChanged?.32:1;
+  const soloScale=rosterChanged?0.32:1;
 
   for(const player of players){
     for(let i=0;i<player.topChampions.length;i++){
