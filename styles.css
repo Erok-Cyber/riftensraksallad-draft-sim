@@ -506,3 +506,42 @@ body.planner-modal-open{overflow:hidden}
 .planner-player-scout.failed{border-color:#5e3b42}.planner-player-scout.failed span{color:#d99da8}
 .planner-scout-summary{margin:8px 0 0;color:var(--muted);font-size:10px;font-weight:750}
 @media(max-width:760px){.planner-player-scout-grid{grid-template-columns:1fr}}
+
+
+/* Match Day */
+.match-day-dashboard{margin:14px 0;border-color:#5f4c22;background:linear-gradient(135deg,rgba(244,190,57,.08),rgba(10,22,37,.92))}
+.match-day-head{display:flex;align-items:flex-start;justify-content:space-between;gap:18px}
+.match-day-head h2{font-size:30px;margin:2px 0 4px}
+.match-day-meta{margin:0;color:var(--muted)}
+.match-day-ban-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-top:14px}
+.match-day-ban-grid>div{background:#101d30;border:1px solid #3a4f6d;border-radius:11px;padding:11px 12px}
+.match-day-ban-grid span{display:block;color:#9fc9ff;font-size:9px;font-weight:900;letter-spacing:.08em}
+.match-day-ban-grid strong{display:block;margin-top:4px;font-size:18px}
+.match-day-foot{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:11px;color:var(--muted);font-size:11px;font-weight:800}
+
+/* Draft Test opponent selector */
+.test-opponent-picker{display:grid;grid-template-columns:auto minmax(220px,420px);align-items:center;gap:7px 12px;margin:8px 0 16px;padding:11px 12px;background:#0d1a2c;border:1px solid #2c425f;border-radius:11px}
+.test-opponent-picker label{font-size:10px;font-weight:900;letter-spacing:.07em;color:#9fc9ff;text-transform:uppercase}
+.test-opponent-picker select{background:#0a1625;color:var(--text);border:1px solid #38516f;border-radius:8px;padding:8px 10px;font:inherit;font-weight:800}
+.test-opponent-picker small{grid-column:1/-1;color:var(--muted);font-size:10px}
+
+/* Opponent Scout 2.0 */
+.planner-scout-profile-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}
+.planner-scout-profile{background:#0d1a2c;border:1px solid #29415f;border-radius:11px;padding:11px}
+.planner-scout-profile-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:9px}
+.planner-scout-profile-head>div{min-width:0}
+.planner-scout-profile-head strong{display:block;margin-top:5px;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.planner-scout-profile-head small{color:var(--muted);font-size:9px;text-align:right}
+.planner-role-chip{display:inline-block;border:1px solid #49698e;background:#152840;color:#b9dcff;border-radius:999px;padding:3px 6px;font-size:8px;font-weight:950;letter-spacing:.08em}
+.planner-profile-champs{display:grid;gap:5px}
+.planner-profile-champ{display:flex;align-items:center;justify-content:space-between;gap:9px;padding-top:5px;border-top:1px solid rgba(255,255,255,.05)}
+.planner-profile-champ strong{font-size:11px}
+.planner-profile-champ span{color:var(--muted);font-size:9px;white-space:nowrap}
+
+@media(max-width:760px){
+  .match-day-head{flex-direction:column}
+  .match-day-ban-grid{grid-template-columns:1fr}
+  .test-opponent-picker{grid-template-columns:1fr}
+  .test-opponent-picker small{grid-column:auto}
+  .planner-scout-profile-grid{grid-template-columns:1fr}
+}
