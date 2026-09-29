@@ -1292,3 +1292,70 @@ body.comp-guide-open .os-sidebar{
 .draft-os .comp-library-grid .comp-card h3{
   font-size:18px!important;
 }
+
+
+/* Stable shell sizing + routed page transition */
+html.route-pending body{
+  opacity:0;
+}
+body.draft-os{
+  transition:opacity .12s ease;
+}
+.draft-os .app.os-main{
+  --shell-max:1540px;
+  padding-top:18px!important;
+}
+.draft-os .app.os-main>header{
+  height:92px!important;
+  min-height:92px!important;
+  max-height:92px!important;
+  padding:10px 2px 14px!important;
+  margin-bottom:24px!important;
+  display:flex!important;
+  align-items:center!important;
+}
+.draft-os .brand-head{
+  min-height:58px;
+  display:flex;
+  align-items:center;
+}
+.draft-os .brand-head>div{
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  min-height:58px;
+}
+.draft-os header .eyebrow{
+  margin:0 0 4px!important;
+  font-size:8px!important;
+  line-height:1.1!important;
+}
+.draft-os header h1{
+  margin:0!important;
+  font-size:31px!important;
+  line-height:1!important;
+}
+.draft-os header .shell-sub{
+  margin:5px 0 0!important;
+  min-height:14px;
+  font-size:10px!important;
+  line-height:1.2!important;
+}
+.draft-os .header-actions{
+  min-height:40px;
+  align-items:center!important;
+}
+.draft-os .app.os-main>header,
+.draft-os .app.os-main>section:not(.planner-new-overlay):not(.comp-guide-overlay),
+.draft-os .app.os-main>.draft-grid{
+  width:min(100%,var(--shell-max));
+  max-width:var(--shell-max)!important;
+}
+.live-os .app.os-main{
+  padding:18px 32px 64px!important;
+}
+.live-os .app.os-main>header{
+  height:92px!important;
+  min-height:92px!important;
+  max-height:92px!important;
+}
