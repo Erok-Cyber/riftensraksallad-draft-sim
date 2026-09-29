@@ -57,9 +57,7 @@
           <button id="plannerTabBtn" class="top-tab">Ban Planner</button>
           <button id="compLibraryTabBtn" class="top-tab">Comp Library</button>
         </div>
-        <button id="homeBtn" class="secondary nav-action hidden">← Hem</button>
-        <button id="undoBtn" class="secondary nav-action hidden">↶ Undo</button>
-        <button id="resetBtn" class="secondary">↻ Starta om</button>
+
       </div>
     </header>
 
@@ -260,8 +258,11 @@
 
       <div class="center card">
         <div class="turn-box">
-          <span class="small">NU PICKAR</span>
-          <strong id="turnLabel">—</strong>
+          <div class="turn-box-main">
+            <span class="small">NU PICKAR</span>
+            <strong id="turnLabel">—</strong>
+          </div>
+          <button id="undoBtn" class="draft-undo hidden" type="button" aria-label="Ångra senaste pick">↶ Ångra</button>
         </div>
 
         <label for="championSearch">Välj champion</label>
