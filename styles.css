@@ -577,3 +577,8 @@ body.planner-modal-open{overflow:hidden}
 .planner-cm-person{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:6px 7px;border:1px solid rgba(255,255,255,.06);border-radius:7px;background:#101c2d}
 .planner-cm-person strong{font-size:10px}
 .planner-cm-person span{font-size:9px;color:#9fc9ff;text-align:right}
+
+.planner-cm-auto-note{margin:12px 0 14px;padding:10px 12px;border:1px solid #425475;border-radius:10px;background:linear-gradient(135deg,rgba(52,95,150,.10),rgba(11,24,40,.95))}
+.planner-cm-auto-note strong,.planner-cm-auto-note span{display:block}
+.planner-cm-auto-note strong{font-size:11px;color:#b9dcff;margin-bottom:4px}
+.planner-cm-auto-note span{font-size:10px;color:var(--muted);line-height:1.45}
