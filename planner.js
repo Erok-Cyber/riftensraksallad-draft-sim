@@ -54,6 +54,11 @@
       status:plan.status||"upcoming",
       bestOf:Number(plan.bestOf)||3,
       opggUrl:plan.opggUrl||"",
+      challengermodeUrl:plan.challengermodeUrl||"",
+      challengermodeTournamentId:plan.challengermodeTournamentId||"",
+      challengermodeTeamName:plan.challengermodeTeamName||plan.opponent||"",
+      challengermode:plan.challengermode||null,
+      competitiveEvidence:plan.competitiveEvidence||null,
       competition:plan.competition||"",
       scoutingConfidence:plan.scoutingConfidence||"preliminary",
       scoutingUpdatedAt:plan.scoutingUpdatedAt||"",
@@ -148,6 +153,30 @@
     const d=new Date(iso);
     if(isNaN(d))return iso||"—";
     return d.toLocaleString("sv-SE",{weekday:"short",day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  }
+  function cmTime(iso){
+    const d=new Date(iso);
+    if(isNaN(d))return "—";
+    return d.toLocaleString("sv-SE",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"});
+  }
+  function cmRosterHtml(plan){
+    const cm=plan?.challengermode;
+    if(!cm)return "";
+    const active=Array.isArray(cm.activeRoster)?cm.activeRoster:[];
+    const registered=Array.isArray(cm.registeredRoster)?cm.registeredRoster:[];
+    const subs=Array.isArray(cm.substitutes)?cm.substitutes:[];
+    const recent=(cm.series||[]).slice(-4).reverse();
+    return '<section class="planner-section planner-cm-section">'+
+      '<div class="planner-section-head"><h3>Challengermode Live</h3><span class="planner-cm-badge '+(cm.rosterChanged?'changed':'live')+'">'+(cm.rosterChanged?'ROSTER ÄNDRAD':'LIVE')+'</span></div>'+
+      '<div class="planner-cm-meta"><strong>'+esc(cm.teamName||plan.challengermodeTeamName||plan.opponent)+'</strong>'+
+        '<span>'+esc(cm.tournamentName||"Rivals")+' · '+esc(cm.tournamentState||"")+'</span>'+
+        '<small>Senast synkad '+esc(cmTime(cm.lastSyncedAt))+'</small></div>'+
+      '<div class="planner-cm-grid">'+
+        '<div><span>AKTIV LINEUP</span><div class="planner-player-grid">'+(active.length?active.map(x=>'<b class="planner-player">'+esc(x)+'</b>').join(""):'<em>Ingen spelad lineup ännu</em>')+'</div></div>'+
+        '<div><span>SUBS / ÖVRIG ROSTER</span><div class="planner-player-grid">'+(subs.length?subs.map(x=>'<b class="planner-player sub">'+esc(x)+'</b>').join(""):(registered.length?'<em>Inga subs identifierade ännu</em>':'<em>Ingen rosterdata</em>'))+'</div></div>'+
+      '</div>'+
+      (recent.length?'<div class="planner-cm-history">'+recent.map(series=>'<div><strong>Serie '+esc(series.ordinal||"—")+'</strong><span>'+esc(series.state||"")+'</span><small>'+esc((series.matches||[]).map(m=>m.state||"").filter(Boolean).join(" / "))+'</small></div>').join("")+'</div>':'')+
+    '</section>';
   }
   function toLocalInput(iso){
     const d=new Date(iso);
