@@ -5,8 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Riftensräksallad Draft Brain</title>
   <script>
-    if(location.search||location.hash)document.documentElement.classList.add("route-pending");
+    (() => {
+      const q=new URLSearchParams(location.search);
+      if(q.get("open")||q.get("view")||location.hash==="#comps"){
+        document.documentElement.classList.add("route-pending");
+      }
+    })();
   </script>
+  <style>
+    html{background:#07101b}
+    html.route-pending body{visibility:hidden!important}
+  </style>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
@@ -365,7 +374,6 @@
     </section>
   </main>
   <button class="os-mobile-toggle" id="osMobileToggle" type="button" aria-label="Öppna navigation">☰</button>
-  <script src="ui-shell.js?v=20260929-smoothshell1"></script>
   <script src="brand.js?v=20260928-publicread3"></script>
   <script src="db-config.js?v=20260928-publicread3"></script>
   <script src="shared-data.js?v=20260928-publicread3"></script>
@@ -373,5 +381,6 @@
   <script src="live.js?v=20260928-analysispack1"></script>
   <script src="advanced-engine.js?v=20260928-meta2"></script>
   <script src="draft-ai.js?v=20260929-teamlearning2"></script>
+  <script src="ui-shell.js?v=20260929-routehard1"></script>
 </body>
 </html>
