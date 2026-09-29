@@ -1050,3 +1050,101 @@ body.comp-guide-open .os-sidebar{
   color:#9aa8ba;
 }
 .draft-os .os-nav-subitem:hover>b{color:#eef3fa}
+
+
+/* Dedicated Comp Library */
+.draft-os .comp-library-page{
+  margin-top:4px!important;
+  padding:22px!important;
+  background:
+    radial-gradient(circle at 92% 0%,rgba(95,85,176,.10),transparent 28%),
+    linear-gradient(180deg,rgba(13,26,43,.96),rgba(9,20,34,.97))!important;
+}
+.draft-os .comp-library-page-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:24px;
+  margin-bottom:18px;
+  padding-bottom:16px;
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.draft-os .comp-library-page-head h2{
+  margin:2px 0 6px;
+  font-size:38px;
+}
+.draft-os .comp-library-page-head p:not(.eyebrow){
+  margin:0;
+  max-width:760px;
+  color:var(--muted);
+  font-size:12px;
+  line-height:1.55;
+}
+.draft-os .comp-library-count{
+  flex:0 0 auto;
+  border:1px solid #355273;
+  background:#102039;
+  color:#a9c9f1;
+  border-radius:999px;
+  padding:7px 10px;
+  font-size:9px;
+  font-weight:900;
+  letter-spacing:.11em;
+}
+.draft-os .comp-library-grid{
+  display:grid;
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:12px;
+}
+.draft-os .comp-library-grid .comp-card{
+  min-height:168px;
+  padding:21px;
+  border-radius:15px;
+  align-items:flex-start;
+}
+.draft-os .comp-library-grid .comp-card>div{
+  align-self:center;
+}
+.draft-os .comp-library-grid .comp-card h3{
+  font-size:21px;
+  margin-bottom:7px;
+}
+.draft-os .comp-library-grid .comp-card p{
+  font-size:12px;
+  line-height:1.5;
+  white-space:normal;
+  overflow:visible;
+}
+.draft-os .comp-library-grid .comp-card small{
+  margin-top:12px;
+  font-size:10px;
+  color:#8fa2ba;
+}
+.draft-os .comp-library-grid .comp-icon{
+  width:46px;
+  height:46px;
+  border-radius:12px;
+  font-size:19px;
+  margin-top:2px;
+}
+.draft-os .comp-library-grid .comp-arrow{
+  align-self:center;
+  font-size:24px;
+}
+@media(max-width:900px){
+  .draft-os .comp-library-grid{grid-template-columns:1fr}
+}
+@media(max-width:620px){
+  .draft-os .comp-library-page-head{align-items:flex-start;flex-direction:column}
+  .draft-os .comp-library-page-head h2{font-size:31px}
+  .draft-os .comp-library-grid .comp-card{min-height:140px;padding:17px}
+}
+
+.draft-os .os-nav-subitem{
+  margin-top:0!important;
+  padding-left:10px!important;
+}
+.draft-os .os-nav-subitem>b{
+  font-size:12px!important;
+  color:inherit!important;
+}
