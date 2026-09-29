@@ -333,7 +333,7 @@ async function refreshTestOpponentOptions(){
     .sort((a,b)=>new Date(a.scheduledAt)-new Date(b.scheduledAt));
   const keep=selectedTestOpponentId&&plans.some(p=>p.id===selectedTestOpponentId)?selectedTestOpponentId:"";
   select.innerHTML='<option value="">Slumpat träningsscenario</option>'+
-    plans.map(p=>'<option value="'+p.id+'">'+p.opponent+' · '+(p.scoutingConfidence||"preliminary").toUpperCase()+'</option>').join("");
+    plans.map(p=>'<option value="'+compGuideEscape(p.id)+'">'+compGuideEscape(p.opponent)+' · '+compGuideEscape((p.scoutingConfidence||"preliminary").toUpperCase())+'</option>').join("");
   select.value=keep;
 }
 function applyTestOpponentSelection(id){
@@ -561,7 +561,7 @@ function renderMatchDayDashboard(){
   const time=isNaN(d)?"—":d.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
   $("matchDayMeta").textContent=["Idag "+time,"BO"+(plan.bestOf||3),plan.competition||null].filter(Boolean).join(" · ");
   const calls=["b1","b2","b3"].map((key,i)=>({label:"B"+(i+1),champ:plan.phase1Plan?.[key]||"Öppen"}));
-  $("matchDayBans").innerHTML=calls.map(x=>'<div><span>'+x.label+'</span><strong>'+x.champ+'</strong></div>').join("");
+  $("matchDayBans").innerHTML=calls.map(x=>'<div><span>'+compGuideEscape(x.label)+'</span><strong>'+compGuideEscape(x.champ)+'</strong></div>').join("");
   $("matchDayScout").textContent="Scout: "+String(plan.scoutingConfidence||"preliminary").toUpperCase();
   const targets=(plan.banPriority||[]).filter(x=>x.type==="target").slice(0,3).map(x=>x.champ);
   $("matchDayTargets").textContent=targets.length?"Targets: "+targets.join(" / "):"Targets: inte låsta ännu";
