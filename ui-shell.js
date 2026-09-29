@@ -33,18 +33,17 @@
       closeSidebar();
     });
   });
-  document.querySelectorAll('a[href="#comps"],a[href="index.html#comps"]').forEach(link=>{
-    link.addEventListener("click",e=>{
-      const home=document.getElementById("startTabBtn");
-      if(!home)return;
-      e.preventDefault();
-      home.click();
-      history.replaceState(null,"",location.pathname+"#comps");
-      setTimeout(()=>{
-        document.getElementById("comps")?.scrollIntoView({behavior:"smooth",block:"start"});
-      },40);
-      closeSidebar();
-    });
+  function openCompLibrary(){
+    const home=document.getElementById("startTabBtn");
+    if(home)home.click();
+    setTimeout(()=>{
+      document.getElementById("comps")?.scrollIntoView({behavior:"smooth",block:"start"});
+    },80);
+    closeSidebar();
+  }
+
+  document.querySelectorAll("[data-shell-open-comps]").forEach(btn=>{
+    btn.addEventListener("click",openCompLibrary);
   });
 
   toggle?.addEventListener("click",()=>{
@@ -80,7 +79,13 @@
     syncActiveNav();
   }
 
-  if(location.hash==="#comps"){
-    setTimeout(()=>document.querySelector(".comps")?.scrollIntoView({behavior:"smooth",block:"start"}),120);
+  const params=new URLSearchParams(location.search);
+  if(params.get("open")==="comps"||location.hash==="#comps"){
+    window.addEventListener("load",()=>{
+      setTimeout(()=>{
+        openCompLibrary();
+        if(params.get("open")==="comps")history.replaceState(null,"",location.pathname);
+      },120);
+    },{once:true});
   }
 })();
