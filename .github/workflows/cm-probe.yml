@@ -7,14 +7,19 @@ jobs:
   probe:
     runs-on: ubuntu-latest
     steps:
-      - name: Probe Challengermode GraphQL
+      - name: Probe public Challengermode pages
         shell: bash
         run: |
-          cat > /tmp/payload.json <<'JSON'
-          {
-            "query": "query($id: UUID!) { tournament(tournamentId: $id) { name state stages { index format ... on TournamentEliminationStage { brackets { rounds { roundNumber title matchSeriesPage(first: 5) { nodes { id title state lineups { name members { user { id username } } } matches(includeFailed: true) { id state lineups { number members { user { id username } } } } } } } } } ... on TournamentGroupStage { groups { title matchSeriesPage(first: 5) { nodes { id title state lineups { name members { user { id username } } } } } } } ... on TournamentSwissStage { rounds { roundNumber title matchSeriesPage(first: 5) { nodes { id title state lineups { name members { user { id username } } } } } } } } } }",
-            "variables": {"id":"4848735b-e52f-4039-37cf-08df10190155"}
-          }
-          JSON
-          echo "=== RESPONSE ==="
-          curl -sS -D - -X POST "https://publicapi.challengermode.com/graphql"             -H "Content-Type: application/json"             --data-binary @/tmp/payload.json
+          set -o pipefail
+          TOUR="https://www.challengermode.com/s/RIVALSLEAGUELOL/tournaments/4848735b-e52f-4039-37cf-08df10190155/brackets/1/B"
+          TEAM="https://www.challengermode.com/teams/8181f7d1-2864-4aba-1605-08defb652511"
+          curl -sSL -A "Mozilla/5.0" "$TOUR" -o /tmp/tour.html
+          curl -sSL -A "Mozilla/5.0" "$TEAM" -o /tmp/team.html
+          echo "TOUR_BYTES=$(wc -c </tmp/tour.html)"
+          echo "TEAM_BYTES=$(wc -c </tmp/team.html)"
+          echo "=== TOUR XENIA/GAME HITS ==="
+          grep -Eio '.{0,120}(Xenia|games/[0-9a-f-]{20,}|matchSeries|__NEXT_DATA__).{0,220}' /tmp/tour.html | head -n 30 || true
+          echo "=== TEAM HITS ==="
+          grep -Eio '.{0,120}(Xenia|Playing as|members|__NEXT_DATA__|gameAccounts).{0,220}' /tmp/team.html | head -n 40 || true
+          echo "=== TOUR HEAD ==="
+          head -c 800 /tmp/tour.html || true
