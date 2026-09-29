@@ -15,12 +15,12 @@
     <nav class="os-nav" aria-label="Huvudnavigation">
       <span class="os-nav-label">WORKSPACE</span>
       <button class="os-nav-item active" data-shell-click="startTabBtn" data-shell-view="home"><span>⌂</span><b>Home</b></button>
-      <button class="os-nav-item" data-shell-focus="simModeBtn"><span>⚔</span><b>Draft Trainer</b></button>
       <a class="os-nav-item" href="live.html"><span>◉</span><b>Draft Brain</b><em>LIVE</em></a>
+      <button class="os-nav-item" data-shell-focus="simModeBtn"><span>⚔</span><b>Draft Trainer</b></button>
       <button class="os-nav-item" data-shell-click="plannerTabBtn" data-shell-view="planner"><span>◎</span><b>Ban Planner</b></button>
       <button class="os-nav-item" data-shell-click="analysisTabBtn" data-shell-view="analysis"><span>▥</span><b>Analys</b></button>
       <span class="os-nav-label os-nav-label-gap">TEAM</span>
-      <button class="os-nav-item" data-shell-scroll=".comps"><span>◇</span><b>Comp Library</b></button>
+      <a class="os-nav-item" href="#comps"><span>◇</span><b>Comp Library</b></a>
     </nav>
     <div class="os-side-footer">
       <div class="os-status-row"><i></i><span>Rivals League · Div 6</span></div>
@@ -52,8 +52,8 @@
           <h2>Build a draft we can actually execute.</h2>
           <p>Träna draft, scouta Rivals-motståndare och gå in i matchen med en tydlig plan — allt i samma workspace.</p>
           <div class="os-hero-actions">
-            <button class="primary os-hero-primary" type="button" data-shell-focus="simModeBtn">Starta Draft Trainer</button>
-            <a class="secondary link-btn" href="live.html">Öppna Draft Brain →</a>
+            <a class="primary os-hero-primary link-btn" href="live.html">Öppna Draft Brain →</a>
+            <button class="secondary" type="button" data-shell-focus="simModeBtn">Starta Draft Trainer</button>
           </div>
         </div>
         <div class="os-hero-status">
@@ -65,12 +65,18 @@
       </div>
       <div class="os-section-title">
         <div><p class="eyebrow">QUICK START</p><h2>Välj workspace</h2></div>
-        <span>Trainer · Test · Live coach</span>
+        <span>Live coach · Trainer · Test</span>
       </div>
       <div class="mode-grid">
+        <a href="live.html" class="mode-btn live-mode featured-mode">
+          <span class="mode-icon">◉</span>
+          <strong>Draft Brain</strong>
+          <span>Live calls, bans, picks, pivots och matchup-read under draften</span>
+          <span class="mode-arrow">→</span>
+        </a>
         <button id="simModeBtn" class="mode-btn sim-mode">
           <span class="mode-icon">⚔</span>
-          <strong>Draft Sim</strong>
+          <strong>Draft Trainer</strong>
           <span>Fri draft mot rollkorrekt motståndarlag</span>
           <span class="mode-arrow">→</span>
         </button>
@@ -80,12 +86,6 @@
           <span>Scenario + automatisk motståndare + facit</span>
           <span class="mode-arrow">→</span>
         </button>
-        <a href="live.html" class="mode-btn live-mode">
-          <span class="mode-icon">◉</span>
-          <strong>Live Draft Coach</strong>
-          <span>Hybrid AI + live calls under vår draft</span>
-          <span class="mode-arrow">→</span>
-        </a>
       </div>
     </section>
 
