@@ -214,8 +214,8 @@
         '<span>'+esc(cm.tournamentName||"Rivals")+' · '+esc(cm.tournamentState||"")+'</span>'+
         '<small>Senast synkad '+esc(cmTime(cm.lastSyncedAt))+'</small></div>'+
       '<div class="planner-cm-resolve">'+
-        '<strong>'+esc(cm.riotIdsResolved||0)+'/5 Riot IDs lösta</strong>'+
-        '<span>'+(cm.generatedOpggUrl?'OP.GG Multisearch byggs automatiskt från aktuell lineup.':'När Riot IDs hittas byggs OP.GG Multisearch automatiskt.')+'</span>'+
+        '<strong>'+esc(cm.riotIdsResolved||0)+'/'+esc(cm.rosterSize||cm.registeredPlayers?.length||5)+' rosterkonton lösta · '+esc(cm.activeRiotIdsResolved||0)+'/5 starters</strong>'+
+        '<span>'+(cm.generatedOpggUrl?'OP.GG Multisearch innehåller hela aktuella rostern inklusive subs.':'När Riot IDs hittas byggs OP.GG Multisearch automatiskt.')+'</span>'+
       '</div>'+
       '<div class="planner-cm-grid">'+
         '<div><span>AKTIV LINEUP</span><div class="planner-cm-people">'+(activePlayers.length?activePlayers.map(person).join(""):'<em>Ingen spelad lineup ännu</em>')+'</div></div>'+
