@@ -80,11 +80,20 @@
   }
 
   const params=new URLSearchParams(location.search);
-  if(params.get("open")==="comps"||location.hash==="#comps"){
+  const requestedOpen=params.get("open");
+  if(requestedOpen==="comps"||location.hash==="#comps"){
     window.addEventListener("load",()=>{
       setTimeout(()=>{
         openCompLibrary();
-        if(params.get("open")==="comps")history.replaceState(null,"",location.pathname);
+        if(requestedOpen==="comps")history.replaceState(null,"",location.pathname);
+      },120);
+    },{once:true});
+  }
+  if(requestedOpen==="test"){
+    window.addEventListener("load",()=>{
+      setTimeout(()=>{
+        document.getElementById("testModeBtn")?.click();
+        history.replaceState(null,"",location.pathname);
       },120);
     },{once:true});
   }
