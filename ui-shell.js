@@ -80,16 +80,14 @@
     setShellActive("view","home");
   });
 
-  const topTabs=document.getElementById("homeTabs");
-  if(topTabs){
-    new MutationObserver(syncActiveNav).observe(topTabs,{subtree:true,attributes:true,attributeFilter:["class"]});
-    syncActiveNav();
-  }
-
   const params=new URLSearchParams(location.search);
   const requestedOpen=params.get("open");
   const requestedView=params.get("view");
   let routed=false;
+
+  if(!requestedOpen&&!requestedView&&location.hash!=="#comps"){
+    syncActiveNav();
+  }
 
   if(requestedOpen==="sim"){
     document.getElementById("simModeBtn")?.click();
