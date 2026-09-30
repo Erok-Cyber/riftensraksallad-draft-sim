@@ -65,9 +65,10 @@ function advTeamPattern(){
 }
 
 function advDamageProfile(list=ours()){
-  const ad=list.filter(e=>damageType[e.champ]==="AD").length;
-  const ap=list.filter(e=>damageType[e.champ]==="AP").length;
-  const mix=list.filter(e=>damageType[e.champ]==="MIX").length;
+  const carries=list.filter(e=>e.role!=="support");
+  const ad=carries.filter(e=>damageType[e.champ]==="AD").length;
+  const ap=carries.filter(e=>damageType[e.champ]==="AP").length;
+  const mix=carries.filter(e=>damageType[e.champ]==="MIX").length;
   const burst=advCount(list,ADV_BURST);
   const sustained=advCount(list,ADV_SUSTAINED);
   const pct=advCount(list,ADV_PERCENT_HP);
@@ -349,4 +350,3 @@ window.RiftAdvanced={
   teamPattern:advTeamPattern,
   objectiveProfile:advObjectiveProfile
 };
-

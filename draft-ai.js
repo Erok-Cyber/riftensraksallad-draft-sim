@@ -91,13 +91,14 @@ function aiCount(list,set){
 
 function aiNeeds(map){
   const list=aiSimList(map);
-  const ad=list.filter(e=>damageType[e.champ]==="AD").length;
-  const ap=list.filter(e=>damageType[e.champ]==="AP").length;
+  const carries=list.filter(e=>e.role!=="support");
+  const ad=carries.filter(e=>damageType[e.champ]==="AD").length;
+  const ap=carries.filter(e=>damageType[e.champ]==="AP").length;
   return {
     count:list.length,
     front:aiCount(list,traits.frontline),
-    engage:aiCount(list,traits.engage),
-    damage:list.filter(e=>hasSmartTrait(e.champ,traits.damage,"Marksman")||hasSmartTrait(e.champ,traits.damage,"Mage")||hasSmartTrait(e.champ,traits.damage,"Assassin")).length,
+    engage:aiCount(list.filter(e=>!(e.role==="support"&&e.champ==="Galio")),traits.engage),
+    damage:carries.filter(e=>hasSmartTrait(e.champ,traits.damage,"Marksman")||hasSmartTrait(e.champ,traits.damage,"Mage")||hasSmartTrait(e.champ,traits.damage,"Assassin")).length,
     peel:aiCount(list,smartTraits.peel),
     wave:aiCount(list,smartTraits.waveclear),
     antiTank:aiCount(list,smartTraits.antiTank),
@@ -299,6 +300,12 @@ function aiRisk(champ,role,map){
 
 function aiCandidate(champ,role){
   const base=deterministicCandidateScoreDetails(champ,role,desiredComp());
+  // Utility supports do not solve carry damage; Galio support is follow-up engage.
+  if(role==="support"){
+    const misleading=base.reasons.filter(r=>r.label==="fixar AD/AP-split"||r.label==="höjer damage"||(champ==="Galio"&&r.label==="ger engage"));
+    base.score-=misleading.reduce((sum,r)=>sum+r.pts,0);
+    base.reasons=base.reasons.filter(r=>!misleading.includes(r));
+  }
   const map={...ownRoleMap(),[role]:champ};
   const used=new Set([...unavailable()].map(x=>x.toLowerCase()));used.add(champ.toLowerCase());
   const state=aiStateScore(map);
@@ -321,6 +328,11 @@ function aiCandidate(champ,role){
   if(compRanks[1]&&compRanks[1].score>=9)score+=2;
 
   const reasons=base.reasons.filter(x=>x.pts>0&&x.label!=="comfort").slice(0,3).map(x=>x.label);
+  if(role==="support"&&["Galio","Shen"].includes(champ)){
+    const hasSetup=ours().some(e=>ADV_HARD_ENGAGE.has(e.champ));
+    if(!hasSetup)score-=12;
+    reasons.unshift(hasSetup?"follow-up på lagets engage":"behöver engage/setup från annan roll");
+  }
   if(scouting?.points>=1&&scouting.reason)reasons.unshift(scouting.reason);
   if(history.n>=3&&history.bonus>=.35)reasons.unshift("teamdata "+history.w+"W/"+history.l+"L · "+history.label);
   if(flex>=4)reasons.push("håller flera pivots öppna");
@@ -499,5 +511,4 @@ render = function(){
 };
 
 if(userSide)render();
-
 
