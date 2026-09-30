@@ -8,6 +8,17 @@ const fs=require('node:fs'),vm=require('node:vm'),{stripTypeScriptTypes}=require
  assert.throws(()=>policy.validateAnswer({choices:[{id:'ban:Nocturne',reason:'invented'}]},draft));
  assert.throws(()=>policy.validateAnswer({choices:[{id:'ban:Zoe',reason:'yes'},{id:'ban:Zoe',reason:'twice'}]},draft));
  assert.equal(policy.validateAnswer({choices:[{id:'ban:Zoe',reason:'CM/OP.GG'}]},draft).choices.length,1);
+ const roleIndex={blue:0,red:0};
+ const full=policy.ORDER.map(([type,side],i)=>({type,side,champ:'Champion'+i,role:type==='pick'?policy.ROLES[roleIndex[side]++]:'unknown'}));
+ for(const side of ['blue','red']){
+   const final=policy.sanitizeDraft({...raw,side,events:full,candidates:[]});
+   assert.equal(final.type,'gameplan');assert.equal(final.candidates.length,0);
+   const plan=Object.fromEntries(policy.PLAN_FIELDS.map(k=>[k,'Konkret villkorad plan']));
+   assert.equal(policy.validateAnswer(plan,final).early,plan.early);
+   assert.throws(()=>policy.validateAnswer({...plan,jungle:''},final));
+   assert(!policy.responseSchema(final).properties.choices);
+ }
+ assert.throws(()=>policy.sanitizeDraft({...raw,events:[...full,full[0]]}));
  const bans=['Garen','Darius','Olaf','Leona','Maokai','Nautilus'].map((champ,i)=>({type:'ban',side:i%2?'red':'blue',champ}));
  const pick=policy.sanitizeDraft({...raw,events:bans,forcedRole:'support',candidates:[{ch:'Braum',role:'support'},{ch:'Braum',role:'top'},{ch:'Leona',role:'support'}]});
  assert.deepEqual(pick.candidates.map(c=>c.id),['support:Braum']);

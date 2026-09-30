@@ -11,7 +11,7 @@ const cache=new Map<string,{at:number,result:unknown}>();
 Deno.serve(async(req:Request)=>{
   if(req.method==='OPTIONS')return new Response(null,{status:204,headers});
   const key=Deno.env.get('GROQ_API_KEY')||'';
-  if(req.method==='GET')return json({configured:!!key,model:MODEL,auth:'team-code',version:1});
+  if(req.method==='GET')return json({configured:!!key,model:MODEL,auth:'team-code',version:2});
   if(req.method!=='POST')return json({error:'METHOD_NOT_ALLOWED'},405);
   const teamKey=req.headers.get('x-team-key')?.trim()||'';
   if(!teamKey||teamKey.length>200)return json({error:'TEAM_KEY_REQUIRED'},401);
@@ -39,7 +39,7 @@ Deno.serve(async(req:Request)=>{
     try{
       const response=await fetch('https://api.groq.com/openai/v1/chat/completions',{
         method:'POST',headers:{Authorization:'Bearer '+key,'Content-Type':'application/json'},signal:AbortSignal.timeout(10000),
-        body:JSON.stringify({model:MODEL,temperature:0.2,reasoning_effort:'low',max_completion_tokens:1800,
+        body:JSON.stringify({model:MODEL,temperature:0.2,reasoning_effort:'low',max_completion_tokens:draft.type==='gameplan'?3000:1800,
           messages:[{role:'system',content:SYSTEM_PROMPT},{role:'user',content:JSON.stringify(draft)}],
           response_format:{type:'json_schema',json_schema:{name:'draft_advice',strict:true,schema:responseSchema(draft)}}})
       });

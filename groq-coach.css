@@ -4,3 +4,10 @@
 .groq-coach [hidden]{display:none!important}.groq-coach summary{cursor:pointer;color:#bed0e6;font-size:13px;padding:10px 0 0}.groq-coach label{display:block;margin:12px 0 6px;font-size:13px}.groq-coach label span{color:#b8c5d5}.groq-coach input[type=password]{box-sizing:border-box;width:100%;min-height:42px;background:#132337;color:#f4f7fc;border:1px solid #53657e;border-radius:8px;padding:10px}
 .groq-coach .groq-auto{display:flex;align-items:center;gap:8px;line-height:1.5}.groq-coach input[type=checkbox]{width:18px;height:18px;flex-shrink:0;accent-color:#e9bb55;margin:0}.groq-coach input:focus-visible,.groq-coach summary:focus-visible{outline:2px solid #e9bb55;outline-offset:3px}
 #groqAdvice{border-top:1px solid #35465c;margin-top:12px;padding-top:3px}#groqPlan{color:#f2dfb0}#groqUncertainty{color:#c0ccdb;font-size:12px}
+.groq-final{margin-bottom:24px;padding:20px;border:1px solid #826c35;border-radius:14px;background:#101f30;color:#edf2fa}
+.groq-final[hidden]{display:none!important}
+.groq-final-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:16px}
+.groq-final-grid strong{color:#e8c976}
+.groq-final-grid p{margin:6px 0 0;line-height:1.6;font-weight:400;overflow-wrap:anywhere}
+.groq-final-grid>div:first-child{grid-column:1/-1}
+@media(max-width:650px){.groq-final-grid{grid-template-columns:1fr}.groq-final{padding:16px}}

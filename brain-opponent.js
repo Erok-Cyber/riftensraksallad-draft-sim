@@ -50,7 +50,7 @@
   function evidenceScore(row){
     const sample=row.season||row.recent;
     const winBonus=sample?Math.max(0,(row.winrate-50)*sample/(sample+20))*0.2:0;
-    return (row.cm?50+Math.min(20,(row.cm-1)*7):0)+Math.log2(row.season+1)*4+Math.log2(row.recent+1)*7+winBonus;
+    return (row.cm?32+Math.min(32,(row.cm-1)*8):0)+Math.min(18,Math.log2(row.season+1)*2)+Math.log2(row.recent+1)*10+winBonus;
   }
   function prospects(){
     const rows=availableEvidence(),out=[];
@@ -102,8 +102,9 @@
       (rows.some(r=>r.recent)?' · senaste matcher vägs in':' · OP.GG bygger på säsongsdata');
   }
   window.RiftOpponent={active,key:()=>selected+':'+revision,pickSignal,summary,
-    scouting:()=>availableEvidence().map(({champ,role,cm,season,recent,roleCertain})=>({champ,role,cm,season,recent,roleCertain})),
+    scouting:(final=false)=>(final?evidence():availableEvidence()).map(({champ,role,cm,season,recent,roleCertain})=>({champ,role,cm,season,recent,roleCertain})),
     bans:()=>banRows().slice(0,3).map(r=>r.ch),
+    banCandidates:()=>banRows().slice(0,8).map(r=>r.ch),
     banReason:champ=>active()?banRows().find(r=>r.ch===champ)?.reason:''};
   function update(){
     if(!select)return;

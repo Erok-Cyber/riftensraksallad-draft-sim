@@ -24,7 +24,7 @@
   <link rel="stylesheet" href="styles.css?v=20260929-picker-contrast1" />
   <link rel="stylesheet" href="live.css?v=20260929-opponent1" />
   <link rel="stylesheet" href="team-roster.css?v=20260930-groq1" />
-  <link rel="stylesheet" href="groq-coach.css?v=20260930-groq1" />
+  <link rel="stylesheet" href="groq-coach.css?v=20260930-brain2" />
 </head>
 <body class="draft-os live-os" data-workspace="brain">
   <aside class="os-sidebar" id="osSidebar">
@@ -301,6 +301,23 @@
       </div></details>
 
       <section id="finalGameplanCard" class="card final-gameplan loading-call hidden">
+        <section id="groqFinalAdvice" class="groq-final" hidden aria-label="AI-gameplan">
+          <p class="eyebrow">AI-GAMEPLAN · KONTROLLERA MOT MATCHLÄGET</p>
+          <h2>Er plan mot deras färdiga comp</h2>
+          <div class="groq-final-grid">
+            <div><strong>Snabb call</strong><p id="groqFinal-call"></p></div>
+            <div><strong>Första 8 minuterna</strong><p id="groqFinal-early"></p></div>
+            <div><strong>Jungle & pathing</strong><p id="groqFinal-jungle"></p></div>
+            <div><strong>Objectives</strong><p id="groqFinal-objectives"></p></div>
+            <div><strong>Så tar vi fighten</strong><p id="groqFinal-teamfight"></p></div>
+            <div><strong>Om vi hamnar efter</strong><p id="groqFinal-behind"></p></div>
+            <div><strong>Top</strong><p id="groqFinal-top"></p></div>
+            <div><strong>Mid</strong><p id="groqFinal-mid"></p></div>
+            <div><strong>ADC</strong><p id="groqFinal-adc"></p></div>
+            <div><strong>Support</strong><p id="groqFinal-support"></p></div>
+            <div><strong>Osäkerheter</strong><p id="groqFinal-uncertainty"></p></div>
+          </div>
+        </section>
         <div class="analysis-head">
           <div>
             <p class="eyebrow">DRAFT KLAR · LOADING SCREEN</p>
@@ -429,12 +446,12 @@
   <script src="stats-engine.js?v=20260928-meta2"></script>
   <script src="champion-picker.js?v=20260929-qol2"></script>
   <script src="scouting-lineup.js?v=20260929-opponent1"></script>
-  <script src="brain-opponent.js?v=20260930-groq1"></script>
-  <script src="live.js?v=20260929-opponent1"></script>
+  <script src="brain-opponent.js?v=20260930-brain2"></script>
+  <script src="live.js?v=20260930-brain2"></script>
   <script src="advanced-engine.js?v=20260930-roster2"></script>
-  <script src="draft-ai.js?v=20260930-groq1"></script>
+  <script src="draft-ai.js?v=20260930-brain2"></script>
   <script src="team-roster.js?v=20260930-groq1"></script>
-  <script src="groq-coach.js?v=20260930-groq1"></script>
+  <script src="groq-coach.js?v=20260930-brain2"></script>
   <script src="ui-shell.js?v=20260929-workspace1"></script>
   <div id="workspaceReady" hidden></div>
 </body>

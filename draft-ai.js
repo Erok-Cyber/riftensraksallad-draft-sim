@@ -197,6 +197,12 @@ function aiStateScore(map){
   // Ease of execution matters for this team.
   if(n.front>0&&n.engage>0&&n.damage>=2)s+=5;
   if(n.engage>=2&&n.damage>=2)s+=2;
+  // Initiation is only useful when allies can reach the same fight.
+  const carries=aiSimList(map).filter(e=>e.role!=="support");
+  const follow=carries.filter(e=>smartTraits.reliableFollow.has(e.champ)).length;
+  if(n.count>=4&&n.engage>0&&!follow)s-=7;
+  if(n.count>=4&&!n.wave&&!n.peel)s-=6; // Few options when playing from behind.
+  if(map.jungle&&map.mid&&traits.early.has(map.jungle)&&laneSetupScore(map.mid)>0)s+=3;
 
   // Core comps are priors, not hard locks.
   const ranked=aiCompRankForMap(map);
@@ -379,13 +385,31 @@ function aiDecision(forcedRole=null){
   const options=[];
 
   open.forEach(role=>{
-    aiRoleCandidates(role).slice(0,3).forEach(x=>{
-      options.push({...x,total:x.score+aiRoleTimingBonus(role)});
+    const ranked=aiRoleCandidates(role);
+    const diverse=[...ranked.slice(0,2),
+      [...ranked].sort((a,b)=>(comfort[role]?.[b.ch]||5)-(comfort[role]?.[a.ch]||5))[0],
+      [...ranked].sort((a,b)=>b.state-a.state||b.score-a.score)[0]];
+    [...new Map(diverse.filter(Boolean).map(x=>[x.ch,x])).values()].forEach(x=>{
+      const timing=aiPickUrgency(x,ranked);
+      options.push({...x,urgency:timing,comfort:comfort[role]?.[x.ch]||5,total:x.score+aiRoleTimingBonus(role)+timing.points});
     });
   });
 
   options.sort((a,b)=>b.total-a.total);
   return options;
+}
+
+function aiPickUrgency(candidate,ranked){
+  const turnIndex=step;
+  const nextOwn=draftOrder.findIndex((t,i)=>i>turnIndex&&t.side===userSide&&t.type==='pick');
+  const intervening=nextOwn<0?[]:draftOrder.slice(turnIndex+1,nextOwn);
+  const exposed=intervening.some(t=>t.side!==userSide||t.type==='ban');
+  const alternatives=ranked.filter(x=>x.ch!==candidate.ch&&x.score>=candidate.score-10);
+  const observed=window.RiftOpponent?.scouting?.().filter(x=>x.champ===candidate.ch)||[];
+  const contested=observed.some(x=>x.cm>0||x.recent>=3);
+  let points=exposed&&alternatives.length===0?5:0;
+  if(exposed&&contested)points+=4;
+  return {points,reason:points?`${contested?'Finns i deras observerade pool. ':''}${alternatives.length===0?'Få jämnstarka alternativ. ':''}Risk att vänta till nästa egna pick.`:'Ingen belagd brådska; prioritera comp och comfort.',alternatives:alternatives.slice(0,2).map(x=>x.ch)};
 }
 
 // Replace per-role ranking with the hybrid AI score.

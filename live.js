@@ -15,7 +15,7 @@ const teamPool = {
 
 const comfort = {
   top:{"Renekton":10,"Malphite":10,"Shen":9,"Mordekaiser":9,"Sion":8,"Garen":8,"Darius":7,"Olaf":7,"Trundle":7,"Heimerdinger":6,"Yorick":6,"Galio":6},
-  jungle:{"Xin Zhao":10,"Jarvan IV":10,"Viego":9,"Volibear":9,"Udyr":9,"Lillia":8,"Vi":8,"Wukong":7,"Graves":7,"Kindred":6},
+  jungle:{"Xin Zhao":10,"Jarvan IV":10,"Viego":9,"Volibear":9,"Udyr":9,"Lillia":4,"Vi":8,"Wukong":7,"Graves":7,"Kindred":6},
   mid:{"Ahri":10,"Annie":10,"Vex":9,"Hwei":8,"Taliyah":8,"Viktor":8,"Sylas":6,"Anivia":6},
   adc:{"Ashe":10,"Varus":9,"Xayah":9,"Jinx":8,"Senna":6},
   support:{"Nautilus":10,"Leona":9,"Maokai":9}
@@ -400,6 +400,7 @@ function render(){
   if(done){
     renderFinalGameplan();
     renderMatchSave();
+    window.RiftGroq?.refresh();
     return;
   }
 
@@ -2153,4 +2154,3 @@ window.RiftChampionPicker?.attach({inputId:"championInput",roster:()=>championRo
     $("lockBtn").textContent="Lås "+champ;
     if(current()?.type==="pick"&&role){selectedRole=role;renderTurn();renderRecommendation();}
   }});
-

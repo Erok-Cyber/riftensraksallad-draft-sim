@@ -24,6 +24,13 @@ const brain=harness(['live.js','advanced-engine.js','draft-ai.js']);
 brain.run('userSide="blue";step=6;events=[];');
 let result=brain.run('aiDecision()');
 assert(result.length>0);assert(result.every(x=>Number.isFinite(x.total)));
+assert.equal(brain.run('comfort.jungle.Lillia'),4);
+brain.run('aiEnsureContext()');const lowComfort=brain.run('aiCandidate("Lillia","jungle").score');
+brain.run('comfort.jungle.Lillia=8;aiContextKey="";aiEnsureContext()');
+assert(brain.run('aiCandidate("Lillia","jungle").score')>lowComfort,'lower Lillia comfort must reduce score');
+brain.run('comfort.jungle.Lillia=4;aiContextKey="";aiEnsureContext()');
+assert(result.length<=20);assert(result.every(x=>x.urgency&&Number.isFinite(x.urgency.points)));
+const ids=result.map(x=>x.role+':'+x.ch);assert.equal(new Set(ids).size,ids.length);
 // Exhausted or occupied roles must never receive an illegal recommendation.
 brain.run('events=[{type:"pick",side:"blue",role:"mid",champ:"Ahri"},{type:"ban",side:"red",champ:"Jarvan IV"}];');
 result=brain.run('aiDecision()');
@@ -185,6 +192,14 @@ console.log('PASS: source-only bans, CM over season stats, no substitutes/unmatc
  pendingResolve({ok:true,json:async()=>({advice:{choices:[{id:'ban:NotInList',reason:'Invented'}]}})});
  await invalid;assert.equal(remote.elements.get('groqBadge').textContent,'FALLBACK');
  assert.equal(remote.run('window.RiftGroq.recommendations(banRecommendations().map(ch=>({ch})))[0].ch'),remote.run('banRecommendations()[0]'));
+ remote.run('events=draftOrder.map((t,i)=>({...t,champ:"Champion"+i,role:"unknown"}));step=20;window.RiftGroq.refresh();');
+ const finalRequest=remote.fire('groqAnalyze','click');for(let i=0;i<8;i++)await Promise.resolve();
+ const finalPlan=Object.fromEntries(['call','early','jungle','objectives','teamfight','behind','top','mid','adc','support','uncertainty'].map(k=>[k,'Plan '+k]));
+ pendingResolve({ok:true,json:async()=>({advice:finalPlan})});await finalRequest;
+ assert.equal(remote.elements.get('groqFinalAdvice').hidden,false);
+ assert.equal(remote.elements.get('groqFinal-jungle').textContent,'Plan jungle');
+ remote.run('events=events.slice(0,19);step=19;window.RiftGroq.refresh();');
+ assert.equal(remote.elements.get('groqFinalAdvice').hidden,true,'undo invalidates final gameplan');
  remote.fire('groqPause','click');assert.equal(remote.elements.get('groqBadge').textContent,'AV');
  console.log('PASS: remote AI opt-in, reordering without locking, stale response rejection, invalid-output fallback, pause.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
