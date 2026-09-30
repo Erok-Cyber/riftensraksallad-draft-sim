@@ -102,6 +102,7 @@
       (rows.some(r=>r.recent)?' · senaste matcher vägs in':' · OP.GG bygger på säsongsdata');
   }
   window.RiftOpponent={active,key:()=>selected+':'+revision,pickSignal,summary,
+    scouting:()=>availableEvidence().map(({champ,role,cm,season,recent,roleCertain})=>({champ,role,cm,season,recent,roleCertain})),
     bans:()=>banRows().slice(0,3).map(r=>r.ch),
     banReason:champ=>active()?banRows().find(r=>r.ch===champ)?.reason:''};
   function update(){
@@ -137,4 +138,3 @@
   // Wait for the core and scoring scripts to initialize before reading draft state.
   document.addEventListener('DOMContentLoaded',load,{once:true});
 })();
-

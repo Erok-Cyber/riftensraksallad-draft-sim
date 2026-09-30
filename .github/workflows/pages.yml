@@ -30,6 +30,11 @@ jobs:
         with:
           ref: main
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
       - name: Validate JavaScript
         run: |
           node --check app.js
@@ -42,7 +47,11 @@ jobs:
           node --check champion-picker.js
           node --check scouting-lineup.js
           node --check brain-opponent.js
+          node --check team-roster.js
+          node --check groq-coach.js
+          node --check supabase/functions/rift-draft-coach/index.ts
           node tests/brain-regression.cjs
+          node tests/groq-policy.cjs
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
@@ -57,3 +66,4 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+

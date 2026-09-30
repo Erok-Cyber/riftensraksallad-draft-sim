@@ -10,7 +10,7 @@ function harness(files,fixtures={}){
     return elements.get(id);
   };
   const store={getItem:key=>storage.get(key)||null,setItem:(key,val)=>storage.set(key,val),removeItem:key=>storage.delete(key)};
-  const context={console:{log(){},warn(){},error(){}},URLSearchParams,Date,Math,Set,Map,
+  const context={console:{log(){},warn(){},error(){}},URLSearchParams,Date,Math,Set,Map,AbortController,AbortSignal,
     localStorage:store,sessionStorage:store,location:{search:'',pathname:'/index.html'},history:{replaceState(){}},
     fetch:async()=>{throw Error('offline test');},queueMicrotask(){},setTimeout(){},clearTimeout(){},
     confirm:()=>true,alert(){},document:{body:element('body'),getElementById:element,createElement:()=>element(Symbol()),
@@ -18,7 +18,7 @@ function harness(files,fixtures={}){
     window:{addEventListener(){},scrollTo(){}}};
   vm.createContext(context);
   for(const file of files)vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
-  return {run:s=>vm.runInContext(s,context),elements,storage,fire:(id,type)=>listeners.get(id+":"+type)?.()};
+  return {context,run:s=>vm.runInContext(s,context),elements,storage,fire:(id,type)=>listeners.get(id+":"+type)?.()};
 }
 const brain=harness(['live.js','advanced-engine.js','draft-ai.js']);
 brain.run('userSide="blue";step=6;events=[];');
@@ -153,3 +153,38 @@ empty.fire('document','DOMContentLoaded');empty.run('userSide="blue";events=[];s
 assert.equal(empty.run('banRecommendations().length'),0);
 assert.equal(empty.elements.get('recommendPicks').textContent,'Inga styrkta banförslag kvar');
 console.log('PASS: source-only bans, CM over season stats, no substitutes/unmatched identities, honest empty state.');
+
+// Remote recommendations are opt-in, roster-bound and never survive draft changes.
+(async()=>{
+ const remote=harness(['live.js','advanced-engine.js','draft-ai.js','team-roster.js','groq-coach.js']);
+ remote.run('userSide="blue";events=[];step=0;renderRecommendation();');
+ let pendingResolve,analysisCalls=0;
+ remote.run('document.getElementById("groqTeamCode").value="fixture-team-code"');
+ remote.context.fetch=async(url,options)=>{
+   const body=JSON.parse(options.body);
+   if(body.verifyOnly)return {ok:true,json:async()=>({ok:true})};
+   analysisCalls++;return new Promise(resolve=>{pendingResolve=resolve;});
+ };
+ const activating=remote.fire('groqAnalyze','click');
+ for(let i=0;i<8;i++)await Promise.resolve();
+ assert.equal(analysisCalls,1);
+ pendingResolve({ok:true,json:async()=>({advice:{choices:[{id:'ban:Poppy',reason:'Anti-dash',risk:'Inte alltid bäst'}],plan:'Säkra engage',nextStep:'Flex',uncertainty:'Ingen scouting'}})});
+ await activating;
+ assert.equal(remote.run('window.RiftGroq.recommendations(banRecommendations().map(ch=>({ch})))[0].ch'),'Poppy');
+ assert.equal(remote.run('events.length'),0,'AI must never lock a choice');
+ remote.run('events=[{type:"ban",side:"blue",champ:"Poppy"}];step=1;renderRecommendation();');
+ assert.equal(remote.elements.get('groqAdvice').hidden,true,'old advice removed on enemy turn');
+ remote.run('events=[];step=0;renderRecommendation();');
+ const request=remote.fire('groqAnalyze','click');
+ for(let i=0;i<8;i++)await Promise.resolve();
+ remote.run('events=[{type:"ban",side:"blue",champ:"Poppy"}];step=1;renderRecommendation();');
+ pendingResolve({ok:true,json:async()=>({advice:{choices:[{id:'ban:Poppy',reason:'Old response'}]}})});
+ await request;assert.equal(remote.elements.get('groqAdvice').hidden,true,'late response discarded');
+ remote.run('events=[];step=0;renderRecommendation();');
+ const invalid=remote.fire('groqAnalyze','click');for(let i=0;i<8;i++)await Promise.resolve();
+ pendingResolve({ok:true,json:async()=>({advice:{choices:[{id:'ban:NotInList',reason:'Invented'}]}})});
+ await invalid;assert.equal(remote.elements.get('groqBadge').textContent,'FALLBACK');
+ assert.equal(remote.run('window.RiftGroq.recommendations(banRecommendations().map(ch=>({ch})))[0].ch'),remote.run('banRecommendations()[0]'));
+ remote.fire('groqPause','click');assert.equal(remote.elements.get('groqBadge').textContent,'AV');
+ console.log('PASS: remote AI opt-in, reordering without locking, stale response rejection, invalid-output fallback, pause.');
+})().catch(error=>{console.error(error);process.exitCode=1;});

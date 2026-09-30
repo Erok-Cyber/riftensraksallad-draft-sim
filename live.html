@@ -23,7 +23,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=20260929-picker-contrast1" />
   <link rel="stylesheet" href="live.css?v=20260929-opponent1" />
-  <link rel="stylesheet" href="team-roster.css?v=20260930-roster3" />
+  <link rel="stylesheet" href="team-roster.css?v=20260930-groq1" />
+  <link rel="stylesheet" href="groq-coach.css?v=20260930-groq1" />
 </head>
 <body class="draft-os live-os" data-workspace="brain">
   <aside class="os-sidebar" id="osSidebar">
@@ -68,13 +69,8 @@
       <p>Välj spelare inför matchen. Draft Brain använder den aktiva championpoolen; era core-comps finns kvar. Gäller denna webbläsare, inte lagets delade roster eller Draft Trainer.</p>
       <div id="rosterPlayers" class="roster-players"></div>
       <p id="rosterWarning" role="status"></p>
-      <details>
-        <summary>Supportalternativ i våra core-comps</summary>
-        <p>Alternativ väljs efter matchup och vad laget behöver. Braum/Poppy är främst skydd och counter-engage; Shen/Galio behöver ofta någon att följa upp.</p>
-        <div id="rosterCompFits"></div>
-      </details>
       <details id="rosterEditor">
-        <summary>Ändra spelare eller lägg till sub</summary>
+        <summary>Hantera spelare & championpooler</summary>
         <div class="roster-edit-grid">
           <label>Roll<select id="rosterEditRole"><option value="top">TOP</option><option value="jungle">JUNGLE</option><option value="mid">MID</option><option value="adc">ADC</option><option value="support" selected>SUPPORT</option></select></label>
           <label>Spelarnamn<input id="rosterEditName" maxlength="40" autocomplete="off"></label>
@@ -151,6 +147,17 @@
             <small id="brainOpponentHint" role="status">Laddar lag från Ban Planner…</small>
           </div>
 
+          <section id="groqCoach" class="groq-coach" aria-label="AI-coach">
+            <div class="groq-head"><strong>AI-coach</strong><span id="groqBadge">AV</span></div>
+            <p id="groqStatus" role="status" aria-live="polite">Regelmotorn är aktiv. Aktivera AI för en extra draftanalys.</p>
+            <div class="groq-actions"><button type="button" id="groqAnalyze" class="secondary">Aktivera AI</button><button type="button" id="groqPause" class="secondary" hidden>Pausa</button></div>
+            <details id="groqSettings"><summary>AI-inställningar</summary>
+              <label for="groqTeamCode">Lagkod <span>(inte API-nyckeln)</span></label><input id="groqTeamCode" type="password" autocomplete="off" maxlength="200" placeholder="Samma kod som för laget">
+              <label class="groq-auto"><input id="groqAuto" type="checkbox" checked> Analysera automatiskt på vår tur</label>
+              <p>Draft, pooler och filtrerad scouting skickas till Groq. Regelmotorn fortsätter vid fel. AI kan ha fel; du låser alltid själv.</p>
+            </details>
+            <div id="groqAdvice" hidden><p id="groqPlan"></p><p id="groqNext"></p><p id="groqUncertainty"></p></div>
+          </section>
           <div id="recommendationBox" class="recommendation hidden">
             <p class="eyebrow" id="recommendEyebrow">REKOMMENDATION</p>
             <h3 id="recommendRole">PICK</h3>
@@ -422,11 +429,12 @@
   <script src="stats-engine.js?v=20260928-meta2"></script>
   <script src="champion-picker.js?v=20260929-qol2"></script>
   <script src="scouting-lineup.js?v=20260929-opponent1"></script>
-  <script src="brain-opponent.js?v=20260930-strict-scout1"></script>
+  <script src="brain-opponent.js?v=20260930-groq1"></script>
   <script src="live.js?v=20260929-opponent1"></script>
   <script src="advanced-engine.js?v=20260930-roster2"></script>
-  <script src="draft-ai.js?v=20260930-roster2"></script>
-  <script src="team-roster.js?v=20260930-roster3"></script>
+  <script src="draft-ai.js?v=20260930-groq1"></script>
+  <script src="team-roster.js?v=20260930-groq1"></script>
+  <script src="groq-coach.js?v=20260930-groq1"></script>
   <script src="ui-shell.js?v=20260929-workspace1"></script>
   <div id="workspaceReady" hidden></div>
 </body>

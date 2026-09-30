@@ -76,11 +76,6 @@
     $('rosterSummary').textContent=roles.map(r=>player(r).name).join(' · ');
     holder.innerHTML=roles.map(role=>'<label class="roster-slot">'+roleNames[role]+'<select data-roster-role="'+role+'" aria-label="Spelare '+roleNames[role]+'">'+state.profiles.filter(p=>p.role===role).map(p=>'<option value="'+esc(p.id)+'"'+(state.active[role]===p.id?' selected':'')+'>'+esc(p.name)+'</option>').join('')+'</select><small>'+teamPool[role].length+' champions</small></label>').join('');
     holder.querySelectorAll('[data-roster-role]').forEach(el=>el.addEventListener('change',()=>select(el.dataset.rosterRole,el.value)));
-    $('rosterCompFits').innerHTML=Object.entries(comps).map(([name,c])=>{
-      const core=teamPool.support.includes(c.core.support)?c.core.support+' (core)':c.core.support+' (core saknas i aktiv pool)';
-      const alternatives=c.alts.support.map(ch=>esc(ch)+(supportFits[name]?.[ch]?' — '+esc(supportFits[name][ch]):''));
-      return '<div><strong>'+esc(name)+'</strong><p>'+esc(core)+(alternatives.length?' · '+alternatives.join(' · '):'')+'</p></div>';
-    }).join('');
     const unavailablePicks=ours().filter(e=>e.role&&teamPool[e.role]&&!teamPool[e.role].includes(e.champ));
     $('rosterWarning').textContent=unavailablePicks.length?'Redan låst utanför aktiv pool: '+unavailablePicks.map(e=>e.champ).join(', ')+'. Använd Undo om du vill ändra draften.':'';
     fillEditor();

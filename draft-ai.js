@@ -446,11 +446,13 @@ function renderAIInsight(){
 // One primary call, two alternatives. Extra analysis stays behind disclosure controls.
 let aiPreviousCall=null;
 function renderRecommendation(){
+  window.RiftGroq?.refresh();
   const t=current(),box=$("recommendationBox");
   if(!t||t.side!==userSide){box.classList.add("hidden");return;}
   box.classList.remove("hidden");
   $("scoreBreakdown").replaceChildren();
-  const list=t.type==="ban"?banRecommendations().slice(0,3).map(ch=>({ch})):aiDecision(selectedRole||null).slice(0,3);
+  const localList=t.type==="ban"?banRecommendations().slice(0,3).map(ch=>({ch})):aiDecision(selectedRole||null);
+  const list=(window.RiftGroq?.recommendations(localList)||localList).slice(0,3);
   if(!list.length){
     if(t.type==="ban"&&window.RiftOpponent?.active()){
       $("recommendEyebrow").textContent="MOTSTÅNDARSCOUTING";$("recommendRole").textContent="BAN";
@@ -478,6 +480,10 @@ function renderRecommendation(){
   const alternatives=$("recommendAlternatives");alternatives.replaceChildren();
   list.slice(1).forEach(x=>addButton(x,alternatives));
   $("recommendStrength").textContent=t.type==="pick"?aiConfidenceLabel(list[1]?top.total-list[1].total:20)+" · regelbaserat stöd":window.RiftOpponent?.active()?"Endast styrkta motståndarpicks":"Alternativ om banplanen ändras";
+  if(top.groqReason){
+    $("recommendReason").textContent=top.groqReason+(top.groqRisk?' · Risk: '+top.groqRisk:'');
+    $("recommendStrength").textContent='AI-prioritering · kontrollerad mot draft och roster';
+  }
   const change=$("recommendChange");
   const context=JSON.stringify(events.map(e=>[e.side,e.type,e.champ,e.role]));
   const prior=aiPreviousCall;
@@ -511,4 +517,3 @@ render = function(){
 };
 
 if(userSide)render();
-

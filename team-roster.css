@@ -10,7 +10,10 @@
 .team-roster textarea{resize:vertical;min-height:92px}.team-roster select option{background:#132337;color:#f4f7fc}
 .roster-edit-grid{display:grid;grid-template-columns:180px 1fr;gap:14px;margin:16px 0}.roster-edit-grid label{display:grid;gap:8px;font-size:14px}.roster-edit-grid .roster-pool{grid-column:1/-1}
 .roster-actions{display:flex;gap:10px;flex-wrap:wrap}.roster-actions button{min-height:44px}
-#rosterCompFits{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}#rosterCompFits>div{padding:14px;border:1px solid #35465c;border-radius:10px}#rosterCompFits strong{font:600 13px Oxanium,Inter,sans-serif;color:#ebbf61}#rosterCompFits p{margin:8px 0 0}
+#rosterEditor{margin-top:18px;border-top:1px solid #35465c;padding-top:14px}
+#rosterEditor>summary{display:inline-flex;align-items:center;gap:10px;cursor:pointer;list-style:none;padding:10px 14px;min-height:44px;box-sizing:border-box;border:1px solid #465d78;border-radius:9px;background:#132337;color:#e7edf6;font:600 14px/1.4 Inter,sans-serif}
+#rosterEditor>summary::before{content:'+';color:#ebbf61;font-size:18px}#rosterEditor[open]>summary::before{content:'−'}#rosterEditor>summary::-webkit-details-marker{display:none}
+#rosterEditor>summary:hover{background:#1c3049;border-color:#c5a15a}#rosterEditor>summary:focus-visible{outline:2px solid #ebbf61;outline-offset:3px}
 #rosterWarning,#rosterMessage{color:#f1cd80}#rosterWarning:empty,#rosterMessage:empty{display:none}
 @media(max-width:950px){.roster-players{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:600px){.draft-os .app.os-main>.team-roster{padding:14px}.roster-edit-grid,#rosterCompFits{grid-template-columns:1fr}.roster-edit-grid .roster-pool{grid-column:auto}}
+@media(max-width:600px){.draft-os .app.os-main>.team-roster{padding:14px}.roster-edit-grid{grid-template-columns:1fr}.roster-edit-grid .roster-pool{grid-column:auto}}
