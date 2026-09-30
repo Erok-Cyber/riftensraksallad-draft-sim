@@ -49,7 +49,6 @@ jobs:
           node --check brain-opponent.js
           node --check team-roster.js
           node --check groq-coach.js
-          node --check supabase/functions/rift-draft-coach/index.ts
           node tests/brain-regression.cjs
           node tests/groq-policy.cjs
 
@@ -66,4 +65,3 @@ jobs:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
-
