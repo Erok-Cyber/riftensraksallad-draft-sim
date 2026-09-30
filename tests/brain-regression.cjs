@@ -160,6 +160,23 @@ empty.fire('document','DOMContentLoaded');empty.run('userSide="blue";events=[];s
 assert.equal(empty.run('banRecommendations().length'),0);
 assert.equal(empty.elements.get('recommendPicks').textContent,'Inga styrkta banförslag kvar');
 console.log('PASS: source-only bans, CM over season stats, no substitutes/unmatched identities, honest empty state.');
+// Equally practiced champions: stronger documented lane player outranks jungle.
+const laneFixture={id:'lane',status:'upcoming',competitiveEvidence:{currentRoster:[{riotId:'J#1',role:'jungle'},{riotId:'M#1',role:'mid'}]},scoutingPlayers:[
+ {riotId:'J#1',tier:'GOLD II',topChampions:[{champ:'Nocturne',seasonGames:100,recentGames:10,seasonWinrate:55}]},
+ {riotId:'M#1',tier:'DIAMOND IV',topChampions:[{champ:'Ahri',seasonGames:100,recentGames:10,seasonWinrate:55}]}]};
+const lane=harness(['live.js','advanced-engine.js','draft-ai.js','scouting-lineup.js','brain-opponent.js'],{'rs_ban_plans_cache':JSON.stringify([laneFixture]),'rs_brain_opponent':'lane'});
+lane.fire('document','DOMContentLoaded');lane.run('userSide="blue";events=[];step=0;');
+assert.equal(lane.run('banRecommendations()[0]'),'Ahri');
+assert(lane.run('window.RiftOpponent.banScore("Ahri")>window.RiftOpponent.banScore("Nocturne")'));
+lane.run('window.RiftOpponent.active().scoutingPlayers.forEach(p=>p.tier="")');
+assert.equal(lane.run('window.RiftOpponent.banScore("Ahri")'),lane.run('window.RiftOpponent.banScore("Nocturne")'),'no hidden jungle preference');
+lane.run('events=[];');assert.equal(lane.run('aiCompPreference({},"EARLY SKIRMISH")'),12);
+assert.equal(lane.run('aiCompPreference({},"PRESS R")'),0);
+lane.run('events=[{type:"ban",side:"red",champ:"Xin Zhao"}]');
+assert.equal(lane.run('aiCompPreference({},"EARLY SKIRMISH")'),12,'one ban with alternatives must not force pivot');
+lane.run('events=teamPool.jungle.map(champ=>({type:"ban",side:"red",champ}))');
+assert.equal(lane.run('aiCompPreference({},"PRESS R")'),8,'blocked go-to unlocks fallback prior');
+console.log('PASS: go-to/fallback priorities, comfort-backed strongest-player proxy, no jungle bias.');
 
 // Remote recommendations are opt-in, roster-bound and never survive draft changes.
 (async()=>{

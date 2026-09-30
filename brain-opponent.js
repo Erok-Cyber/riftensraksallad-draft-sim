@@ -7,6 +7,8 @@
   const active=()=>replay?null:plans.find(p=>String(p.id)===selected&&p.status!=='cancelled')||null;
   const canonical=name=>championRoster.find(c=>c.toLowerCase()===String(name||'').trim().toLowerCase());
   const identity=value=>String(value||'').trim().toLowerCase();
+  const tiers=['IRON','BRONZE','SILVER','GOLD','PLATINUM','EMERALD','DIAMOND','MASTER','GRANDMASTER','CHALLENGER'];
+  function rankTier(player){return String(player?.tier||'').toUpperCase().match(/\b(CHALLENGER|GRANDMASTER|MASTER|DIAMOND|EMERALD|PLATINUM|GOLD|SILVER|BRONZE|IRON)\b/)?.[1]||'';}
   function evidence(){
     const plan=active();if(!plan)return [];
     const lineup=window.RiftScouting.lineup(plan),out=[];
@@ -27,7 +29,7 @@
       const add=(champ)=>{
         const ch=canonical(champ);if(!ch)return null;
         let row=out.find(x=>x.champ===ch&&x.player===entry.player.riotId);
-        if(!row){row={champ:ch,role,player:entry.player.riotId,cm:0,season:0,recent:0,winrate:0,roleCertain};out.push(row);}
+        if(!row){row={champ:ch,role,player:entry.player.riotId,tier:rankTier(entry.player),cm:0,season:0,recent:0,winrate:null,roleCertain};out.push(row);}
         return row;
       };
       played.forEach(pick=>{const row=add(pick.champ);if(row)row.cm++;});
@@ -38,7 +40,7 @@
         const season=Math.max(0,Number(c.seasonGames)||0),recent=Math.max(0,Number(c.recentGames)||0);
         if(!season&&!recent)return;
         const row=add(ch);row.season=season;row.recent=recent;
-        row.winrate=Math.max(0,Math.min(100,Number(c.seasonWinrate)||50));
+        row.winrate=c.seasonWinrate!=null&&Number.isFinite(Number(c.seasonWinrate))?Math.max(0,Math.min(100,Number(c.seasonWinrate))):null;
       });
     });
     return out;
@@ -49,7 +51,7 @@
   }
   function evidenceScore(row){
     const sample=row.season||row.recent;
-    const winBonus=sample?Math.max(0,(row.winrate-50)*sample/(sample+20))*0.2:0;
+    const winBonus=sample&&row.winrate!=null?Math.max(0,(row.winrate-50)*sample/(sample+20))*0.2:0;
     return (row.cm?32+Math.min(32,(row.cm-1)*8):0)+Math.min(18,Math.log2(row.season+1)*2)+Math.log2(row.recent+1)*10+winBonus;
   }
   function prospects(){
@@ -85,12 +87,20 @@
     if(row.cm)parts.push('CM: '+row.cm+' tävlingspick'+(row.cm===1?'':'s'));
     if(row.recent)parts.push('OP.GG: '+row.recent+' senaste matcher');
     else if(row.season)parts.push('OP.GG: '+row.season+' säsongsmatcher');
+    if(row.winrate!=null&&row.season>=10)parts.push(row.winrate+'% / '+row.season+' matcher');
+    if(row.tier)parts.push(row.tier+' · rankproxy, inte bevis på carry');
     return parts.join(' · ')+' · '+row.player;
   }
   function banRows(){
     const merged=new Map();
+    const all=evidence(),known=[...new Set(all.map(r=>r.player))].map(player=>all.find(r=>r.player===player&&r.tier)).filter(Boolean);
+    const lowest=known.length>=2?Math.min(...known.map(r=>tiers.indexOf(r.tier))):null;
     availableEvidence().forEach(row=>{
-      const score=evidenceScore(row),existing=merged.get(row.champ);
+      // Rank is only a bounded strength proxy. No role gets a free jungle/carry bonus.
+      const rankBonus=lowest!=null&&row.tier?Math.min(18,Math.max(0,tiers.indexOf(row.tier)-lowest)*4):0;
+      const pool=all.filter(r=>r.player===row.player),volume=pool.reduce((sum,r)=>sum+r.season+r.recent*2+r.cm*8,0);
+      const concentration=volume?(row.season+row.recent*2+row.cm*8)/volume:0;
+      const score=evidenceScore(row)+rankBonus+concentration*8,existing=merged.get(row.champ);
       if(!existing||score>existing.score)merged.set(row.champ,{ch:row.champ,score,reason:sourceText(row)});
     });
     return [...merged.values()].sort((a,b)=>b.score-a.score||a.ch.localeCompare(b.ch));
@@ -105,6 +115,7 @@
     scouting:(final=false)=>(final?evidence():availableEvidence()).map(({champ,role,cm,season,recent,roleCertain})=>({champ,role,cm,season,recent,roleCertain})),
     bans:()=>banRows().slice(0,3).map(r=>r.ch),
     banCandidates:()=>banRows().slice(0,8).map(r=>r.ch),
+    banScore:champ=>banRows().find(r=>r.ch===champ)?.score||0,
     banReason:champ=>active()?banRows().find(r=>r.ch===champ)?.reason:''};
   function update(){
     if(!select)return;

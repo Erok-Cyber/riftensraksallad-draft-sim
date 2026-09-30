@@ -114,7 +114,7 @@ function aiNeeds(map){
 function aiCompFitForMap(map,name){
   const c=comps[name];
   const p=enemyProfile();
-  let s=0;
+  let s=aiCompPreference(map,name);
   roles.forEach(role=>{
     const ch=map[role];
     if(!ch)return;
@@ -142,6 +142,17 @@ function aiCompFitForMap(map,name){
   }
   s+=aiCompHistoryBonus(name);
   return s;
+}
+
+function aiCompPreference(map,name){
+  const core=comps['EARLY SKIRMISH'],used=unavailable();
+  const viable=roles.every(role=>map[role]
+    ?map[role]===core.core[role]||(core.alts[role]||[]).includes(map[role])
+    :[core.core[role],...(core.alts[role]||[])].some(ch=>teamPool[role]?.includes(ch)&&!used.has(ch.toLowerCase())));
+  // Team identity is a prior, not a demand to abandon already locked picks.
+  if(name==='EARLY SKIRMISH')return viable?12:0;
+  if(name==='PRESS R')return viable?0:8;
+  return 0;
 }
 
 function aiCompRankForMap(map){
@@ -322,6 +333,9 @@ function aiCandidate(champ,role){
   const history=aiTeamHistorySignal(champ,role);
 
   let score=base.score*AI_CONFIG.baseWeight;
+  const preferred=aiCompPreference(ownRoleMap(),'EARLY SKIRMISH')>0?'EARLY SKIRMISH':'PRESS R';
+  if(comps[preferred].core[role]===champ)score+=8;
+  else if((comps[preferred].alts[role]||[]).includes(champ))score+=4;
   score+=(state-50)*AI_CONFIG.stateWeight;
   score+=(lookahead-50)*AI_CONFIG.lookaheadWeight;
   score+=flex*AI_CONFIG.flexibilityWeight;

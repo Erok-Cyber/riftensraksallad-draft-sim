@@ -13,7 +13,7 @@
     const t=current(),final=events.length===20;if(!userSide||(!final&&(!t||t.side!==userSide)))return null;
     const list=final?[]:candidates();if(!final&&!list.length)return null;
     const payload={side:userSide,events:events.map(({side,type,champ,role})=>({side,type,champ,role})),pools:JSON.parse(JSON.stringify(teamPool)),forcedRole:selectedRole||null,
-      candidates:list.map(c=>({ch:c.ch,role:c.role,score:c.total||c.score||0,reasons:c.reasons||[],evidence:t.type==='ban'?window.RiftOpponent?.banReason(c.ch)||'':''})),
+      candidates:list.map(c=>({ch:c.ch,role:c.role,score:t.type==='ban'?window.RiftOpponent?.banScore?.(c.ch)||0:c.total||c.score||0,reasons:c.reasons||[],evidence:t.type==='ban'?window.RiftOpponent?.banReason(c.ch)||'':''})),
       comfort:roles.flatMap(role=>teamPool[role].map(ch=>({role,ch,value:comfort[role]?.[ch]||5}))),
       decisionContext:list.map(c=>({id:id(c),urgency:c.urgency?.reason||'',alternatives:c.urgency?.alternatives||[],risk:c.risk?.reasons?.join(' · ')||''})),
       targeted:!!window.RiftOpponent?.active(),scouting:window.RiftOpponent?.scouting?.(final)||[],scoutingNote:window.RiftOpponent?.active()?window.RiftOpponent.summary():'Ingen motståndarscouting vald.',patch:window.RiftStats?.getStatus?.()?.patch||''};
