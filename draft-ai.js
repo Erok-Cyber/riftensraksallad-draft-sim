@@ -438,7 +438,16 @@ function renderRecommendation(){
   box.classList.remove("hidden");
   $("scoreBreakdown").replaceChildren();
   const list=t.type==="ban"?banRecommendations().slice(0,3).map(ch=>({ch})):aiDecision(selectedRole||null).slice(0,3);
-  if(!list.length){box.classList.add("hidden");return;}
+  if(!list.length){
+    if(t.type==="ban"&&window.RiftOpponent?.active()){
+      $("recommendEyebrow").textContent="MOTSTÅNDARSCOUTING";$("recommendRole").textContent="BAN";
+      $("recommendPicks").textContent="Inga styrkta banförslag kvar";
+      $("recommendReason").textContent="Underlaget saknas, rollerna är visade eller poolen är redan pickad/bannad. Välj generellt läge om du vill se generiska bans.";
+      $("recommendAlternatives").replaceChildren();$("recommendStrength").textContent="";$("recommendChange").textContent="";
+      $("brainDataStatus").textContent=window.RiftOpponent.summary();return;
+    }
+    box.classList.add("hidden");return;
+  }
   const top=list[0];
   $("recommendEyebrow").textContent=t.type==="ban"?"BANFÖRSLAG":"REKOMMENDERAT PICK";
   $("recommendRole").textContent=top.role?roleNames[top.role]:"BAN";
@@ -452,10 +461,10 @@ function renderRecommendation(){
   addButton(top,$("recommendPicks"));
   $("recommendReason").textContent=top.reasons?.slice(0,2).join(" · ")||window.RiftOpponent?.banReason(top.ch)||"Baserat på comp och visade hot.";
   const stats=window.RiftStats?.getStatus?.();
-  $("brainDataStatus").textContent=stats?.hasData?stats.source+" · data "+(stats.metaPatch||"?")+(stats.fallback?" · äldre underlag":""):"Metadata saknas · regler och lagpool används";
+  $("brainDataStatus").textContent=window.RiftOpponent?.active()?window.RiftOpponent.summary():stats?.hasData?stats.source+" · data "+(stats.metaPatch||"?")+(stats.fallback?" · äldre underlag":""):"Metadata saknas · regler och lagpool används";
   const alternatives=$("recommendAlternatives");alternatives.replaceChildren();
   list.slice(1).forEach(x=>addButton(x,alternatives));
-  $("recommendStrength").textContent=t.type==="pick"?aiConfidenceLabel(list[1]?top.total-list[1].total:20)+" · regelbaserat stöd":"Alternativ om banplanen ändras";
+  $("recommendStrength").textContent=t.type==="pick"?aiConfidenceLabel(list[1]?top.total-list[1].total:20)+" · regelbaserat stöd":window.RiftOpponent?.active()?"Endast styrkta motståndarpicks":"Alternativ om banplanen ändras";
   const change=$("recommendChange");
   const context=JSON.stringify(events.map(e=>[e.side,e.type,e.champ,e.role]));
   const prior=aiPreviousCall;
@@ -489,5 +498,6 @@ render = function(){
 };
 
 if(userSide)render();
+
 
 

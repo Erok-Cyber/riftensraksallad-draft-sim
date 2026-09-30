@@ -6,18 +6,58 @@
   try{selected=replay?'':sessionStorage.getItem('rs_brain_opponent')||'';}catch{}
   const active=()=>replay?null:plans.find(p=>String(p.id)===selected&&p.status!=='cancelled')||null;
   const canonical=name=>championRoster.find(c=>c.toLowerCase()===String(name||'').trim().toLowerCase());
-  function prospects(){
+  const identity=value=>String(value||'').trim().toLowerCase();
+  function evidence(){
     const plan=active();if(!plan)return [];
-    const used=unavailable(),out=[];
-    for(const entry of window.RiftScouting.lineup(plan)){
-      // Known enemy roles supersede scouting. Never fill these with imaginary picks.
-      if(enemyRoleShown(entry.role))continue;
-      const confidence=entry.source==='challengermode'?0.85:Math.min(0.55,Math.max(0,Number(entry.roleConfidence)||0)/100);
-      if(!confidence)continue;
-      const pool=(entry.pool||[]).map(c=>({...c,champ:canonical(c.champ)}))
-        .filter(c=>c.champ&&!used.has(c.champ.toLowerCase())&&enemyRoleCandidates(c.champ).includes(entry.role)).slice(0,3);
-      const total=pool.reduce((n,c)=>n+Math.max(1,Number(c.seasonGames||c.recentGames)||1),0);
-      pool.forEach(c=>out.push({champ:c.champ,role:entry.role,weight:confidence*Math.max(1,Number(c.seasonGames||c.recentGames)||1)/(total||1)}));
+    const lineup=window.RiftScouting.lineup(plan),out=[];
+    const games=(plan.competitiveEvidence?.games||[]).slice(-10);
+    const keys=entry=>[entry.cmUsername,entry.player?.riotId].map(identity).filter(Boolean);
+    const matches=(pick,entry)=>[pick.player,pick.riotId].map(identity).filter(Boolean).some(k=>keys(entry).includes(k));
+    lineup.forEach(entry=>{
+      const played=[];
+      games.forEach(game=>(game.picks||[]).forEach(pick=>{
+        // Exact identity only. Old roster members and ambiguous names cannot become current starters.
+        if(matches(pick,entry)&&lineup.filter(e=>matches(pick,e)).length===1)played.push(pick);
+      }));
+      const recentRole=[...played].reverse().find(p=>roles.includes(p.role))?.role;
+      const lockedRoles=lineup.filter(e=>e.source==='challengermode').map(e=>e.role);
+      const role=entry.source==='challengermode'?entry.role:
+        recentRole&&!lockedRoles.includes(recentRole)?recentRole:entry.role;
+      const roleCertain=entry.source==='challengermode'||role===recentRole;
+      const add=(champ)=>{
+        const ch=canonical(champ);if(!ch)return null;
+        let row=out.find(x=>x.champ===ch&&x.player===entry.player.riotId);
+        if(!row){row={champ:ch,role,player:entry.player.riotId,cm:0,season:0,recent:0,winrate:0,roleCertain};out.push(row);}
+        return row;
+      };
+      played.forEach(pick=>{const row=add(pick.champ);if(row)row.cm++;});
+      (entry.player?.topChampions||[]).forEach(c=>{
+        const ch=canonical(c.champ);if(!ch)return;
+        // Only the starter's relevant role pool, unless tournament evidence confirms the pick.
+        if(!played.some(p=>canonical(p.champ)===ch)&&!enemyRoleCandidates(ch).includes(role))return;
+        const season=Math.max(0,Number(c.seasonGames)||0),recent=Math.max(0,Number(c.recentGames)||0);
+        if(!season&&!recent)return;
+        const row=add(ch);row.season=season;row.recent=recent;
+        row.winrate=Math.max(0,Math.min(100,Number(c.seasonWinrate)||50));
+      });
+    });
+    return out;
+  }
+  function availableEvidence(){
+    const used=unavailable();
+    return evidence().filter(row=>!used.has(row.champ.toLowerCase())&&!enemyRoleShown(row.role));
+  }
+  function evidenceScore(row){
+    const sample=row.season||row.recent;
+    const winBonus=sample?Math.max(0,(row.winrate-50)*sample/(sample+20))*0.2:0;
+    return (row.cm?50+Math.min(20,(row.cm-1)*7):0)+Math.log2(row.season+1)*4+Math.log2(row.recent+1)*7+winBonus;
+  }
+  function prospects(){
+    const rows=availableEvidence(),out=[];
+    for(const role of roles){
+      const pool=rows.filter(r=>r.role===role).sort((a,b)=>evidenceScore(b)-evidenceScore(a)).slice(0,4);
+      const total=pool.reduce((n,r)=>n+evidenceScore(r),0);
+      pool.forEach(r=>out.push({...r,weight:(r.roleCertain?1:0.7)*evidenceScore(r)/(total||1)}));
     }
     return out;
   }
@@ -27,41 +67,43 @@
       if(rule.role!==role||!rule.boost[champ])continue;
       const matches=predicted.filter(p=>rule.enemy.includes(p.champ));
       const weight=Math.min(1,matches.reduce((sum,p)=>sum+p.weight,0));
-      points+=rule.boost[champ]*weight*0.3;
+      points+=rule.boost[champ]*weight*0.85;
       if(weight>0)threats.push(...matches.map(p=>p.champ));
     }
     // Broad comp answers also cover scouted champions without a handwritten matchup rule.
     const mass=set=>predicted.reduce((sum,p)=>sum+(set.has(p.champ)?p.weight:0),0);
     const answers=[];
     const add=(value,label)=>{if(value>0){points+=value;if(value>=0.5)answers.push(label);}};
-    if(smartTraits.peel.has(champ)||traits.disengage.has(champ))add(mass(traits.dive)*2,'peel mot deras dive-pool');
-    if(traits.engage.has(champ)||smartTraits.pick.has(champ))add(mass(traits.poke)*2,'access mot deras poke-pool');
-    if(smartTraits.antiTank.has(champ))add(mass(traits.tanks)*2,'damage mot deras tank-pool');
-    if(smartTraits.zone.has(champ))add(mass(traits.melee)*1.2,'zonkontroll mot deras melee-pool');
-    return {points:Math.min(8,points),reason:threats.length?'Scout: svar mot '+[...new Set(threats)].slice(0,2).join('/')+' om de väljs':answers.length?'Scout: '+answers[0]:''};
+    if(smartTraits.peel.has(champ)||traits.disengage.has(champ))add(mass(traits.dive)*5,'peel mot deras dive-pool');
+    if(traits.engage.has(champ)||smartTraits.pick.has(champ))add(mass(traits.poke)*5,'access mot deras poke-pool');
+    if(smartTraits.antiTank.has(champ))add(mass(traits.tanks)*5,'damage mot deras tank-pool');
+    if(smartTraits.zone.has(champ))add(mass(traits.melee)*3,'zonkontroll mot deras melee-pool');
+    return {points:Math.min(24,points),reason:threats.length?'Scout: svar mot '+[...new Set(threats)].slice(0,2).join('/')+' om de väljs':answers.length?'Scout: '+answers[0]:''};
   }
-  function plannedBans(){
-    const plan=active();if(!plan)return [];
-    const rows=[];
-    ['b1','b2','b3'].forEach((key,i)=>{const ch=canonical(plan.phase1Plan?.[key]);if(ch)rows.push({ch,bonus:60-i*8,reason:'Sparad banplan mot '+plan.opponent+' · B'+(i+1)});});
-    (plan.banPriority||[]).slice(0,5).forEach((b,i)=>{const ch=canonical(b.champ);if(ch&&!rows.some(x=>x.ch===ch))rows.push({ch,bonus:34-i*4,reason:'Ban-prioritet mot '+plan.opponent+(b.why?' · '+b.why:'')});});
-    return rows;
+  function sourceText(row){
+    const parts=[];
+    if(row.cm)parts.push('CM: '+row.cm+' tävlingspick'+(row.cm===1?'':'s'));
+    if(row.recent)parts.push('OP.GG: '+row.recent+' senaste matcher');
+    else if(row.season)parts.push('OP.GG: '+row.season+' säsongsmatcher');
+    return parts.join(' · ')+' · '+row.player;
   }
-  function banRows(base){
-    const used=unavailable(),predicted=prospects(),planned=plannedBans();
-    const names=[...new Set([...base,...planned.map(p=>p.ch),...predicted.map(p=>p.champ)])];
-    const phaseTwo=step>=12;
-    return names.filter(ch=>!used.has(ch.toLowerCase())).map(ch=>{
-      const row=planned.find(p=>p.ch===ch);
-      const pool=predicted.filter(p=>p.champ===ch);
-      // On second ban phase, pool threats in unresolved roles matter more than the old B1-B3 order.
-      const bonus=(row?.bonus||0)*(phaseTwo?0.25:1)+Math.min(24,pool.reduce((sum,p)=>sum+p.weight*24,0));
-      return {ch,score:banScore(ch)+bonus,reason:row?.reason||(pool.length?'Scoutad championpool hos '+active().opponent:'Comp och visade hot')};
-    }).sort((a,b)=>b.score-a.score);
+  function banRows(){
+    const merged=new Map();
+    availableEvidence().forEach(row=>{
+      const score=evidenceScore(row),existing=merged.get(row.champ);
+      if(!existing||score>existing.score)merged.set(row.champ,{ch:row.champ,score,reason:sourceText(row)});
+    });
+    return [...merged.values()].sort((a,b)=>b.score-a.score||a.ch.localeCompare(b.ch));
   }
-  window.RiftOpponent={active,key:()=>selected+':'+revision,pickSignal,
-    bans:base=>banRows(base).slice(0,3).map(r=>r.ch),
-    banReason:champ=>active()?banRows([champ]).find(r=>r.ch===champ)?.reason:''};
+  function summary(){
+    const rows=evidence();
+    if(!rows.length)return 'Scouting saknas för aktuella starters. Inga generiska target bans fylls på.';
+    return 'CM + OP.GG · '+new Set(rows.map(r=>r.player)).size+' starters med data'+
+      (rows.some(r=>r.recent)?' · senaste matcher vägs in':' · OP.GG bygger på säsongsdata');
+  }
+  window.RiftOpponent={active,key:()=>selected+':'+revision,pickSignal,summary,
+    bans:()=>banRows().slice(0,3).map(r=>r.ch),
+    banReason:champ=>active()?banRows().find(r=>r.ch===champ)?.reason:''};
   function update(){
     if(!select)return;
     select.replaceChildren();
@@ -74,7 +116,7 @@
     select.value=selected;select.disabled=replay;
     const plan=active();
     hint.textContent=replay?'Historisk övning använder ingen aktuell motståndarscouting.':plan
-      ?(offline?'Cachad scouting · ':'')+'Banplan + starters pooler. Visade picks väger tyngst.'
+      ?(offline?'Cachad scouting · ':'')+summary()
       :(loading?'Laddar lag… ':offline?'Kunde inte uppdatera lagen. ':'')+(plans.length?'Välj ett lag för anpassade bans och picks.':'Lägg till en match i Ban Planner för att välja motståndare.');
   }
   select?.addEventListener('change',()=>{
@@ -95,3 +137,4 @@
   // Wait for the core and scoring scripts to initialize before reading draft state.
   document.addEventListener('DOMContentLoaded',load,{once:true});
 })();
+
