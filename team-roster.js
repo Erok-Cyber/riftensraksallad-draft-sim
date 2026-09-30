@@ -4,7 +4,7 @@
   const KEY='rs_own_roster_v1';
   const clone=value=>JSON.parse(JSON.stringify(value));
   const basePools=clone(teamPool),baseComfort=clone(comfort),baseComps=clone(comps);
-  const names={top:'Dahlin',jungle:'Erik',mid:'Adrian',adc:'Tacky',support:'Ordinarie support'};
+  const names={top:'Dahlin',jungle:'Erik',mid:'Adrian',adc:'Tacky',support:'Frippen'};
   const defaults={profiles:roles.map(role=>({id:'core-'+role,role,name:names[role],pool:basePools[role]})),active:Object.fromEntries(roles.map(role=>[role,'core-'+role]))};
   defaults.profiles.push({id:'jacob-support',role:'support',name:'Jacob',pool:['Nautilus','Maokai','Shen','Braum','Leona','Galio','Poppy']});
   // Alternatives, not replacements for the core or unconditional pick priorities.
@@ -21,6 +21,8 @@
     const seen=new Set();
     const valid=raw.profiles.filter(p=>p&&typeof p.id==='string'&&p.id.length<80&&roles.includes(p.role)&&typeof p.name==='string'&&p.name.trim()&&Array.isArray(p.pool)&&p.pool.length&&p.pool.length<=60&&p.pool.every(c=>typeof c==='string'&&c.length>0&&c.length<60)&&!seen.has(p.id)&&seen.add(p.id));
     valid.forEach(p=>{const v={id:p.id,role:p.role,name:p.name.trim().slice(0,40),pool:[...new Set(p.pool)]};const i=out.profiles.findIndex(x=>x.id===v.id);if(i<0)out.profiles.push(v);else if(out.profiles[i].role===v.role)out.profiles[i]=v;});
+    const support=out.profiles.find(p=>p.id==='core-support');
+    if(support?.name==='Ordinarie support')support.name='Frippen';
     roles.forEach(role=>{if(out.profiles.some(p=>p.id===raw.active?.[role]&&p.role===role))out.active[role]=raw.active[role];});
     return out;
   }

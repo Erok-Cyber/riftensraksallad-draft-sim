@@ -91,6 +91,11 @@ assert.equal(reloaded.run('window.RiftRoster.player("support").name'),'Test');
 assert.equal(reloaded.run('JSON.stringify(teamPool.support)'),JSON.stringify(['Nautilus','Braum']));
 const corrupt=harness(['live.js','advanced-engine.js','draft-ai.js','team-roster.js'],{'rs_own_roster_v1':'{broken'});
 assert.equal(corrupt.run('teamPool.support.length'),3);
+assert.equal(corrupt.run('window.RiftRoster.player("support").name'),'Frippen');
+const legacyRoster={profiles:[{id:'core-support',role:'support',name:'Ordinarie support',pool:['Braum']}],active:{support:'core-support'}};
+const migrated=harness(['live.js','advanced-engine.js','draft-ai.js','team-roster.js'],{'rs_own_roster_v1':JSON.stringify(legacyRoster)});
+assert.equal(migrated.run('window.RiftRoster.player("support").name'),'Frippen');
+assert.equal(migrated.run('teamPool.support[0]'),'Braum');
 console.log('PASS: lineup profiles, seven Jacob candidates, core preservation, cache invalidation, legal picks, validation and reload.');
 // Review replay must be isolated from the real draft and must not contain future decisions.
 brain.storage.set('rs_draft_state','real-draft-must-survive');
