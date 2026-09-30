@@ -20,7 +20,7 @@ let aiContextKey="";
 const aiRoleCache=new Map(),aiStateCache=new Map();
 function aiEnsureContext(){
   const key=JSON.stringify([userSide,events.map(e=>[e.side,e.type,e.role,e.champ]),
-    window.RiftStats?.getStatus?.(),window.RiftOpponent?.key(),localStorage.getItem("rs_draft_archive"),Object.keys(championMeta).length]);
+    window.RiftStats?.getStatus?.(),window.RiftOpponent?.key(),window.RiftRoster?.key(),localStorage.getItem("rs_draft_archive"),Object.keys(championMeta).length]);
   if(key!==aiContextKey){aiContextKey=key;aiRoleCache.clear();aiStateCache.clear();}
 }
 let aiHistoryCacheRaw=null;
@@ -51,6 +51,7 @@ function aiPatchWeight(matchPatch){
   return .5;
 }
 function aiTeamHistorySignal(champ,role){
+  if(window.RiftRoster&&window.RiftRoster.player(role)?.id!=='core-'+role)return {n:0,w:0,l:0,bonus:0,label:'ingen spelarspecifik historik'};
   const rows=aiHistoryArchive().filter(m=>(m.ourPicks||[]).some(p=>p?.champ===champ&&p?.role===role));
   const n=rows.length,tier=aiHistoryTier(n);
   if(!n||tier.cap===0)return {n,w:rows.filter(m=>m.result==="win").length,l:rows.filter(m=>m.result==="loss").length,bonus:0,label:tier.label};
@@ -498,6 +499,5 @@ render = function(){
 };
 
 if(userSide)render();
-
 
 

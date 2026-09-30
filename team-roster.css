@@ -1,0 +1,16 @@
+.team-roster{margin:0 0 20px;padding:16px 20px;border:1px solid #35465c;border-radius:14px;background:#0d1927;color:#eef3fa}
+.team-roster>summary{cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;font-family:Oxanium,Inter,sans-serif;font-weight:700;font-size:16px;min-height:28px}
+.team-roster>summary::before{content:'▸';color:#e8bb55}.team-roster[open]>summary::before{content:'▾'}
+#rosterSummary{font:400 14px/1.6 Inter,sans-serif;color:#c6d2e0}
+.team-roster p,.team-roster small{font:400 14px/1.6 Inter,sans-serif;color:#c6d2e0}
+.roster-players{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin:18px 0}
+.roster-slot{display:flex;flex-direction:column;gap:8px;min-width:0;font:600 13px Oxanium,Inter,sans-serif;color:#ebbf61}
+.team-roster select,.team-roster input,.team-roster textarea{width:100%;box-sizing:border-box;min-height:44px;border:1px solid #53657e;border-radius:8px;background:#132337;color:#f4f7fc;padding:10px 12px;font:400 15px/1.5 Inter,sans-serif}
+.team-roster select:focus-visible,.team-roster input:focus-visible,.team-roster textarea:focus-visible{outline:2px solid #e8bb55;outline-offset:2px}
+.team-roster textarea{resize:vertical;min-height:92px}.team-roster select option{background:#132337;color:#f4f7fc}
+.roster-edit-grid{display:grid;grid-template-columns:180px 1fr;gap:14px;margin:16px 0}.roster-edit-grid label{display:grid;gap:8px;font-size:14px}.roster-edit-grid .roster-pool{grid-column:1/-1}
+.roster-actions{display:flex;gap:10px;flex-wrap:wrap}.roster-actions button{min-height:44px}
+#rosterCompFits{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:14px}#rosterCompFits>div{padding:14px;border:1px solid #35465c;border-radius:10px}#rosterCompFits strong{font:600 13px Oxanium,Inter,sans-serif;color:#ebbf61}#rosterCompFits p{margin:8px 0 0}
+#rosterWarning,#rosterMessage{color:#f1cd80}#rosterWarning:empty,#rosterMessage:empty{display:none}
+@media(max-width:950px){.roster-players{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:600px){.team-roster{padding:14px}.roster-edit-grid,#rosterCompFits{grid-template-columns:1fr}.roster-edit-grid .roster-pool{grid-column:auto}}

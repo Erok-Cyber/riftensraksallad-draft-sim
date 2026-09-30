@@ -23,6 +23,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=20260929-picker-contrast1" />
   <link rel="stylesheet" href="live.css?v=20260929-opponent1" />
+  <link rel="stylesheet" href="team-roster.css?v=20260930-roster1" />
 </head>
 <body class="draft-os live-os" data-workspace="brain">
   <aside class="os-sidebar" id="osSidebar">
@@ -62,6 +63,28 @@
       </div>
     </header>
 
+    <details class="team-roster" id="teamRoster">
+      <summary>Vår roster <span id="rosterSummary"></span></summary>
+      <p>Välj spelare inför matchen. Draft Brain använder den aktiva championpoolen; era core-comps finns kvar. Gäller denna webbläsare, inte lagets delade roster eller Draft Trainer.</p>
+      <div id="rosterPlayers" class="roster-players"></div>
+      <p id="rosterWarning" role="status"></p>
+      <details>
+        <summary>Supportalternativ i våra core-comps</summary>
+        <p>Alternativ väljs efter matchup och vad laget behöver. Braum/Poppy är främst skydd och counter-engage; Shen/Galio behöver ofta någon att följa upp.</p>
+        <div id="rosterCompFits"></div>
+      </details>
+      <details id="rosterEditor">
+        <summary>Ändra spelare eller lägg till sub</summary>
+        <div class="roster-edit-grid">
+          <label>Roll<select id="rosterEditRole"><option value="top">TOP</option><option value="jungle">JUNGLE</option><option value="mid">MID</option><option value="adc">ADC</option><option value="support" selected>SUPPORT</option></select></label>
+          <label>Spelarnamn<input id="rosterEditName" maxlength="40" autocomplete="off"></label>
+          <label class="roster-pool">Championpool<textarea id="rosterEditPool" placeholder="Nautilus, Maokai, Braum"></textarea></label>
+        </div>
+        <div class="roster-actions"><button id="rosterSave" type="button">Spara och använd</button><button id="rosterNew" class="secondary" type="button">Ny sub i vald roll</button></div>
+        <p>Separera champions med kommatecken. Nya spelare får samma neutrala comfort-värde för alla sina champions.</p>
+      </details>
+      <p id="rosterMessage" role="status" aria-live="polite"></p>
+    </details>
     <section id="startCard" class="card os-live-hero">
       <div class="os-live-hero-head">
         <div>
@@ -402,11 +425,11 @@
   <script src="brain-opponent.js?v=20260930-strict-scout1"></script>
   <script src="live.js?v=20260929-opponent1"></script>
   <script src="advanced-engine.js?v=20260929-qol2"></script>
-  <script src="draft-ai.js?v=20260930-strict-scout1"></script>
+  <script src="draft-ai.js?v=20260930-roster1"></script>
+  <script src="team-roster.js?v=20260930-roster1"></script>
   <script src="ui-shell.js?v=20260929-workspace1"></script>
   <div id="workspaceReady" hidden></div>
 </body>
 </html>
-
 
 
