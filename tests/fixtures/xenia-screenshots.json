@@ -1,0 +1,170 @@
+[
+  {
+    "id": "xenia-screenshot-20260912-2309",
+    "source": "manual-screenshot",
+    "sourceFile": "image(5).png",
+    "label": "Bildverifierad tävlingsmatch",
+    "playedAt": "2026-09-12",
+    "dateLabel": "09/12/2026",
+    "observedAt": "2026-10-01T09:47:15Z",
+    "result": "win",
+    "duration": "23:09",
+    "teamKills": 23,
+    "enemyKills": 1,
+    "note": "Datum enligt bilden (12 september 2026). Match-ID och säker serieordning saknas. Bans ej registrerade. Manuellt underlag efter admin completion enligt laget.",
+    "picks": [
+      {
+        "role": "top",
+        "player": "Bytesbanditen",
+        "riotId": "ebbaLOVER245#34256",
+        "displayName": "ebbaLOVER245",
+        "champ": "Nasus",
+        "kda": "2/0/6"
+      },
+      {
+        "role": "jungle",
+        "player": "Elsaboy",
+        "riotId": "ElsaBoy1727#1727",
+        "displayName": "ElsaBoy1727",
+        "champ": "Xin Zhao",
+        "kda": "4/1/5"
+      },
+      {
+        "role": "mid",
+        "player": "VinnieTehPr0",
+        "riotId": "VinnieTehPr0#MEEPS",
+        "displayName": "VinnieTehPr0",
+        "champ": "Azir",
+        "kda": "4/0/5"
+      },
+      {
+        "role": "adc",
+        "player": "tretnix",
+        "riotId": "Tretnix#Juicy",
+        "displayName": "Tretnix",
+        "champ": "Yunara",
+        "kda": "12/0/3"
+      },
+      {
+        "role": "support",
+        "player": "Doginator",
+        "riotId": "Eddie#Bard",
+        "displayName": "Eddie",
+        "champ": "Lulu",
+        "kda": "1/0/17"
+      }
+    ]
+  },
+  {
+    "id": "xenia-screenshot-20260912-3132",
+    "source": "manual-screenshot",
+    "sourceFile": "image(6).png",
+    "label": "Bildverifierad tävlingsmatch",
+    "playedAt": "2026-09-12",
+    "dateLabel": "09/12/2026",
+    "observedAt": "2026-10-01T09:47:15Z",
+    "result": "loss",
+    "duration": "31:32",
+    "teamKills": 10,
+    "enemyKills": 27,
+    "note": "Datum enligt bilden (12 september 2026). Match-ID och säker serieordning saknas. Bans ej registrerade. Manuellt underlag efter admin completion enligt laget.",
+    "picks": [
+      {
+        "role": "top",
+        "player": "Bytesbanditen",
+        "riotId": "ebbaLOVER245#34256",
+        "displayName": "ebbaLOVER245",
+        "champ": "Ornn",
+        "kda": "4/4/3"
+      },
+      {
+        "role": "jungle",
+        "player": "Elsaboy",
+        "riotId": "ElsaBoy1727#1727",
+        "displayName": "ElsaBoy1727",
+        "champ": "Xin Zhao",
+        "kda": "1/6/2"
+      },
+      {
+        "role": "mid",
+        "player": "VinnieTehPr0",
+        "riotId": "VinnieTehPr0#MEEPS",
+        "displayName": "VinnieTehPr0",
+        "champ": "Azir",
+        "kda": "3/7/1"
+      },
+      {
+        "role": "adc",
+        "player": "tretnix",
+        "riotId": "Tretnix#Juicy",
+        "displayName": "Tretnix",
+        "champ": "Jinx",
+        "kda": "0/5/3"
+      },
+      {
+        "role": "support",
+        "player": "Doginator",
+        "riotId": "Eddie#Bard",
+        "displayName": "Eddie",
+        "champ": "Lulu",
+        "kda": "2/5/3"
+      }
+    ]
+  },
+  {
+    "id": "xenia-screenshot-20260912-2450",
+    "source": "manual-screenshot",
+    "sourceFile": "image(7).png",
+    "label": "Bildverifierad tävlingsmatch",
+    "playedAt": "2026-09-12",
+    "dateLabel": "09/12/2026",
+    "observedAt": "2026-10-01T09:47:15Z",
+    "result": "win",
+    "duration": "24:50",
+    "teamKills": 33,
+    "enemyKills": 10,
+    "note": "Datum enligt bilden (12 september 2026). Match-ID och säker serieordning saknas. Bans ej registrerade. Manuellt underlag efter admin completion enligt laget.",
+    "picks": [
+      {
+        "role": "top",
+        "player": "Bytesbanditen",
+        "riotId": "ebbaLOVER245#34256",
+        "displayName": "ebbaLOVER245",
+        "champ": "Renekton",
+        "kda": "2/1/2"
+      },
+      {
+        "role": "jungle",
+        "player": "Elsaboy",
+        "riotId": "ElsaBoy1727#1727",
+        "displayName": "ElsaBoy1727",
+        "champ": "Sylas",
+        "kda": "9/2/16"
+      },
+      {
+        "role": "mid",
+        "player": "VinnieTehPr0",
+        "riotId": "VinnieTehPr0#MEEPS",
+        "displayName": "VinnieTehPr0",
+        "champ": "Ahri",
+        "kda": "16/0/5"
+      },
+      {
+        "role": "adc",
+        "player": "tretnix",
+        "riotId": "Tretnix#Juicy",
+        "displayName": "Tretnix",
+        "champ": "Yunara",
+        "kda": "4/5/16"
+      },
+      {
+        "role": "support",
+        "player": "Doginator",
+        "riotId": "Eddie#Bard",
+        "displayName": "Eddie",
+        "champ": "Lulu",
+        "kda": "2/2/24"
+      }
+    ]
+  }
+]

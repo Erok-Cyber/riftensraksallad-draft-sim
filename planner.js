@@ -4,10 +4,10 @@
   const TEAM_KEY_STORAGE="rs_team_access_key";
   let plans=[];
   let selectedId=null;
-  let editing=false;
+  let editing=false,reviewing=false;
   let dirty=false,saving=false,matchView=false,editPlan=null;
   let lastSavedId=null;
-  function mayDiscard(){return !dirty||confirm("Du har osparade ändringar. Lämna redigeringen ändå?");}
+  function mayDiscard(){return !saving&&(!dirty||confirm("Du har osparade ändringar. Lämna redigeringen ändå?"));}
   window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
   document.addEventListener("click",e=>{
     if(dirty&&e.target.closest(".os-sidebar a")&&!mayDiscard()){e.preventDefault();e.stopImmediatePropagation();}
@@ -70,6 +70,7 @@
       challengermodeTeamName:plan.challengermodeTeamName||plan.opponent||"",
       challengermode:plan.challengermode||null,
       competitiveEvidence:plan.competitiveEvidence||null,
+      seriesReview:plan.seriesReview||null,
       competition:plan.competition||"",
       scoutingConfidence:plan.scoutingConfidence||"preliminary",
       scoutingUpdatedAt:plan.scoutingUpdatedAt||"",
@@ -116,19 +117,19 @@
   function selectPlan(id){
     if(!plans.some(p=>p.id===id)||!mayDiscard())return false;
     dirty=false;editPlan=null;
-    selectedId=id;editing=false;render();return true;
+    selectedId=id;editing=false;reviewing=false;render();return true;
   }
   function sortPlans(list){
     const group=p=>p.status==='completed'||p.status==='cancelled'?2:matchStage(p).past?1:0;
     return [...list].sort((a,b)=>group(a)-group(b)||(group(a)===0?new Date(a.scheduledAt)-new Date(b.scheduledAt):new Date(b.scheduledAt)-new Date(a.scheduledAt)));
   }
   function matchStage(plan,now=Date.now()){
-    if(plan.status==='completed')return {label:'SPELAD',heading:'EFTER MATCHEN',past:true};
-    if(plan.status==='cancelled')return {label:'INSTÄLLD',heading:'INSTÄLLD MATCH',past:false};
+    if(plan.status==='completed')return {label:'MATCH SPELAD',heading:'EFTER MATCHEN',past:true,tone:'completed'};
+    if(plan.status==='cancelled')return {label:'INSTÄLLD',heading:'INSTÄLLD MATCH',past:false,tone:'cancelled'};
     const at=Date.parse(plan.scheduledAt);
-    if(Number.isFinite(at)&&now>=at+6*60*60*1000)return {label:'ATT FÖLJA UPP',heading:'EFTER MATCHTIDEN',past:true};
-    if(Number.isFinite(at)&&now>=at)return {label:'MATCHTID PASSERAD',heading:'MATCHDAG',past:true};
-    return {label:'KOMMANDE',heading:'KOMMANDE MATCH',past:false};
+    if(Number.isFinite(at)&&now>=at+6*60*60*1000)return {label:'KVAR ATT REVIEWA',heading:'EFTER MATCHTIDEN',past:true,tone:'review'};
+    if(Number.isFinite(at)&&now>=at)return {label:'MATCHDAG',heading:'MATCHDAG',past:true,tone:'review'};
+    return {label:'KOMMANDE',heading:'KOMMANDE MATCH',past:false,tone:'upcoming'};
   }
   function dateText(iso){
     const d=new Date(iso);
@@ -258,20 +259,50 @@
       return;
     }
     list.innerHTML=sortPlans(plans).map(p=>{
-      const status=matchStage(p).label;
+      const stage=matchStage(p),status=stage.label;
       return '<button type="button" class="planner-match-card '+(p.id===selectedId?"active":"")+'" data-plan-id="'+esc(p.id)+'">'+
-        '<span class="top"><strong>'+esc(p.opponent)+'</strong><span class="status '+esc(p.status)+'">'+status+'</span></span>'+
+        '<span class="top"><strong>'+esc(p.opponent)+'</strong><span class="status '+esc(stage.tone)+'">'+status+'</span></span>'+
         '<span class="date">'+esc(dateText(p.scheduledAt))+' · BO'+esc(p.bestOf||3)+'</span>'+
         '<small>'+(scoutingIds.has(p.id)?'Scoutar OP.GG…':esc((p.phase1Plan?.b1||"—")+" / "+(p.phase1Plan?.b2||"—")+" / "+(p.phase1Plan?.b3||"—")))+'</small>'+
       '</button>';
     }).join("");
   }
+  const reviewQuestions={result:'Hur slutade serien?',worked:'Vad fungerade?',difficult:'Vad blev svårt?',next:'Vad ändrar vi nästa gång?'};
+  function renderReview(plan){
+    const detail=$('plannerDetail'),review=plan.seriesReview||{},writable=hasKey();
+    detail.classList.remove('planner-match-view');
+    detail.innerHTML='<div class="planner-detail-head"><div><p class="eyebrow">EFTER MATCHEN</p><h2>'+esc(plan.opponent)+'</h2><p class="analysis-note">'+esc(dateText(plan.scheduledAt))+'</p></div><button type="button" class="secondary" data-planner-action="cancel">Tillbaka</button></div>'+
+      '<section id="seriesReviewForm" class="planner-section planner-review-form"><p>Hur gick matchen? Korta svar räcker.</p>'+
+      Object.entries(reviewQuestions).map(([key,label])=>'<label class="postmatch-field">'+label+'<textarea id="pr-'+key+'" maxlength="'+(key==='result'?40:600)+'" rows="'+(key==='result'?1:3)+'" '+(!writable?'readonly':'')+' placeholder="'+(key==='result'?'Till exempel 2–1 till oss':'En konkret observation räcker')+'">'+esc(review[key]||'')+'</textarea></label>').join('')+
+      (plan.gameNotes?.general?'<details><summary>Tidigare anteckningar</summary><p>'+nl(plan.gameNotes.general)+'</p></details>':'')+
+      '<p id="plannerSaveStatus" class="planner-save-status" role="status"></p>'+
+      '<button type="button" class="planner-save-btn" data-planner-action="'+(writable?'save-review':'unlock-review')+'">'+(writable?'Spara review & markera spelad':'Lås upp för att skriva review')+'</button></section>';
+  }
+  async function saveReview(){
+    if(saving||!hasKey())return;
+    const review=Object.fromEntries(Object.keys(reviewQuestions).map(k=>[k,$('pr-'+k).value.trim().slice(0,k==='result'?40:600)]));
+    const status=$('plannerSaveStatus');
+    if(!Object.values(review).some(Boolean)){status.textContent='Svara på minst en fråga innan du sparar.';return;}
+    saving=true;status.textContent='Sparar…';
+    const fields=[...$('plannerDetail').querySelectorAll('button,textarea')];fields.forEach(el=>el.disabled=true);
+    try{
+      const data=await request('POST','',{reviewOnly:true,id:current().id,review});
+      if(!data.plan)throw Error('Servern bekräftade inte sparningen. Försök igen.');
+      const plan=normalize(data.plan),i=plans.findIndex(p=>p.id===plan.id);if(i>=0)plans[i]=plan;
+      writeCache(plans);dirty=false;reviewing=false;lastSavedId=plan.id;render();
+    }catch(err){status.textContent='Kunde inte spara: '+err.message+' Dina svar finns kvar.';}
+    finally{saving=false;fields.forEach(el=>el.disabled=false);}
+  }
+  function evidenceHtml(plan){
+    const games=(plan.competitiveEvidence?.games||[]).filter(g=>g.source==='manual-screenshot');
+    if(!games.length)return '';
+    return '<section class="planner-section planner-preparation"><h3>Bildverifierade matcher</h3><p class="analysis-note">Manuellt tillagda eftersom matchdata saknas i Challengermode. Används i scouting och Draft Brain. KDA är matchutfall, inte ett mått på spelarstyrka.</p>'+
+      games.map(g=>'<details class="planner-evidence-game"><summary>'+esc(g.playedAt||g.dateLabel||'Datum saknas')+' · '+(g.result==='win'?'VINST':'FÖRLUST')+' · '+esc(g.duration)+' · '+esc(g.teamKills)+'–'+esc(g.enemyKills)+'</summary><div class="planner-evidence-picks">'+(g.picks||[]).map(p=>'<div><span>'+esc(String(p.role||'').toUpperCase())+'</span><strong>'+esc(p.champ)+'</strong><span>'+esc(p.displayName||p.player)+'</span><b>'+esc(p.kda)+'</b></div>').join('')+'</div><p class="analysis-note">'+esc(g.note||'')+'</p></details>').join('')+'</section>';
+  }
   function renderRead(plan){
     const detail=$("plannerDetail");
     detail.classList.toggle("planner-match-view",matchView);
     const bans=(plan.banPriority||[]).slice(0,5);
-    const conditionals=plan.conditionalBans||[];
-    const fallbacks=plan.ourFallbacks||[];
     const notes=plan.gameNotes||{};
     const stage=matchStage(plan);
     detail.innerHTML=
@@ -291,9 +322,9 @@
       '</div>'+
       (plan.status!=='cancelled'&&(stage.past||plan.status==='completed')?'<section class="planner-section"><div class="planner-section-head"><h3>Efter matchen</h3></div>'+
         '<p class="analysis-note">'+(plan.status==='completed'?'Serien är markerad som spelad. Banplan och scouting finns kvar som underlag.':'Matchtiden har passerat. Bekräfta att serien är spelad, eller ändra datumet om den flyttats.')+'</p>'+
-        noteBlock('Resultat & lärdomar',notes.general)+
-        '<button type="button" class="planner-edit-btn" data-planner-action="followup">'+(plan.status==='completed'?'Redigera eftermatchnoteringar':'Följ upp & markera som spelad')+'</button>'+
-        '<p class="analysis-note">Skriv gärna seriescore, vad som fungerade och en sak att ändra nästa gång. Win/Loss per game sparas separat i Draft Brain.</p></section>':'')+
+        (plan.seriesReview?'<div class="planner-note-grid">'+noteBlock('Resultat',plan.seriesReview.result)+noteBlock('Vad fungerade?',plan.seriesReview.worked)+noteBlock('Vad blev svårt?',plan.seriesReview.difficult)+noteBlock('Nästa gång',plan.seriesReview.next)+'</div>':noteBlock('Tidigare anteckningar',notes.general))+
+        '<button type="button" class="planner-edit-btn" data-planner-action="followup">'+(plan.status==='completed'?'Öppna matchreview':'Reviewa matchen')+'</button>'+
+        '<p class="analysis-note">En kort review räcker. Resultaten per game finns under kopplade games.</p></section>':'')+
       (window.RiftPostmatch?.seriesHTML(plan)||'')+
       '<div class="planner-phase1">'+
         ['b1','b2','b3'].map((k,i)=>'<div class="planner-ban-call"><span>B'+(i+1)+'</span><strong>'+esc(plan.phase1Plan?.[k]||"Öppen")+'</strong></div>').join("")+
@@ -309,6 +340,7 @@
         (plan.scoutingError?'<div class="planner-scout-warning">'+esc(plan.scoutingError)+'</div>':'')+
         (scoutLineup(plan).length?'<div class="planner-scout-profile-grid">'+scoutLineup(plan).map(scoutProfileCard).join("")+'</div>':'')+
       '</section>'+
+      evidenceHtml(plan)+
       '<div class="planner-preparation">'+(plan.challengermode?cmRosterHtml(plan):(plan.challengermodeUrl?'<section class="planner-section planner-cm-section"><div class="planner-section-head"><h3>Challengermode Live</h3><span class="planner-cm-badge pending">VÄNTAR</span></div><p class="analysis-note">'+esc(cmApiState.error||'Turneringen är länkad. Synka för roster, subs och matchhistorik.')+'</p></section>':''))+'</div>'+
       '<section class="planner-section">'+
         '<div class="planner-section-head"><h3>Ban-prioritet</h3><span class="analysis-note">3–5 champs</span></div>'+
@@ -319,16 +351,8 @@
           '<span class="planner-ban-why">'+esc(b.why||"")+'</span>'+
         '</div>').join(""):'<span class="analysis-note">Ingen banlista ännu.</span>')+'</div>'+
       '</section>'+
-      '<div class="planner-two-col">'+
-        '<section class="planner-section"><div class="planner-section-head"><h3>Comp-bans</h3><span class="analysis-note">om vi visar X</span></div>'+
-          '<div class="planner-condition-list">'+(conditionals.length?conditionals.map(c=>'<div class="planner-condition"><strong>'+esc(c.condition||"")+'</strong><span class="bans">'+esc((c.bans||[]).join(" / "))+'</span><p>'+esc(c.why||"")+'</p></div>').join(""):'<span class="analysis-note">Inga conditional bans.</span>')+'</div>'+
-        '</section>'+
-        '<section class="planner-section"><div class="planner-section-head"><h3>Om våra picks bannas</h3><span class="analysis-note">fallback</span></div>'+
-          '<div class="planner-fallback-list">'+(fallbacks.length?fallbacks.map(f=>'<div class="planner-fallback"><strong>'+esc(f.champ||"")+'</strong><span class="options">→ '+esc((f.options||[]).join(" / "))+'</span></div>').join(""):'<span class="analysis-note">Inga fallbacks.</span>')+'</div>'+
-        '</section>'+
-      '</div>'+
       '<section class="planner-section">'+
-        '<div class="planner-section-head"><h3>BO3 notes</h3><span class="analysis-note">uppdatera mellan games</span></div>'+
+        '<div class="planner-section-head"><h3>Matchanteckningar</h3><span class="analysis-note">uppdatera mellan games</span></div>'+
         '<div class="planner-note-grid">'+
           noteBlock("INFÖR SERIEN",notes.preSeries)+noteBlock("GAME 1",notes.game1)+noteBlock("GAME 2",notes.game2)+noteBlock("ÖVRIGT",notes.general)+
         '</div>'+
@@ -345,10 +369,6 @@
     detail.classList.remove("planner-match-view");
     const bans=[...(plan.banPriority||[])];
     while(bans.length<5)bans.push({champ:"",type:"watch",priority:bans.length+1,why:""});
-    const conditionals=[...(plan.conditionalBans||[])];
-    while(conditionals.length<3)conditionals.push({condition:"",bans:[],why:""});
-    const fallbacks=[...(plan.ourFallbacks||[])];
-    while(fallbacks.length<6)fallbacks.push({champ:"",options:[]});
     const notes=plan.gameNotes||{};
     detail.innerHTML=
       '<div class="planner-detail-head"><div><p class="eyebrow">REDIGERA PLAN</p><h2>'+esc(plan.opponent)+'</h2></div>'+
@@ -387,18 +407,7 @@
           '<textarea data-field="why" placeholder="Varför?">'+esc(b.why||'')+'</textarea>'+
         '</div>').join("")+'</div>'+
       '</section>'+
-      '<div class="planner-two-col">'+
-        '<section class="planner-section"><div class="planner-section-head"><h3>Conditional bans</h3></div><div class="planner-edit-grid">'+conditionals.map((c,i)=>'<div class="planner-edit-conditional" data-edit-conditional="'+i+'">'+
-          '<input data-field="condition" placeholder="Om vi spelar..." value="'+esc(c.condition||'')+'">'+
-          '<input data-field="bans" placeholder="Poppy, Vi" value="'+esc((c.bans||[]).join(", "))+'">'+
-          '<input data-field="why" placeholder="Varför?" value="'+esc(c.why||'')+'">'+
-        '</div>').join("")+'</div></section>'+
-        '<section class="planner-section"><div class="planner-section-head"><h3>Våra fallbacks</h3></div><div class="planner-edit-grid">'+fallbacks.map((f,i)=>'<div class="planner-edit-fallback" data-edit-fallback="'+i+'">'+
-          '<input data-field="champ" placeholder="Jarvan IV" value="'+esc(f.champ||'')+'">'+
-          '<input data-field="options" placeholder="Wukong, Vi" value="'+esc((f.options||[]).join(", "))+'">'+
-        '</div>').join("")+'</div></section>'+
-      '</div>'+
-      '<section class="planner-section"><div class="planner-section-head"><h3>BO3 notes</h3></div><div class="planner-note-grid">'+
+      '<section class="planner-section"><div class="planner-section-head"><h3>Matchanteckningar</h3></div><div class="planner-note-grid">'+
         field("Inför serien",'<textarea id="pePreSeries">'+esc(notes.preSeries||'')+'</textarea>')+
         field("Game 1",'<textarea id="peGame1">'+esc(notes.game1||'')+'</textarea>')+
         field("Game 2",'<textarea id="peGame2">'+esc(notes.game2||'')+'</textarea>')+
@@ -427,15 +436,6 @@
       type:row.querySelector('[data-field="type"]').value,
       priority:i+1,
       why:row.querySelector('[data-field="why"]').value.trim()
-    })).filter(x=>x.champ);
-    out.conditionalBans=[...document.querySelectorAll("[data-edit-conditional]")].map(row=>({
-      condition:row.querySelector('[data-field="condition"]').value.trim(),
-      bans:row.querySelector('[data-field="bans"]').value.split(",").map(x=>x.trim()).filter(Boolean),
-      why:row.querySelector('[data-field="why"]').value.trim()
-    })).filter(x=>x.condition||x.bans.length);
-    out.ourFallbacks=[...document.querySelectorAll("[data-edit-fallback]")].map(row=>({
-      champ:row.querySelector('[data-field="champ"]').value.trim(),
-      options:row.querySelector('[data-field="options"]').value.split(",").map(x=>x.trim()).filter(Boolean)
     })).filter(x=>x.champ);
     out.gameNotes={preSeries:val("pePreSeries"),game1:val("peGame1"),game2:val("peGame2"),general:val("peGeneral")};
     return normalize(out);
@@ -476,16 +476,6 @@
     }catch{
       return [];
     }
-  }
-  function defaultFallbacks(){
-    return [
-      {champ:"Jarvan IV",options:["Wukong","Vi","Xin Zhao"]},
-      {champ:"Annie",options:["Vex","Taliyah","Hwei"]},
-      {champ:"Xin Zhao",options:["Volibear","Jarvan IV","Wukong"]},
-      {champ:"Ashe",options:["Varus","Xayah"]},
-      {champ:"Nautilus",options:["Leona","Maokai"]},
-      {champ:"Malphite",options:["Sion","Shen","Mordekaiser"]}
-    ];
   }
   function slugify(value){
     return String(value||"match").toLowerCase()
@@ -679,7 +669,7 @@
       banPriority:[],
       phase1Plan:{b1:"",b2:"",b3:"",note:"Ny matchup — fyll banplan efter scouting."},
       conditionalBans:[],
-      ourFallbacks:defaultFallbacks(),
+      ourFallbacks:[],
       gameNotes:{
         preSeries:preNotes,
         game1:"",
@@ -733,13 +723,13 @@
     updateDbBadge();
     renderList();
     // Background sync must never replace a form the user is editing.
-    if(editing&&$("peOpponent"))return;
+    if((editing&&$("peOpponent"))||(reviewing&&$("seriesReviewForm")))return;
     const p=editing&&editPlan?editPlan:plans.find(x=>x.id===selectedId);
     if(!p){
       $("plannerDetail").innerHTML='<div class="planner-empty"><strong>Välj en match</strong><p>Banplan, scouting och BO3-notes visas här.</p></div>';
       return;
     }
-    editing?renderEdit(normalize(p)):renderRead(normalize(p));
+    reviewing?renderReview(normalize(p)):editing?renderEdit(normalize(p)):renderRead(normalize(p));
   }
   function show(){
     updateDbBadge();
@@ -763,13 +753,15 @@
       const id=$('plannerUnlinkedGame')?.value;
       if(id&&typeof openDraftReview==='function')openDraftReview(id,current());
     }
-    if(action==="edit"){if(await ensureWrite()){editing=true;dirty=false;editPlan=normalize(current());render();}}
-    if(action==="followup"&&await ensureWrite()){
-      editing=true;editPlan=normalize(current());dirty=editPlan.status!=='completed';editPlan.status='completed';render();
-      if($("plannerSaveStatus"))$("plannerSaveStatus").textContent='Kontrollera status och spara för att bekräfta';
-      $("peGeneral")?.focus();
+    if(action==="edit"){if(await ensureWrite()){reviewing=false;editing=true;dirty=false;editPlan=normalize(current());render();}}
+    if(action==="followup"){
+      reviewing=true;editing=false;dirty=false;render();
     }
-    if(action==="cancel"&&mayDiscard()){editing=false;dirty=false;editPlan=null;render();}
+    if(action==="unlock-review"&&await ensureWrite()){
+      $('seriesReviewForm')?.remove();render();
+    }
+    if(action==="save-review")await saveReview();
+    if(action==="cancel"&&mayDiscard()){editing=false;reviewing=false;dirty=false;editPlan=null;render();}
     if(action==="view"){matchView=!matchView;render();}
     if(action==="save")await saveCurrent();
     if(action==="scout")await scoutPlan();
@@ -777,7 +769,7 @@
     if(action==="delete")await deleteCurrent();
   });
   $("plannerDetail")?.addEventListener("input",()=>{
-    if(!editing)return;
+    if(!editing&&!reviewing)return;
     dirty=true;lastSavedId=null;
     if($("plannerSaveStatus"))$("plannerSaveStatus").textContent="Osparade ändringar";
   });

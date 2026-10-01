@@ -19,7 +19,7 @@
       const played=[];
       games.forEach(game=>(game.picks||[]).forEach(pick=>{
         // Exact identity only. Old roster members and ambiguous names cannot become current starters.
-        if(matches(pick,entry)&&lineup.filter(e=>matches(pick,e)).length===1)played.push(pick);
+        if(matches(pick,entry)&&lineup.filter(e=>matches(pick,e)).length===1)played.push({...pick,manual:game.source==='manual-screenshot'});
       }));
       const recentRole=[...played].reverse().find(p=>roles.includes(p.role))?.role;
       const lockedRoles=lineup.filter(e=>e.source==='challengermode').map(e=>e.role);
@@ -29,10 +29,10 @@
       const add=(champ)=>{
         const ch=canonical(champ);if(!ch)return null;
         let row=out.find(x=>x.champ===ch&&x.player===entry.player.riotId);
-        if(!row){row={champ:ch,role,player:entry.player.riotId,tier:rankTier(entry.player),cm:0,season:0,recent:0,winrate:null,roleCertain};out.push(row);}
+        if(!row){row={champ:ch,role,player:entry.player.riotId,tier:rankTier(entry.player),cm:0,manual:0,season:0,recent:0,winrate:null,roleCertain};out.push(row);}
         return row;
       };
-      played.forEach(pick=>{const row=add(pick.champ);if(row)row.cm++;});
+      played.forEach(pick=>{const row=add(pick.champ);if(row){row.cm++;if(pick.manual)row.manual++;}});
       (entry.player?.topChampions||[]).forEach(c=>{
         const ch=canonical(c.champ);if(!ch)return;
         // Only the starter's relevant role pool, unless tournament evidence confirms the pick.
@@ -84,7 +84,8 @@
   }
   function sourceText(row){
     const parts=[];
-    if(row.cm)parts.push('CM: '+row.cm+' tävlingspick'+(row.cm===1?'':'s'));
+    if(row.cm-row.manual)parts.push('CM: '+(row.cm-row.manual)+' tävlingspicks');
+    if(row.manual)parts.push('Bildverifierat: '+row.manual+' tävlingspick'+(row.manual===1?'':'s'));
     if(row.recent)parts.push('OP.GG: '+row.recent+' senaste matcher');
     else if(row.season)parts.push('OP.GG: '+row.season+' säsongsmatcher');
     if(row.winrate!=null&&row.season>=10)parts.push(row.winrate+'% / '+row.season+' matcher');
@@ -108,7 +109,7 @@
   function summary(){
     const rows=evidence();
     if(!rows.length)return 'Scouting saknas för aktuella starters. Inga generiska target bans fylls på.';
-    return 'CM + OP.GG · '+new Set(rows.map(r=>r.player)).size+' starters med data'+
+    return (rows.some(r=>r.manual)?'CM + bilder + OP.GG · ':'CM + OP.GG · ')+new Set(rows.map(r=>r.player)).size+' starters med data'+
       (rows.some(r=>r.recent)?' · senaste matcher vägs in':' · OP.GG bygger på säsongsdata');
   }
   window.RiftOpponent={active,key:()=>selected+':'+revision,pickSignal,summary,

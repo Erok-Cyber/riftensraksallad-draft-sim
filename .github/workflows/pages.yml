@@ -53,6 +53,7 @@ jobs:
           node tests/brain-regression.cjs
           node tests/groq-policy.cjs
           node tests/postmatch.cjs
+          node tests/planner-review.cjs
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

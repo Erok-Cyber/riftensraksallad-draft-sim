@@ -241,3 +241,15 @@ console.log('PASS: go-to/fallback priorities, comfort-backed strongest-player pr
  remote.fire('groqPause','click');assert.equal(remote.elements.get('groqBadge').textContent,'AV');
  console.log('PASS: remote AI opt-in, reordering without locking, stale response rejection, invalid-output fallback, pause.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
+
+const xeniaGames=JSON.parse(fs.readFileSync(path.join(root,'tests/fixtures/xenia-screenshots.json'),'utf8'));
+const xeniaFixture={id:'xenia',status:'upcoming',competitiveEvidence:{currentRoster:xeniaGames[0].picks.map(({player,riotId,role})=>({player,riotId,role})),games:xeniaGames},scoutingPlayers:[]};
+const xenia=harness(['live.js','advanced-engine.js','draft-ai.js','scouting-lineup.js','brain-opponent.js'],{'rs_ban_plans_cache':JSON.stringify([xeniaFixture]),'rs_brain_opponent':'xenia'});
+xenia.fire('document','DOMContentLoaded');xenia.run('userSide="blue";events=[];step=0;championRoster.push("Lulu","Nasus");');
+assert.equal(xenia.run('window.RiftOpponent.scouting().find(r=>r.champ==="Lulu").cm'),3);
+assert.equal(xenia.run('window.RiftOpponent.scouting().find(r=>r.champ==="Sylas").role'),'jungle');
+assert(xenia.run('window.RiftOpponent.banReason("Lulu").includes("Bildverifierat: 3")'));
+assert(!xenia.run('window.RiftOpponent.banReason("Lulu").includes("CM:")'));
+xenia.run('events=[{side:"red",type:"pick",role:"support",champ:"Lulu"}];');
+assert(!xenia.run('window.RiftOpponent.banCandidates().includes("Lulu")'));
+console.log('PASS: Xenia screenshots feed exact starters, off-role tournament picks and accurate source labels.');

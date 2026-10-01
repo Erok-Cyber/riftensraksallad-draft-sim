@@ -1,0 +1,34 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
+const root=path.join(__dirname,'..');
+(async()=>{
+ const {mergeReview,preserveEvidence}=await import('../supabase/functions/rift-team-planner/plan-policy.mjs');
+ const game={id:'image-1',source:'manual-screenshot',playedAt:'2026-09-12',duration:'23:09',result:'win',picks:[{player:'starter',champ:'Azir'}]};
+ const original={id:'series-1',opponent:'Team',status:'upcoming',scheduledAt:'2026-09-30T18:00:00Z',phase1Plan:{b1:'Keep'},competitiveEvidence:{currentRoster:[{player:'starter'}],games:[game]},gameNotes:{general:'Keep'},serverOnly:'Keep'};
+ const reviewed=mergeReview(original,{worked:'Good',phase1Plan:{b1:'erase'}},'test-time');
+ assert.equal(original.status,'upcoming');assert.equal(reviewed.status,'completed');assert.equal(reviewed.phase1Plan.b1,'Keep');assert.equal(reviewed.serverOnly,'Keep');assert.deepEqual(reviewed.competitiveEvidence,original.competitiveEvidence);assert.equal(reviewed.seriesReview.updatedAt,'test-time');
+ assert.throws(()=>mergeReview(original,{}));assert.equal(mergeReview(original,{worked:'x'.repeat(900)}).seriesReview.worked.length,600);
+ const stale={...original,competitiveEvidence:{games:[]}};
+ let merged=preserveEvidence(stale,reviewed);assert.equal(merged.competitiveEvidence.games.length,1);assert.equal(merged.seriesReview.worked,'Good');
+ for(let i=0;i<3;i++)merged=preserveEvidence(merged,reviewed);
+ assert.equal(merged.competitiveEvidence.games.length,1,'repeated sync must not duplicate images');
+ assert.equal(preserveEvidence({...original,competitiveEvidence:{games:[{...game,id:'different-id'}]}},original).competitiveEvidence.games.length,1,'same screenshot data must not count twice');
+ const nodes=new Map(),storage=new Map([['rs_team_access_key','fixture-only']]);
+ const el=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:'',value:'',disabled:false,classList:{remove(){},toggle(){}},addEventListener(){},querySelectorAll(){return [];}});return nodes.get(id);};
+ let fail=true,calls=0;
+ const ctx={window:{RiftScouting:{lineup:()=>[]},RIFT_DB_CONFIG:{plannerFunctionUrl:'https://fixture.invalid'},addEventListener(){}},document:{getElementById:el,addEventListener(){}},localStorage:{getItem:k=>storage.get(k)||'',setItem:(k,v)=>storage.set(k,v)},Date,Map,Set,console,confirm:()=>true,alert(){},URL,
+ fetch:async()=>{calls++;return {ok:!fail,text:async()=>JSON.stringify(fail?{error:'Offline'}:{plan:reviewed})}}};
+ vm.createContext(ctx);
+ let code=fs.readFileSync(path.join(root,'planner.js'),'utf8');
+ code=code.replace('window.RiftBanPlanner={','window.__test={matchStage,renderReview,saveReview,setup:p=>{plans=[p];selectedId=p.id;reviewing=true;dirty=true;render=()=>{};},state:()=>({plans,dirty,reviewing,saving}),renderRead};\n  window.RiftBanPlanner={');
+ vm.runInContext(code,ctx);const api=ctx.window.__test;
+ assert.equal(api.matchStage(original,Date.parse('2026-10-01')).tone,'review');assert.equal(api.matchStage(reviewed).tone,'completed');
+ api.setup(original);api.renderReview(original);
+ const html=el('plannerDetail').innerHTML;
+ assert(html.includes('Hur slutade serien?'));assert(!html.includes('peB1'));assert(!html.includes('Redigera plan'));assert(!html.includes('Comp-bans'));
+ el('pr-worked').value='Good';await api.saveReview();
+ assert(api.state().dirty);assert(api.state().reviewing);assert.equal(api.state().plans[0].status,'upcoming');assert.equal(el('pr-worked').value,'Good');assert(!api.state().saving);
+ fail=false;await api.saveReview();assert(!api.state().dirty);assert(!api.state().reviewing);assert.equal(api.state().plans[0].status,'completed');
+ storage.delete('rs_team_access_key');const before=calls;await api.saveReview();assert.equal(calls,before,'read-only must not POST');
+ api.renderRead(reviewed);assert(!el('plannerDetail').innerHTML.includes('Comp-bans'));assert(!el('plannerDetail').innerHTML.includes('Om våra picks bannas'));
+ console.log('PASS: focused review UI, status tones, protected payload, bounded review, failed save retains answers, read-only, idempotent manual evidence.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

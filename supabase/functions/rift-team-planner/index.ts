@@ -1,5 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 
+import { mergeReview, preserveEvidence } from "./plan-policy.mjs";
+
 const corsHeaders={
   "Access-Control-Allow-Origin":"*",
   "Access-Control-Allow-Headers":"content-type, x-team-key",
@@ -824,15 +826,27 @@ Deno.serve(async(req:Request)=>{
       const body=await req.json().catch(()=>null);
       if(body?.verifyOnly===true)return json({ok:true,writeAccess:true});
       let plan=body?.plan;
+      const planId=body?.reviewOnly===true?body.id:plan?.id;
+      if(typeof planId!=='string'||!planId.trim())return json({error:"Invalid plan"},400);
+      const {data:existing,error:readError}=await db.from("team_plans").select("id,opponent,scheduled_at,status,payload").eq("team_slug",TEAM_SLUG).eq("id",planId).maybeSingle();
+      if(readError)return json({error:"Could not read current plan"},500);
+      const stored=existing?{...existing.payload,id:existing.id,opponent:existing.opponent,scheduledAt:existing.scheduled_at,status:existing.status}:null;
+      if(body?.reviewOnly===true){
+        if(!stored)return json({error:"Matchen finns inte kvar."},404);
+        try{plan=mergeReview(stored,body.review)}catch{return json({error:"Svara på minst en fråga."},400)}
+      }else if(stored){
+        // Polling/scouting is not an edit: start from current server data, never a stale browser copy.
+        plan=body?.syncChallengermode===true||body?.scout===true?stored:preserveEvidence(plan,stored);
+      }
       if(!plan||typeof plan.id!=="string"||typeof plan.opponent!=="string"||!plan.scheduledAt)return json({error:"Invalid plan"},400);
 
       let cmSyncError="";
-      if(body?.syncChallengermode===true){
+      if(body?.syncChallengermode===true&&body?.reviewOnly!==true){
         try{plan=await syncChallengermodePlan(plan)}
         catch(err){cmSyncError=clean(err instanceof Error?err.message:err,220)}
       }
 
-      if(body?.scout===true){
+      if(body?.scout===true&&body?.reviewOnly!==true){
         try{plan=await scoutPlan(plan)}
         catch(err){
           plan={
