@@ -104,6 +104,27 @@ const migrated=harness(['live.js','advanced-engine.js','draft-ai.js','team-roste
 assert.equal(migrated.run('window.RiftRoster.player("support").name'),'Frippen');
 assert.equal(migrated.run('teamPool.support[0]'),'Braum');
 console.log('PASS: lineup profiles, seven Jacob candidates, core preservation, cache invalidation, legal picks, validation and reload.');
+// Role-specific substitutions preserve the core and reject uncurated comp bonuses.
+const subs=harness(['live.js','advanced-engine.js','draft-ai.js','team-roster.js']);
+subs.run('window.RiftRoster.savePlayer("top","","Topsub","Ornn, Kennen")');
+assert(subs.run('comps["PRESS R"].alts.top.includes("Ornn")'));
+assert(!subs.run('comps["EARLY SKIRMISH"].alts.top.includes("Ornn")'));
+subs.run('window.RiftRoster.savePlayer("jungle","","Junglesub","Amumu, Sejuani")');
+subs.run('window.RiftRoster.savePlayer("mid","","Midsub","Orianna, Galio")');
+subs.run('window.RiftRoster.savePlayer("adc","","ADCsub","Miss Fortune, Jinx")');
+assert(subs.run('comps["PRESS R"].alts.jungle.includes("Amumu")'));
+assert(subs.run('comps["PRESS R"].alts.mid.includes("Orianna")'));
+assert(subs.run('comps["PRESS R"].alts.adc.includes("Miss Fortune")'));
+assert.equal(subs.run('JSON.stringify(Object.values(comps).map(c=>c.core))'),coreBefore);
+subs.run('userSide="blue";step=20;events=roles.map(role=>({type:"pick",side:"blue",champ:teamPool[role][0],role,player:window.RiftRoster.player(role)}));window.RiftOpponent={active:()=>({id:"series-1",opponent:"Opponent",bestOf:3})};captureDraftContext();');
+const frozen=subs.run('JSON.stringify(savedDraftContext)');
+subs.run('window.RiftRoster.select("top","core-top")');
+assert.equal(subs.run('JSON.stringify(captureDraftContext())'),frozen,'changing roster cannot rewrite the finished draft');
+const firstId=subs.run('buildMatchRecord().id');assert.equal(subs.run('buildMatchRecord().id'),firstId,'retry must reuse match ID');
+assert.equal(subs.run('buildMatchRecord().draftContext.roster.players[0].name'),'Topsub');
+subs.run('savedDraftContext=null;events=events.map(({player,...rest})=>rest)');
+assert.equal(subs.run('captureDraftContext().roster'),null,'legacy drafts must not invent historical players');
+console.log('PASS: subs in all roles, immutable historical roster, stable save ID, honest legacy data.');
 // Review replay must be isolated from the real draft and must not contain future decisions.
 brain.storage.set('rs_draft_state','real-draft-must-survive');
 brain.storage.set('rs_review_replay',JSON.stringify({side:'blue',patch:'26.18',events:[{type:'ban',side:'blue',champ:'Garen'}]}));

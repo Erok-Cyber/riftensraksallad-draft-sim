@@ -99,6 +99,22 @@
       return {cloud:false,match,error:err};
     }
   }
+  // Metadata edits are confirmed online before replacing the cached match.
+  // Fetch the latest payload so review/link edits never discard a newer draft snapshot.
+  async function updateMatchDetails(id,patch){
+    if(configured()&&!hasTeamKey())throw new Error('Lås upp lagdatabasen innan du sparar.');
+    const list=configured()?await fetchRemote():localMatches();
+    const before=list.find(m=>String(m.id)===String(id));
+    if(!before)throw new Error('Matchen finns inte längre. Synka historiken.');
+    const match={...before};
+    if(Object.prototype.hasOwnProperty.call(patch,'series'))match.series=patch.series;
+    if(Object.prototype.hasOwnProperty.call(patch,'postReview'))match.postReview=patch.postReview;
+    match.detailsUpdatedAt=new Date().toISOString();
+    if(configured())await uploadOne(match);
+    writeLocal(uniqueById([...localMatches().filter(m=>String(m.id)!==String(id)),match]));
+    setState({mode:configured()?'shared':'local',status:configured()?'Delad · skrivning':'Lokal',error:null});
+    return match;
+  }
   async function deleteMatch(id){
     if(configured()&&!hasTeamKey()){
       setState({mode:"readonly",status:"Delad · läsning",error:null});
@@ -175,7 +191,7 @@
   function subscribe(fn){listeners.add(fn);fn({...state});return()=>listeners.delete(fn)}
   function getState(){return {...state}}
 
-  window.RiftSharedData={configured,hasTeamKey,localMatches,saveMatch,deleteMatch,sync,connect,disconnect,subscribe,getState};
+  window.RiftSharedData={configured,hasTeamKey,localMatches,saveMatch,updateMatchDetails,deleteMatch,sync,connect,disconnect,subscribe,getState};
   setState({
     mode:configured()?(hasTeamKey()?"shared":"readonly"):"local",
     status:configured()?(hasTeamKey()?"Delad · synkar…":"Delad · läsning"):"Lokal · databas ej aktiverad"

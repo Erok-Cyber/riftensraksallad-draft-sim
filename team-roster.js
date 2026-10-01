@@ -14,6 +14,13 @@
     'OBJECTIVE CONTROL':{Braum:'skydda backline vid chokes',Poppy:'zonkontroll och anti-dash',Galio:'counter-engage vid objectives'},
     'JUNGLE CARRY':{Shen:'skydd och follow-up för junglern',Braum:'peel och setup',Poppy:'anti-dive runt carry',Galio:'följ upp junglerns engage'}
   };
+  // Conservative role-specific variants. Unknown fits stay selectable, but receive no comp bonus.
+  const roleFits={
+    'EARLY SKIRMISH':{top:['Pantheon','Kled','Sett','Camille'],jungle:['Lee Sin','Elise','Rek\'Sai','Poppy'],mid:['Galio','Lissandra','LeBlanc'],adc:['Kalista','Lucian','Draven'],support:['Rell','Rakan','Alistar','Thresh']},
+    'PRESS R':{top:['Ornn','Kennen','Gnar','Sett'],jungle:['Amumu','Sejuani','Zac','Diana'],mid:['Lissandra','Orianna','Neeko','Galio'],adc:['Miss Fortune','Samira','Aphelios'],support:['Rell','Rakan','Alistar']},
+    'OBJECTIVE CONTROL':{top:['Ornn','Rumble','Cho\'Gath'],jungle:['Amumu','Sejuani','Zac','Ivern'],mid:['Orianna','Azir','Ziggs','Cassiopeia'],adc:['Caitlyn','Sivir','Aphelios'],support:['Zyra','Rell','Braum','Poppy']},
+    'JUNGLE CARRY':{top:['Ornn','Poppy','Gragas'],jungle:['Bel\'Veth','Master Yi','Karthus'],mid:['Galio','Lissandra','Orianna'],adc:['Sivir','Jhin'],support:['Lulu','Renata Glasc','Thresh','Rakan']}
+  };
   const esc=value=>String(value).replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
   function validate(raw){
     const out=clone(defaults);
@@ -36,11 +43,12 @@
     });
     Object.entries(baseComps).forEach(([name,comp])=>{
       comps[name].alts=clone(comp.alts);
-      roles.forEach(role=>{comps[name].alts[role]=(comp.alts[role]||[]).filter(ch=>teamPool[role].includes(ch));});
+      roles.forEach(role=>{comps[name].alts[role]=[...new Set([...(comp.alts[role]||[]),...(roleFits[name]?.[role]||[])])].filter(ch=>teamPool[role].includes(ch)&&ch!==comp.core[role]);});
       comps[name].alts.support=[...new Set([...comps[name].alts.support,...Object.keys(supportFits[name]||{}).filter(ch=>teamPool.support.includes(ch))])].filter(ch=>ch!==comp.core.support);
     });
   }
   function key(){return JSON.stringify(roles.map(r=>[state.active[r],teamPool[r],comfort[r]]));}
+  function compOptions(){return Object.fromEntries(Object.entries(comps).map(([name,c])=>[name,Object.fromEntries(roles.map(role=>[role,[...new Set([c.core[role],...(c.alts[role]||[])])].filter(ch=>teamPool[role].includes(ch))]))]));}
   function persist(){try{localStorage.setItem(KEY,JSON.stringify(state));return true;}catch{return false;}}
   function refresh(message){
     apply();renderUI();if(userSide)render();
@@ -78,9 +86,12 @@
     holder.querySelectorAll('[data-roster-role]').forEach(el=>el.addEventListener('change',()=>select(el.dataset.rosterRole,el.value)));
     const unavailablePicks=ours().filter(e=>e.role&&teamPool[e.role]&&!teamPool[e.role].includes(e.champ));
     $('rosterWarning').textContent=unavailablePicks.length?'Redan låst utanför aktiv pool: '+unavailablePicks.map(e=>e.champ).join(', ')+'. Använd Undo om du vill ändra draften.':'';
+    const fits=compOptions(),missing=name=>roles.filter(r=>!fits[name][r].length).map(r=>roleNames[r]);
+    const early=missing('EARLY SKIRMISH'),fallback=missing('PRESS R');
+    if($('rosterCompStatus'))$('rosterCompStatus').textContent=!early.length?'Early Skirmish har comp-alternativ i alla fem aktiva pooler.':!fallback.length?'Early Skirmish saknar bedömt comp-alternativ för '+early.join(', ')+'. Press R har alternativ i alla roller.':'Comp-fit behöver bedömas: Early Skirmish ('+early.join(', ')+'), Press R ('+fallback.join(', ')+'). Alla poolens champions är fortfarande valbara.';
     fillEditor();
   }
-  window.RiftRoster={key,player:role=>clone(player(role)),select,savePlayer,parsePool,snapshot:()=>clone(state)};
+  window.RiftRoster={key,player:role=>clone(player(role)),select,savePlayer,parsePool,snapshot:()=>clone(state),compOptions:()=>clone(compOptions())};
   // Complete the support profiles in the existing explainable engine.
   ['frontline','tanks','melee'].forEach(trait=>traits[trait].add('Braum'));
   damageType.Braum='UTIL';damageType.Poppy='AD';

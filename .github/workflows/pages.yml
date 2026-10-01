@@ -49,8 +49,10 @@ jobs:
           node --check brain-opponent.js
           node --check team-roster.js
           node --check groq-coach.js
+          node --check postmatch.js
           node tests/brain-regression.cjs
           node tests/groq-policy.cjs
+          node tests/postmatch.cjs
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

@@ -15,6 +15,7 @@
     const payload={side:userSide,events:events.map(({side,type,champ,role})=>({side,type,champ,role})),pools:JSON.parse(JSON.stringify(teamPool)),forcedRole:selectedRole||null,
       candidates:list.map(c=>({ch:c.ch,role:c.role,score:t.type==='ban'?window.RiftOpponent?.banScore?.(c.ch)||0:c.total||c.score||0,reasons:c.reasons||[],evidence:t.type==='ban'?window.RiftOpponent?.banReason(c.ch)||'':''})),
       comfort:roles.flatMap(role=>teamPool[role].map(ch=>({role,ch,value:comfort[role]?.[ch]||5}))),
+      compOptions:window.RiftRoster?.compOptions?.()||{},
       decisionContext:list.map(c=>({id:id(c),urgency:c.urgency?.reason||'',alternatives:c.urgency?.alternatives||[],risk:c.risk?.reasons?.join(' · ')||''})),
       targeted:!!window.RiftOpponent?.active(),scouting:window.RiftOpponent?.scouting?.(final)||[],scoutingNote:window.RiftOpponent?.active()?window.RiftOpponent.summary():'Ingen motståndarscouting vald.',patch:window.RiftStats?.getStatus?.()?.patch||''};
     payload.mode=final?'gameplan':'draft';
@@ -28,6 +29,7 @@
     byId('groqPlan').textContent=answer?.advice.plan||'';
     byId('groqNext').textContent=answer?.advice.nextStep?'Nästa steg: '+answer.advice.nextStep:'';
     byId('groqUncertainty').textContent=answer?.advice.uncertainty?'Osäkerhet: '+answer.advice.uncertainty:'';
+    if(answer?.final&&typeof captureFinalAI==='function')captureFinalAI();
   }
   function controls(){byId('groqPause').hidden=!enabled;byId('groqAnalyze').disabled=busy;byId('groqAnalyze').textContent=busy?'Analyserar…':enabled?(events.length===20?'Uppdatera gameplan':'Analysera igen'):'Aktivera AI';}
   function recommendations(list){
@@ -89,6 +91,10 @@
   byId('groqAnalyze').addEventListener('click',activate);
   byId('groqPause').addEventListener('click',()=>{enabled=false;generation++;controller?.abort();clearTimeout(timer);busy=false;answer=null;adviceUI();controls();status('AI pausad. Regelmotorn är aktiv.','AV');renderRecommendation();});
   byId('groqAuto').addEventListener('change',()=>{if(!byId('groqAuto').checked)clearTimeout(timer);else if(enabled&&!answer&&!busy&&snapshot()?.key!==failedKey)analyze();});
-  window.RiftGroq={recommendations,refresh};
+  function savedAdvice(){
+    if(!enabled||!answer||snapshot()?.key!==answer.key)return null;
+    return JSON.parse(JSON.stringify({final:!!answer.final,advice:answer.advice,model:'openai/gpt-oss-120b',capturedAt:new Date().toISOString()}));
+  }
+  window.RiftGroq={recommendations,refresh,snapshot:savedAdvice};
   refresh();controls();
 })();

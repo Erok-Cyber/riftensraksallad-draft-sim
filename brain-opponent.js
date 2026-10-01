@@ -112,6 +112,7 @@
       (rows.some(r=>r.recent)?' · senaste matcher vägs in':' · OP.GG bygger på säsongsdata');
   }
   window.RiftOpponent={active,key:()=>selected+':'+revision,pickSignal,summary,
+    plans:()=>plans.filter(p=>p.status!=='cancelled').map(p=>({id:String(p.id),opponent:p.opponent,scheduledAt:p.scheduledAt,bestOf:p.bestOf||3,status:p.status})),
     scouting:(final=false)=>(final?evidence():availableEvidence()).map(({champ,role,cm,season,recent,roleCertain})=>({champ,role,cm,season,recent,roleCertain})),
     bans:()=>banRows().slice(0,3).map(r=>r.ch),
     banCandidates:()=>banRows().slice(0,8).map(r=>r.ch),

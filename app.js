@@ -543,7 +543,7 @@ function syncDraftArchiveFromMatches(matches){
     scaling:m.scaling||null,bestWindow:m.bestWindow||null,topRisk:m.topRisk||null,
     fightStyle:m.fightStyle||null,objectiveStyle:m.objectiveStyle||null,
     result:m.result||null,matchType:m.matchType||null,patch:m.patch||null,
-    matchup:m.matchup||null,draftTimeline:m.draftTimeline||[]
+    matchup:m.matchup||null,draftTimeline:m.draftTimeline||[],series:m.series||null,draftContext:m.draftContext||null,postReview:m.postReview||null
   }));
   localStorage.setItem("rs_draft_archive",JSON.stringify(archive));
 }
@@ -845,19 +845,22 @@ function reviewEscape(value){
   return String(value??"").replace(/[&<>"']/g,ch=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[ch]));
 }
 function closeDraftReview(){
+  if(window.RiftPostmatch&&!window.RiftPostmatch.mayClose())return;
+  window.RiftPostmatch?.reset();
   const overlay=$("draftReviewOverlay");
   if(!overlay)return;
   overlay.classList.add("hidden");
   overlay.setAttribute("aria-hidden","true");
   document.body.classList.remove("review-open");
 }
-function openDraftReview(id){
+function openDraftReview(id,preferredSeries=null){
+  if(window.RiftPostmatch&&!window.RiftPostmatch.mayClose())return;
   const m=matchHistoryData().find(x=>x.id===id);
   if(!m)return;
   const overlay=$("draftReviewOverlay");
   const d=new Date(m.savedAt);
   const date=isNaN(d)?m.savedAt:d.toLocaleString("sv-SE",{dateStyle:"medium",timeStyle:"short"});
-  $("draftReviewTitle").textContent=(m.result==="win"?"WIN":"LOSS")+" · "+(m.comp||"Draft");
+  $("draftReviewTitle").textContent=(m.result==="win"?"WIN":"LOSS")+" · "+(m.series?.opponent?m.series.opponent+' · ':'')+(m.comp||"Draft");
   $("draftReviewMeta").textContent=[date,m.matchType==="league"?"Liga":"Flex / 5v5",m.patch?"Patch "+m.patch:null,m.side?m.side.toUpperCase()+" side":null].filter(Boolean).join(" · ");
 
   const matchup=m.matchup;
@@ -884,6 +887,7 @@ function openDraftReview(id){
       if(ours&&suggestions.length){
         brain='<div class="review-brain '+(inTop?"followed":"deviated")+'"><b>Brain:</b> '+suggestions.map(reviewEscape).join(" / ")+(inTop?" · ✓ inom top 3":" · valde annat")+'</div>';
       }
+      if(ours&&e.brain?.ai?.advice?.choices?.length)brain+='<div class="review-brain"><b>AI vid beslutet:</b> '+e.brain.ai.advice.choices.map(c=>reviewEscape(c.id+' — '+c.reason)).join(' / ')+'</div>';
       return '<div class="review-step '+(ours?"ours":"enemy")+'">'+
         '<span class="review-step-num">'+(i+1)+'</span>'+
         '<div><small>'+reviewEscape(e.label||((e.side||"").toUpperCase()+" "+e.type))+' · '+(ours?"VI":"ENEMY")+'</small>'+
@@ -904,6 +908,7 @@ function openDraftReview(id){
     '<p><b>Fight:</b> '+reviewEscape(m.fightStyle||"—")+'</p>'+
     '<p><b>Objective:</b> '+reviewEscape(m.objectiveStyle||"—")+'</p>'+reasons+risks;
 
+  window.RiftPostmatch?.render(m,preferredSeries);
   overlay.classList.remove("hidden");
   overlay.setAttribute("aria-hidden","false");
   document.body.classList.add("review-open");

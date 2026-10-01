@@ -1,0 +1,28 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),path=require('node:path');
+const root=path.join(__dirname,'..');
+(async()=>{
+ const original={id:'game-1',savedAt:'2026-09-30T18:00:00Z',result:'win',matchType:'league',side:'blue',draftContext:{roster:{players:[{id:'sub',role:'top',name:'Original'}]},aiPlan:{advice:{call:'Original plan'}}}};
+ const storage=new Map([['rs_match_history',JSON.stringify([original])]]),nodes=new Map();
+ const el=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:'',value:'',addEventListener(){}});return nodes.get(id);};
+ let remote={...original,serverOnly:'must survive'},fail=false,posts=0,lastPayload;
+ const window={RIFT_DB_CONFIG:{enabled:false},addEventListener(){},dispatchEvent(){}};
+ const c={window,document:{getElementById:el},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},Date,Map,Set,JSON,console,CustomEvent:class{},queueMicrotask(){},confirm:()=>true,
+ fetch:async(url,init)=>{if(init.method==='GET')return {ok:true,text:async()=>JSON.stringify({matches:[{id:remote.id,payload:remote}]})};posts++;lastPayload=JSON.parse(init.body).match;return {ok:!fail,text:async()=>JSON.stringify(fail?{error:'Offline'}:{ok:true})};}};
+ vm.createContext(c);vm.runInContext(fs.readFileSync(path.join(root,'shared-data.js'),'utf8'),c);
+ const shared=window.RiftSharedData;
+ window.RIFT_DB_CONFIG={enabled:true,functionUrl:'https://fixture.invalid',teamSlug:'fixture'};
+ await assert.rejects(shared.updateMatchDetails('game-1',{postReview:{worked:'ok'}}));assert.equal(posts,0,'read-only must never POST');
+ storage.set('rs_team_access_key','fixture-only');
+ const patch={series:{id:'series-1',opponent:'Opponent'},postReview:{worked:'Good engage'},draftContext:{bad:'must be ignored'}};
+ const updated=await shared.updateMatchDetails('game-1',patch);
+ assert.equal(updated.serverOnly,'must survive');assert.deepEqual(updated.draftContext,original.draftContext);assert.equal(lastPayload.series.id,'series-1');
+ const saved=storage.get('rs_match_history');fail=true;
+ await assert.rejects(shared.updateMatchDetails('game-1',{postReview:{worked:'unsaved'}}));assert.equal(storage.get('rs_match_history'),saved,'failed edit must not overwrite cached success');
+ vm.runInContext(fs.readFileSync(path.join(root,'postmatch.js'),'utf8'),c);
+ const ui=window.RiftPostmatch;assert.equal(ui.seriesGames('series-1').length,1);assert.equal(ui.seriesGames('other').length,0);
+ assert.equal(ui.cleanReview({worked:'x'.repeat(900)}).worked.length,600);
+ const dangerous={...updated,postReview:{worked:'<img src=x onerror=alert(1)>'},draftContext:{roster:{players:[{name:'<script>',role:'top',pool:['<img>']}]}}};
+ ui.render(dangerous);assert(!el('postmatchReview').innerHTML.includes('<script>'));assert(el('postmatchReview').innerHTML.includes('&lt;script&gt;'));assert(!el('postmatchReview').innerHTML.includes('<img src'));
+ const html=ui.seriesHTML({id:'series-1'});assert(html.includes('1–0'));assert(!html.includes('series-2'));
+ console.log('PASS: protected metadata updates, fresh payload preservation, failure rollback, exact series links, bounded review, escaped historical data.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

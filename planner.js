@@ -294,6 +294,7 @@
         noteBlock('Resultat & lärdomar',notes.general)+
         '<button type="button" class="planner-edit-btn" data-planner-action="followup">'+(plan.status==='completed'?'Redigera eftermatchnoteringar':'Följ upp & markera som spelad')+'</button>'+
         '<p class="analysis-note">Skriv gärna seriescore, vad som fungerade och en sak att ändra nästa gång. Win/Loss per game sparas separat i Draft Brain.</p></section>':'')+
+      (window.RiftPostmatch?.seriesHTML(plan)||'')+
       '<div class="planner-phase1">'+
         ['b1','b2','b3'].map((k,i)=>'<div class="planner-ban-call"><span>B'+(i+1)+'</span><strong>'+esc(plan.phase1Plan?.[k]||"Öppen")+'</strong></div>').join("")+
       '</div>'+
@@ -753,9 +754,15 @@
     selectPlan(card.dataset.planId);
   });
   $("plannerDetail")?.addEventListener("click",async e=>{
+    const review=e.target.closest('[data-series-review]');
+    if(review){if(typeof openDraftReview==='function')openDraftReview(review.dataset.seriesReview);return;}
     const btn=e.target.closest("[data-planner-action]");
     if(!btn)return;
     const action=btn.dataset.plannerAction;
+    if(action==='link-game'&&await ensureWrite()){
+      const id=$('plannerUnlinkedGame')?.value;
+      if(id&&typeof openDraftReview==='function')openDraftReview(id,current());
+    }
     if(action==="edit"){if(await ensureWrite()){editing=true;dirty=false;editPlan=normalize(current());render();}}
     if(action==="followup"&&await ensureWrite()){
       editing=true;editPlan=normalize(current());dirty=editPlan.status!=='completed';editPlan.status='completed';render();

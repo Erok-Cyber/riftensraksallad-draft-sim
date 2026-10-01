@@ -1,0 +1,9 @@
+.postmatch-field{display:flex;flex-direction:column;gap:8px;margin:14px 0;font:500 14px/1.5 Inter,sans-serif;color:#e5edf8}
+.postmatch-field select,.postmatch-field textarea,#plannerUnlinkedGame{box-sizing:border-box;width:100%;min-width:0;max-width:100%;padding:11px 12px;border:1px solid #496078;border-radius:9px;background:#111f31;color:#edf3fc;font:400 14px/1.5 Inter,sans-serif}
+.postmatch-field textarea{resize:vertical}.postmatch-field :focus-visible{outline:2px solid #e8c56c;outline-offset:2px}
+.postmatch-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.postmatch-grid p,.postmatch-snapshot p{overflow-wrap:anywhere;line-height:1.6;font-size:14px}
+.postmatch-snapshot{border-top:1px solid #34465b;margin-top:20px;padding-top:14px}.postmatch-snapshot summary{cursor:pointer;color:#e8c56c;padding:8px 0}
+.postmatch-game{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:14px 0;border-bottom:1px solid #34465b}.postmatch-game span{min-width:0;overflow-wrap:anywhere}.postmatch-game small{display:block;color:#b6c5d8;margin-top:5px}.postmatch-game button{flex-shrink:0}
+#plannerUnlinkedGame{margin:10px 0}#postmatchReview{margin-top:20px}#postmatchStatus{min-height:1.5em}#postmatchReview h3{color:#e8c56c}
+@media(max-width:850px){.postmatch-grid{grid-template-columns:1fr}.postmatch-game{flex-wrap:wrap}}

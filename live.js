@@ -144,6 +144,7 @@ const banBase = {
 };
 
 let userSide=null, step=0, events=[], selectedRole=null, historySaved=false;
+let savedDraftContext=null,matchSaving=false;
 let pendingMatchResult=null,pendingMatchType=null;
 let testMode=(new URLSearchParams(location.search).get("test")==="1")||localStorage.getItem("rs_test_mode")==="1";
 let draftIsTest=testMode;
@@ -189,7 +190,7 @@ function recentPicks(){try{return JSON.parse(localStorage.getItem("rs_recent_pic
 
 function saveState(){
   if(testMode||draftIsTest)return;
-  localStorage.setItem("rs_draft_state",JSON.stringify({userSide,step,events,historySaved,pendingMatchResult,pendingMatchType}));
+  localStorage.setItem("rs_draft_state",JSON.stringify({userSide,step,events,historySaved,pendingMatchResult,pendingMatchType,savedDraftContext}));
 }
 function restoreState(){
   if(new URLSearchParams(location.search).get("replay")==="1"){
@@ -216,16 +217,18 @@ function restoreState(){
     if(state&&state.userSide&&Array.isArray(state.events)){
       userSide=state.userSide;step=state.step||0;events=state.events;historySaved=!!state.historySaved;
       pendingMatchResult=state.pendingMatchResult||null;pendingMatchType=state.pendingMatchType||null;
+      savedDraftContext=state.savedDraftContext||null;
       $("startCard").classList.add("hidden");$("liveArea").classList.remove("hidden");
       return true;
     }
   }catch{}
   return false;
 }
-function clearState(){localStorage.removeItem("rs_draft_state");pendingMatchResult=null;pendingMatchType=null}
+function clearState(){localStorage.removeItem("rs_draft_state");pendingMatchResult=null;pendingMatchType=null;savedDraftContext=null;}
 
 document.querySelectorAll(".side-btn").forEach(btn=>btn.addEventListener("click",()=>{
   userSide=btn.dataset.side;step=0;events=[];selectedRole=null;historySaved=false;pendingMatchResult=null;pendingMatchType=null;draftIsTest=testMode;
+  savedDraftContext=null;
   $("startCard").classList.add("hidden");$("liveArea").classList.remove("hidden");
   saveState();render();
 }));
@@ -280,7 +283,7 @@ $("undoBtn").addEventListener("click",()=>{
   }
   if(step===0)return;
   events.pop();enemyInferenceCache={key:null,value:null};enemyProfileCache={key:null,value:null};finalAnalysisCache={key:null,value:null};
-  step=Math.max(0,step-1);selectedRole=null;historySaved=false;pendingMatchResult=null;pendingMatchType=null;saveState();render();
+  step=Math.max(0,step-1);selectedRole=null;historySaved=false;pendingMatchResult=null;pendingMatchType=null;savedDraftContext=null;saveState();render();
 });
 $("resetBtn").addEventListener("click",()=>{
   const unsaved=step>=draftOrder.length&&!historySaved&&!testMode&&!draftIsTest;
@@ -340,11 +343,31 @@ function lockCurrent(){
     comp:desiredComp(),
     matchup:draftMatchupAnalysis()
   }:null;
-  events.push({...turn,champ,role,brain:brainBefore});
+  if(brainBefore)brainBefore.ai=window.RiftGroq?.snapshot?.()||null;
+  const player=turn.type==='pick'&&turn.side===userSide?window.RiftRoster?.player?.(role)||null:null;
+  events.push({...turn,champ,role,brain:brainBefore,player});
   enemyInferenceCache={key:null,value:null};enemyProfileCache={key:null,value:null};finalAnalysisCache={key:null,value:null};
   step++;selectedRole=null;$("championInput").value="";
   document.querySelectorAll(".role-buttons button").forEach(b=>b.classList.remove("active"));
+  if(step===draftOrder.length)captureDraftContext();
   saveState();render();
+}
+
+function draftContextKey(){return JSON.stringify([userSide,events.map(e=>[e.type,e.side,e.champ,e.role])]);}
+function captureDraftContext(){
+  if(step!==draftOrder.length)return null;
+  if(savedDraftContext?.key===draftContextKey())return savedDraftContext;
+  const opponent=window.RiftOpponent?.active?.();
+  const players=ours().filter(e=>e.player).map(e=>JSON.parse(JSON.stringify({...e.player,role:e.role})));
+  savedDraftContext={version:1,key:draftContextKey(),recordId:window.crypto?.randomUUID?.()||('match-'+Date.now()+'-'+Math.random().toString(16).slice(2)),capturedAt:new Date().toISOString(),
+    series:opponent?{id:String(opponent.id),opponent:opponent.opponent||'',scheduledAt:opponent.scheduledAt||'',bestOf:opponent.bestOf||3}:null,
+    roster:players.length?{players,partial:players.length!==5}:null,compOptions:window.RiftRoster?.compOptions?.()||null,aiPlan:null};
+  return savedDraftContext;
+}
+function captureFinalAI(){
+  if(step!==draftOrder.length||historySaved)return;
+  const ai=window.RiftGroq?.snapshot?.();if(!ai?.final)return;
+  const context=captureDraftContext();context.aiPlan=ai;saveState();
 }
 
 function firstOpenRole(){
@@ -1055,6 +1078,17 @@ if(window.RiftSharedData?.configured?.()){
 }
 
 function renderMatchSave(){
+  if(step===draftOrder.length&&$("matchSeriesSelect")){
+    const context=captureDraftContext(),select=$("matchSeriesSelect");
+    const plans=window.RiftOpponent?.plans?.()||[];
+    if(context.series&&!plans.some(p=>p.id===context.series.id))plans.push(context.series);
+    select.replaceChildren();
+    for(const p of [{id:'',opponent:'Fristående game'},...plans]){
+      const option=document.createElement('option');option.value=p.id;option.textContent=p.opponent+(p.scheduledAt?' · '+new Date(p.scheduledAt).toLocaleDateString('sv-SE'):'');select.appendChild(option);
+    }
+    select.value=context.series?.id||'';select.disabled=historySaved;
+    $("matchContextHint").textContent=context.roster?'Roster sparas från era låsta picks. AI-gameplan följer med om en aktuell plan har hunnit bli klar.':'Äldre draft: spelarnamn saknas. Roster återskapas inte från dagens inställningar.';
+  }
   const card=$("matchSaveCard");
   if(!card)return;
   if(step<draftOrder.length){card.classList.add("hidden");return}
@@ -1092,8 +1126,11 @@ function renderMatchSave(){
 function buildMatchRecord(){
   const inferred=inferEnemyRoles();
   const final=getFinalAnalysis();
+  const context=captureDraftContext();
   return {
-    id:(window.crypto?.randomUUID?.()||("match-"+Date.now()+"-"+Math.random().toString(16).slice(2))),
+    id:context?.recordId||(window.crypto?.randomUUID?.()||("match-"+Date.now()+"-"+Math.random().toString(16).slice(2))),
+    series:context?.series||null,
+    draftContext:context?JSON.parse(JSON.stringify(context)):null,
     savedAt:new Date().toISOString(),
     patch:window.RiftStats?.getStatus?.()?.patch||"26.19",
     result:pendingMatchResult,
@@ -1114,6 +1151,7 @@ function buildMatchRecord(){
     draftTimeline:events.map(e=>({
       label:e.label,type:e.type,side:e.side,champ:e.champ,role:e.role||null,
       brain:e.brain?{
+        ai:e.brain.ai||null,
         role:e.brain.role||null,
         suggestions:[...(e.brain.suggestions||[])],
         comp:e.brain.comp||null,
@@ -1128,8 +1166,14 @@ function buildMatchRecord(){
   };
 }
 
+$("matchSeriesSelect")?.addEventListener('change',()=>{
+  if(historySaved)return;const context=captureDraftContext();if(!context)return;
+  const id=$("matchSeriesSelect").value,plan=window.RiftOpponent?.plans?.().find(p=>p.id===id);
+  context.series=plan?{id:plan.id,opponent:plan.opponent,scheduledAt:plan.scheduledAt,bestOf:plan.bestOf}:null;saveState();
+});
+
 async function saveCompletedMatch(){
-  if(testMode||draftIsTest||historySaved||!pendingMatchResult||!pendingMatchType)return;
+  if(testMode||draftIsTest||historySaved||matchSaving||!pendingMatchResult||!pendingMatchType)return;
 
   if(window.RiftSharedData?.configured?.()&&!window.RiftSharedData?.hasTeamKey?.()){
     const code=prompt("För att spara i lagets databas behövs lagkoden en gång på den här enheten:");
@@ -1143,6 +1187,7 @@ async function saveCompletedMatch(){
   }
 
   $("saveMatchBtn").disabled=true;
+  if(matchSaving)return;matchSaving=true;
   $("matchSaveHint").textContent="Sparar match…";
   try{
     const record=buildMatchRecord();
@@ -1173,7 +1218,7 @@ async function saveCompletedMatch(){
     console.error("Could not save match:",err);
     $("matchSaveHint").textContent="Kunde inte spara matchen.";
     $("saveMatchBtn").disabled=false;
-  }
+  }finally{matchSaving=false;}
 }
 
 document.querySelectorAll(".result-choice").forEach(btn=>btn.addEventListener("click",()=>{

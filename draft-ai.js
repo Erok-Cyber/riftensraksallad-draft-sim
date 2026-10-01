@@ -51,8 +51,12 @@ function aiPatchWeight(matchPatch){
   return .5;
 }
 function aiTeamHistorySignal(champ,role){
-  if(window.RiftRoster&&window.RiftRoster.player(role)?.id!=='core-'+role)return {n:0,w:0,l:0,bonus:0,label:'ingen spelarspecifik historik'};
-  const rows=aiHistoryArchive().filter(m=>(m.ourPicks||[]).some(p=>p?.champ===champ&&p?.role===role));
+  const activeId=window.RiftRoster?.player(role)?.id||'core-'+role;
+  const rows=aiHistoryArchive().filter(m=>{
+    const saved=m.draftContext?.roster?.players?.find(p=>p.role===role);
+    const samePlayer=saved?saved.id===activeId:!m.draftContext?.roster&&activeId==='core-'+role;
+    return samePlayer&&(m.ourPicks||[]).some(p=>p?.champ===champ&&p?.role===role);
+  });
   const n=rows.length,tier=aiHistoryTier(n);
   if(!n||tier.cap===0)return {n,w:rows.filter(m=>m.result==="win").length,l:rows.filter(m=>m.result==="loss").length,bonus:0,label:tier.label};
   let games=0,wins=0;
