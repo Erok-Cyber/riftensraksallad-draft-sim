@@ -119,7 +119,16 @@
     selectedId=id;editing=false;render();return true;
   }
   function sortPlans(list){
-    return [...list].sort((a,b)=>new Date(a.scheduledAt)-new Date(b.scheduledAt));
+    const group=p=>p.status==='completed'||p.status==='cancelled'?2:matchStage(p).past?1:0;
+    return [...list].sort((a,b)=>group(a)-group(b)||(group(a)===0?new Date(a.scheduledAt)-new Date(b.scheduledAt):new Date(b.scheduledAt)-new Date(a.scheduledAt)));
+  }
+  function matchStage(plan,now=Date.now()){
+    if(plan.status==='completed')return {label:'SPELAD',heading:'EFTER MATCHEN',past:true};
+    if(plan.status==='cancelled')return {label:'INSTÄLLD',heading:'INSTÄLLD MATCH',past:false};
+    const at=Date.parse(plan.scheduledAt);
+    if(Number.isFinite(at)&&now>=at+6*60*60*1000)return {label:'ATT FÖLJA UPP',heading:'EFTER MATCHTIDEN',past:true};
+    if(Number.isFinite(at)&&now>=at)return {label:'MATCHTID PASSERAD',heading:'MATCHDAG',past:true};
+    return {label:'KOMMANDE',heading:'KOMMANDE MATCH',past:false};
   }
   function dateText(iso){
     const d=new Date(iso);
@@ -248,8 +257,8 @@
       list.innerHTML='<div class="planner-loading">Inga planerade matcher ännu.</div>';
       return;
     }
-    list.innerHTML=plans.map(p=>{
-      const status=p.status==="completed"?"KLAR":p.status==="cancelled"?"INSTÄLLD":"KOMMANDE";
+    list.innerHTML=sortPlans(plans).map(p=>{
+      const status=matchStage(p).label;
       return '<button type="button" class="planner-match-card '+(p.id===selectedId?"active":"")+'" data-plan-id="'+esc(p.id)+'">'+
         '<span class="top"><strong>'+esc(p.opponent)+'</strong><span class="status '+esc(p.status)+'">'+status+'</span></span>'+
         '<span class="date">'+esc(dateText(p.scheduledAt))+' · BO'+esc(p.bestOf||3)+'</span>'+
@@ -264,10 +273,11 @@
     const conditionals=plan.conditionalBans||[];
     const fallbacks=plan.ourFallbacks||[];
     const notes=plan.gameNotes||{};
+    const stage=matchStage(plan);
     detail.innerHTML=
       '<div class="planner-detail-head">'+
-        '<div><p class="eyebrow">KOMMANDE MATCH</p><h2>'+esc(plan.opponent)+'</h2>'+
-          '<div class="planner-meta">'+esc(dateText(plan.scheduledAt))+' · BO'+esc(plan.bestOf)+(plan.competition?' · '+esc(plan.competition):'')+' · '+esc(plan.status.toUpperCase())+'</div></div>'+
+        '<div><p class="eyebrow">'+stage.heading+'</p><h2>'+esc(plan.opponent)+'</h2>'+
+          '<div class="planner-meta">'+esc(dateText(plan.scheduledAt))+' · BO'+esc(plan.bestOf)+(plan.competition?' · '+esc(plan.competition):'')+' · '+stage.label+'</div></div>'+
         '<div class="planner-detail-actions">'+
           (lastSavedId===plan.id?'<span class="planner-save-status" role="status">Sparad ✓</span>':'')+
           '<button type="button" class="secondary" data-planner-action="view" aria-pressed="'+matchView+'">'+(matchView?'Visa förberedelser':'Under match')+'</button>'+
@@ -279,6 +289,11 @@
           (hasKey()?'<button type="button" class="planner-delete-btn" data-planner-action="delete">Radera match</button>':'')+
         '</div>'+
       '</div>'+
+      (plan.status!=='cancelled'&&(stage.past||plan.status==='completed')?'<section class="planner-section"><div class="planner-section-head"><h3>Efter matchen</h3></div>'+
+        '<p class="analysis-note">'+(plan.status==='completed'?'Serien är markerad som spelad. Banplan och scouting finns kvar som underlag.':'Matchtiden har passerat. Bekräfta att serien är spelad, eller ändra datumet om den flyttats.')+'</p>'+
+        noteBlock('Resultat & lärdomar',notes.general)+
+        '<button type="button" class="planner-edit-btn" data-planner-action="followup">'+(plan.status==='completed'?'Redigera eftermatchnoteringar':'Följ upp & markera som spelad')+'</button>'+
+        '<p class="analysis-note">Skriv gärna seriescore, vad som fungerade och en sak att ändra nästa gång. Win/Loss per game sparas separat i Draft Brain.</p></section>':'')+
       '<div class="planner-phase1">'+
         ['b1','b2','b3'].map((k,i)=>'<div class="planner-ban-call"><span>B'+(i+1)+'</span><strong>'+esc(plan.phase1Plan?.[k]||"Öppen")+'</strong></div>').join("")+
       '</div>'+
@@ -345,7 +360,7 @@
           '<h3>Match</h3>'+
           field("Motståndare",'<input id="peOpponent" value="'+esc(plan.opponent)+'">')+
           field("Datum / tid",'<input id="peScheduled" type="datetime-local" value="'+esc(toLocalInput(plan.scheduledAt))+'">')+
-          field("Status",'<select id="peStatus"><option value="upcoming" '+(plan.status==="upcoming"?"selected":"")+'>Kommande</option><option value="completed" '+(plan.status==="completed"?"selected":"")+'>Klar</option><option value="cancelled" '+(plan.status==="cancelled"?"selected":"")+'>Inställd</option></select>')+
+          field("Status",'<select id="peStatus"><option value="upcoming" '+(plan.status==="upcoming"?"selected":"")+'>Kommande</option><option value="completed" '+(plan.status==="completed"?"selected":"")+'>Spelad</option><option value="cancelled" '+(plan.status==="cancelled"?"selected":"")+'>Inställd</option></select>')+
           field("Best of",'<select id="peBestOf"><option value="1" '+(plan.bestOf===1?"selected":"")+'>BO1</option><option value="3" '+(plan.bestOf===3?"selected":"")+'>BO3</option><option value="5" '+(plan.bestOf===5?"selected":"")+'>BO5</option></select>')+
           field("Liga / turnering",'<input id="peCompetition" value="'+esc(plan.competition||'')+'" placeholder="Rivals">')+
           field("OP.GG"+(plan.challengermodeUrl?" · auto-genererad":""),'<input id="peOpgg" '+(plan.challengermodeUrl?'readonly ':'')+'value="'+esc(plan.opggUrl||'')+'">')+
@@ -386,7 +401,7 @@
         field("Inför serien",'<textarea id="pePreSeries">'+esc(notes.preSeries||'')+'</textarea>')+
         field("Game 1",'<textarea id="peGame1">'+esc(notes.game1||'')+'</textarea>')+
         field("Game 2",'<textarea id="peGame2">'+esc(notes.game2||'')+'</textarea>')+
-        field("Övrigt",'<textarea id="peGeneral">'+esc(notes.general||'')+'</textarea>')+
+        field("Efter matchen / övrigt",'<textarea id="peGeneral" placeholder="Seriescore, vad fungerade och vad ändrar vi nästa gång?">'+esc(notes.general||'')+'</textarea>')+
       '</div></section>';
   }
   function collect(plan){
@@ -742,6 +757,11 @@
     if(!btn)return;
     const action=btn.dataset.plannerAction;
     if(action==="edit"){if(await ensureWrite()){editing=true;dirty=false;editPlan=normalize(current());render();}}
+    if(action==="followup"&&await ensureWrite()){
+      editing=true;editPlan=normalize(current());dirty=editPlan.status!=='completed';editPlan.status='completed';render();
+      if($("plannerSaveStatus"))$("plannerSaveStatus").textContent='Kontrollera status och spara för att bekräfta';
+      $("peGeneral")?.focus();
+    }
     if(action==="cancel"&&mayDiscard()){editing=false;dirty=false;editPlan=null;render();}
     if(action==="view"){matchView=!matchView;render();}
     if(action==="save")await saveCurrent();
@@ -769,4 +789,3 @@
 
   window.RiftBanPlanner={show,load,render,deleteCurrent,scoutPlan,syncChallengermodePlan,getPlans,selectPlan,roleLineup:scoutLineup};
 })();
-
