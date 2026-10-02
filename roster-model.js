@@ -40,21 +40,32 @@
   let state=read(),catalog=[...data.champions],images={...(data.images||{})},listeners=new Set();
   const player=r=>state.profiles.find(p=>p.id===state.active[r]&&p.role===r);
   const profile=(r,id)=>id?state.profiles.find(p=>p.role===r&&p.id===id):player(r);
-  let optionsCache=null;
-  function notify(source='local'){optionsCache=null;listeners.forEach(fn=>fn(source));}
+  let optionsCache=null,planCache=new Map();
+  function notify(source='local'){optionsCache=null;planCache.clear();listeners.forEach(fn=>fn(source));}
   function mutate(fn){const before=clone(state);try{fn();localStorage.setItem(KEY,JSON.stringify(state));}catch(e){state=before;throw Error('Kunde inte spara: '+e.message);}notify();}
   const canonical=name=>({naut:'Nautilus',mao:'Maokai',j4:'Jarvan IV'}[String(name).toLowerCase()]||catalog.find(c=>c.toLowerCase()===String(name).trim().toLowerCase()));
   function parsePool(text){const entries=String(text).split(/[,;\n]/).map(s=>s.trim()).filter(Boolean);if(!entries.length||entries.length>60)throw Error('Välj 1–60 champions.');return [...new Set(entries.map(n=>{const c=canonical(n);if(!c)throw Error('Okänd champion: '+n);return c;}))];}
   function savePlayer(role,id,name,pool,activate=true){
     if(!roles.includes(role))throw Error('Välj en roll.');name=String(name).trim();if(!name||name.length>40)throw Error('Ange ett namn, högst 40 tecken.');
     pool=parsePool(Array.isArray(pool)?pool.join(','):pool);
-    let savedId;mutate(()=>{let p=state.profiles.find(x=>x.id===id&&x.role===role);if(!p){p={id:'sub-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),role,comfort:{}};state.profiles.push(p);}Object.assign(p,{name,pool});p.comfort=Object.fromEntries(pool.map(ch=>[ch,score(p,ch)]));p.paused=(p.paused||[]).filter(ch=>pool.includes(ch));if(activate)state.active[role]=p.id;savedId=p.id;});return savedId;
+    let savedId;mutate(()=>{let p=state.profiles.find(x=>x.id===id&&x.role===role);if(!p){if(state.profiles.length>=40)throw Error('Högst 40 spelare kan sparas.');p={id:'sub-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),role,comfort:Object.fromEntries(pool.map(ch=>[ch,5]))};state.profiles.push(p);}Object.assign(p,{name,pool});p.comfort=Object.fromEntries(pool.map(ch=>[ch,score(p,ch)]));p.paused=(p.paused||[]).filter(ch=>pool.includes(ch));if(activate)state.active[role]=p.id;savedId=p.id;});return savedId;
+  }
+  function affinity(name,role,ch){
+    const c=data.comps[name];if(!c)return null;
+    if(c.core[role]===ch)return {source:'core',reason:'standardpick',weight:1};
+    if((c.alts[role]||[]).includes(ch)||(roleFits[name]?.[role]||[]).includes(ch)||(role==='support'&&Object.hasOwn(supportFits[name]||{},ch)))return {source:'curated',reason:'bedömt alternativ',weight:1};
+    const reason=window.RiftProfiles?.affinity(ch,role,name);
+    return reason?{source:'kit',reason,weight:.7}:null;
+  }
+  function renamePlayer(role,id,name){
+    const p=profile(role,id);name=String(name).trim();
+    if(!p||!name||name.length>40)throw Error('Ange ett namn, högst 40 tecken.');
+    mutate(()=>{p.name=name;});
   }
   function compOptions(){
     if(optionsCache)return optionsCache;
     return optionsCache=Object.fromEntries(Object.entries(data.comps).map(([name,c])=>[name,Object.fromEntries(roles.map(role=>{
-      const fit=new Set([c.core[role],...(c.alts[role]||[]),...(roleFits[name]?.[role]||[]),...(role==='support'?Object.keys(supportFits[name]||{}):[])]);
-      const p=player(role),options=p.pool.filter(ch=>fit.has(ch)&&!p.paused?.includes(ch));
+      const p=player(role),options=p.pool.filter(ch=>affinity(name,role,ch)&&!p.paused?.includes(ch));
       options.sort((a,b)=>score(p,b)-score(p,a)||Number(b===c.core[role])-Number(a===c.core[role])||a.localeCompare(b));
       return [role,options];
     }))]));
@@ -63,10 +74,11 @@
     const options=compOptions()[name];if(!options)return 0;
     return roles.reduce((total,role)=>{
       const ch=map[role];if(!ch||!options[role].includes(ch))return total;
-      return total+(ch===data.comps[name].core[role]?10:5)*score(player(role),ch)/10;
+      return total+(ch===data.comps[name].core[role]?10:5)*affinity(name,role,ch).weight*score(player(role),ch)/10;
     },0);
   }
   function compPlan(name){
+    if(planCache.has(name))return clone(planCache.get(name));
     const options=compOptions()[name];if(!options)return null;
     // Choose five distinct champions; maximize comfort, then preserve the familiar baseline on ties.
     let best={value:-Infinity,picks:Object.fromEntries(roles.map(r=>[r,null]))};
@@ -77,7 +89,7 @@
       if(!pool.length){walk(i+1,used,{...picks,[role]:null},value-1000);return;}
       pool.forEach(ch=>{used.add(ch);walk(i+1,used,{...picks,[role]:ch},value+score(player(role),ch)+(ch===data.comps[name].core[role]?1.1:0));used.delete(ch);});
     }
-    walk(0,new Set(),{},0);return best.picks;
+    walk(0,new Set(),{},0);planCache.set(name,best.picks);return clone(best.picks);
   }
   function removePlayer(role,id,replacementId){
     const p=profile(role,id);if(!p)throw Error('Spelaren finns inte längre.');
@@ -93,7 +105,7 @@
   function removeChampion(role,ch,id){const p=profile(role,id);if(!p?.pool.includes(ch))return;if(p.pool.length<=1)throw Error('Behåll minst en champion i poolen.');mutate(()=>{p.pool=p.pool.filter(x=>x!==ch);p.paused=(p.paused||[]).filter(x=>x!==ch);delete p.comfort?.[ch];});}
   function pauseChampion(role,ch,paused,id){const p=profile(role,id);if(!p?.pool.includes(ch))throw Error('Champion saknas i poolen.');mutate(()=>{p.paused=(p.paused||[]).filter(x=>x!==ch);if(paused)p.paused.push(ch);});}
   window.addEventListener('storage',e=>{if(e.key===KEY||e.key===null){state=read();notify('external');}});
-  window.RiftRoster={roles,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);},select,savePlayer,removePlayer,parsePool,setComfort,addChampion,removeChampion,pauseChampion,
+  window.RiftRoster={roles,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);},select,savePlayer,removePlayer,renamePlayer,affinity,parsePool,setComfort,addChampion,removeChampion,pauseChampion,
     profile:(r,id)=>{const p=profile(r,id);return p?clone({...p,comfort:Object.fromEntries(p.pool.map(ch=>[ch,score(p,ch)]))}):null;},
     available:r=>player(r).pool.filter(ch=>!player(r).paused?.includes(ch)),
     replace:raw=>mutate(()=>{state=validate(raw);}),
@@ -101,7 +113,7 @@
     comfort:(r,ch)=>score(player(r),ch),compWeight:(r,ch)=>score(player(r),ch)/10,
     compOptions:()=>clone(compOptions()),compPlan,compFit,key:()=>JSON.stringify(state),
     catalog:()=>[...catalog],image:ch=>images[ch]||'',
-    rolesFor:ch=>roles.filter(role=>data.pools[role].includes(ch)||Object.entries(data.comps).some(([name,c])=>c.core[role]===ch||(c.alts[role]||[]).includes(ch)||(roleFits[name]?.[role]||[]).includes(ch)||(role==='support'&&Object.hasOwn(supportFits[name]||{},ch)))),
+    rolesFor:ch=>roles.filter(role=>window.RiftProfiles?.get(ch)?.roles?.includes(role)||data.pools[role].includes(ch)||Object.entries(data.comps).some(([name,c])=>c.core[role]===ch||(c.alts[role]||[]).includes(ch)||(roleFits[name]?.[role]||[]).includes(ch)||(role==='support'&&Object.hasOwn(supportFits[name]||{},ch)))),
     async loadCatalog(){try{const versions=await fetch('https://ddragon.leagueoflegends.com/api/versions.json').then(r=>r.json());const raw=await fetch('https://ddragon.leagueoflegends.com/cdn/'+versions[0]+'/data/en_US/champion.json').then(r=>r.json());if(!raw.data)throw Error('Missing catalog');catalog=Object.values(raw.data).map(c=>c.name).sort();images=Object.fromEntries(Object.values(raw.data).map(c=>[c.name,'https://ddragon.leagueoflegends.com/cdn/'+versions[0]+'/img/champion/'+c.image.full]));return true;}catch{return false;}}
   };
 })();

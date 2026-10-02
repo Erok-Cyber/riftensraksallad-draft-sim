@@ -38,6 +38,7 @@
   async function request(method,query="",body=null){
     const res=await fetch(endpoint(query),{
       method,
+      signal:globalThis.AbortSignal?.timeout?.(15000),
       headers:headers(),
       body:body==null?undefined:JSON.stringify(body)
     });
@@ -52,7 +53,7 @@
     return {...p,id:row.id||p.id,opponent:row.opponent||p.opponent,scheduledAt:row.scheduled_at||p.scheduledAt,status:row.status||p.status,updatedAt:row.updated_at||p.updatedAt};
   }
   function cache(){
-    try{return JSON.parse(localStorage.getItem(CACHE_KEY)||"[]")}catch{return[]}
+    try{const rows=JSON.parse(localStorage.getItem(CACHE_KEY)||"[]");return Array.isArray(rows)?rows.filter(p=>p&&typeof p==='object'&&p.id):[]}catch{return[]}
   }
   function writeCache(list){
     localStorage.setItem(CACHE_KEY,JSON.stringify(list));

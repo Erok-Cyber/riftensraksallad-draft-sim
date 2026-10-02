@@ -52,6 +52,22 @@
  add('Senna','AD',0,0.5,1.7,'ranged sustained');
  add('Lulu|Renata Glasc|Ivern','UTIL',0,0.7,3,'ranged');
  add('Zyra','AP',0,1.3,2,'ranged wave');
+ // Roles and tactical tags shared by practice and Brain (migrated from existing engine data).
+ const kitRoles={
+  top:["Sion", "Ornn", "Malphite", "Shen", "Poppy", "Galio", "Gragas", "Mordekaiser", "Trundle", "Renekton", "Garen", "Darius", "Olaf", "Camille", "Gnar", "Yorick", "Kennen", "Heimerdinger", "Rumble"],
+  jungle:["Poppy", "Sejuani", "Zac", "Amumu", "Gragas", "Udyr", "Volibear", "Trundle", "Jarvan IV", "Wukong", "Xin Zhao", "Vi", "Rek'Sai", "Lee Sin", "Viego", "Graves", "Kindred", "Master Yi", "Bel'Veth", "Lillia", "Diana", "Elise", "Karthus", "Ivern"],
+  mid:["Galio", "Ahri", "Annie", "Vex", "Orianna", "Taliyah", "Anivia", "Hwei", "Viktor", "Azir", "Ziggs", "Cassiopeia", "Sylas"],
+  adc:["Ashe", "Varus", "Xayah", "Jinx", "Aphelios", "Caitlyn", "Sivir", "Lucian", "Draven", "Kalista", "Samira", "Miss Fortune", "Jhin", "Senna"],
+  support:["Maokai", "Nautilus", "Leona", "Braum", "Poppy", "Rell", "Alistar", "Rakan", "Thresh", "Senna", "Lulu", "Renata Glasc", "Zyra"],
+ };
+ Object.entries(kitRoles).forEach(([role,list])=>list.forEach(ch=>{if(profiles[ch])(profiles[ch].roles??=[]).push(role);}));
+ const tacticalTags={
+  early:["Nautilus", "Leona", "Poppy", "Volibear", "Renekton", "Darius", "Olaf", "Jarvan IV", "Wukong", "Xin Zhao", "Vi", "Ahri", "Taliyah", "Ashe", "Varus"],
+  zone:["Maokai", "Lillia", "Taliyah", "Anivia", "Hwei", "Viktor", "Heimerdinger", "Varus"],
+  follow:["Viego", "Lillia", "Ahri", "Annie", "Vex", "Taliyah", "Hwei", "Viktor", "Ashe", "Varus", "Xayah", "Jinx"],
+  pick:["Maokai", "Shen", "Nautilus", "Leona", "Jarvan IV", "Vi", "Ahri", "Annie", "Vex", "Taliyah", "Ashe", "Varus"],
+ };
+ Object.entries(tacticalTags).forEach(([tag,list])=>list.forEach(ch=>{if(profiles[ch]&&!profiles[ch].tags.includes(tag))profiles[ch].tags.push(tag);}));
  const get=ch=>profiles[ch]||null;
  function assess(picks){
   const known=picks.map(p=>typeof p==='string'?p:p.champ),unknown=known.filter(ch=>!get(ch));
@@ -60,5 +76,20 @@
   return {front:sum('front'),engage:sum('engage'),peel:sum('peel'),damage:picks.filter(p=>(typeof p==='string'||p.role!=='support')&&get(typeof p==='string'?p:p.champ)&&get(typeof p==='string'?p:p.champ).damage!=='UTIL').length,
    wave:count('wave'),unknown,complete:unknown.length===0};
  }
- window.RiftProfiles={get,all:()=>profiles,assess};
+ // Structural affinity is a conservative alternative, not a replacement for
+ // practiced core picks. Never infer a kit or role from a champion's name.
+ function affinity(ch,role,identity){
+  const p=get(ch);if(!p?.roles?.includes(role))return '';
+  const tag=t=>p.tags.includes(t),carry=p.damage!=='UTIL',dps=tag('sustained');
+  if(identity==='EARLY SKIRMISH'&&tag('early')&&
+    (role==='support'?p.engage>=2||p.peel>=2:role==='adc'?dps:carry))return 'tidig styrka och skirmish';
+  if(identity==='PRESS R'&&
+    (role==='adc'?dps&&tag('follow'):role==='mid'?p.engage>=1.5&&(tag('burst')||tag('wave')):p.engage>=2))return role==='adc'?'damage efter engage':'engage och uppföljning';
+  if(identity==='OBJECTIVE CONTROL'&&
+    (role==='support'?p.peel>=2&&(p.front>=2||tag('zone')):role==='adc'?dps&&tag('wave'):role==='mid'?tag('wave')&&(tag('zone')||p.peel>=1.3):p.front>=2&&(p.engage>=2||dps)||tag('zone')&&carry))return 'kontroll runt objectives';
+  if(identity==='JUNGLE CARRY'&&
+    (role==='jungle'?carry&&dps&&p.front<1:role==='support'?p.peel>=2:role==='top'?p.front>=2&&p.peel>=1.8:role==='mid'?tag('wave')&&(p.engage>=1.2||p.peel>=1.7):p.engage>=1||p.peel>=1.5))return role==='jungle'?'ihållande jungledamage':'setup eller skydd för junglern';
+  return '';
+ }
+ window.RiftProfiles={get,all:()=>profiles,assess,affinity};
 })();

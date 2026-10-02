@@ -45,6 +45,9 @@ Object.entries(window.RiftProfiles?.all()||{}).forEach(([ch,p])=>{
   if(p.tags.includes('antiTank'))smartTraits.antiTank.add(ch);
   if(p.tags.includes('sustained'))ADV_SUSTAINED.add(ch);
   if(p.tags.includes('burst'))ADV_BURST.add(ch);
+  if(p.engage>=2)ADV_HARD_ENGAGE.add(ch);
+  if(p.tags.includes('early'))traits.early.add(ch);
+  for(const [tag,set] of [['zone',smartTraits.zone],['follow',smartTraits.reliableFollow],['pick',smartTraits.pick]])if(p.tags.includes(tag))set.add(ch);
 });
 
 const advClamp=(n,min,max)=>Math.max(min,Math.min(max,n));
@@ -107,7 +110,7 @@ function advStructure(list=ours()){
   const wave=list.filter(e=>smartTraits.waveclear.has(e.champ)).length;
   const antiTank=list.filter(e=>smartTraits.antiTank.has(e.champ)||ADV_PERCENT_HP.has(e.champ)).length;
   const range=list.filter(e=>smartTraits.rangedDamage.has(e.champ)).length;
-  const threats=list.filter(e=>traits.damage.has(e.champ)||ADV_SUSTAINED.has(e.champ)||ADV_BURST.has(e.champ)).length;
+  const threats=list.filter(e=>e.role!=="support").filter(e=>traits.damage.has(e.champ)||ADV_SUSTAINED.has(e.champ)||ADV_BURST.has(e.champ)).length;
   const checks=[
     ["frontline",frontQ>=2.2],
     ["engage",engageQ>=2.0],

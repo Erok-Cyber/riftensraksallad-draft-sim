@@ -58,6 +58,7 @@ jobs:
           node tests/brain-regression.cjs
           node tests/roster-sync.cjs
           node tests/player-delete.cjs
+          node tests/product-audit.cjs
           node tests/groq-policy.cjs
           node tests/postmatch.cjs
           node tests/planner-review.cjs

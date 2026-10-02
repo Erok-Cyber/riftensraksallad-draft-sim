@@ -11,11 +11,11 @@ function harness(files,fixtures={}){
   };
   const store={getItem:key=>storage.get(key)||null,setItem:(key,val)=>storage.set(key,val),removeItem:key=>storage.delete(key)};
   const context={console:{log(){},warn(){},error(){}},URLSearchParams,Date,Math,Set,Map,AbortController,AbortSignal,
-    localStorage:store,sessionStorage:store,location:{search:'',pathname:'/index.html'},history:{replaceState(){}},
+    localStorage:store,sessionStorage:store,location:{search:'',pathname:'/index.html'},history:{replaceState(){},pushState(){}},
     fetch:async()=>{throw Error('offline test');},queueMicrotask(){},setTimeout(){},clearTimeout(){},
     confirm:()=>true,alert(){},document:{body:element('body'),getElementById:element,createElement:()=>element(Symbol()),
       querySelectorAll:()=>[],querySelector:()=>element('query'),addEventListener(type,fn){listeners.set("document:"+type,fn);},dispatchEvent(){}},
-    window:{addEventListener(){},scrollTo(){}}};
+    window:{addEventListener(type,fn){listeners.set("window:"+type,fn);},scrollTo(){}}};
   vm.createContext(context);
   files=['team-data.js','champion-profiles.js','roster-model.js',...files.filter(f=>!['team-data.js','champion-profiles.js','roster-model.js'].includes(f))];
   for(const file of files)vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});

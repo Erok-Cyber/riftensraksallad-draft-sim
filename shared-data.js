@@ -23,7 +23,7 @@
   function teamKey(){return localStorage.getItem(TEAM_KEY_STORAGE)||""}
   function hasTeamKey(){return !!teamKey()}
   function localMatches(){
-    try{return JSON.parse(localStorage.getItem(LOCAL_MATCHES)||"[]")}catch{return[]}
+    try{const rows=JSON.parse(localStorage.getItem(LOCAL_MATCHES)||"[]");return Array.isArray(rows)?rows.filter(m=>m&&typeof m==='object'&&m.id):[]}catch{return[]}
   }
   function writeLocal(list){
     localStorage.setItem(LOCAL_MATCHES,JSON.stringify(list.slice(-250)));
@@ -45,6 +45,7 @@
   async function request(method,query="",body=null){
     const res=await fetch(edgeUrl(query),{
       method,
+      signal:globalThis.AbortSignal?.timeout?.(15000),
       headers:edgeHeaders(),
       body:body==null?undefined:JSON.stringify(body)
     });

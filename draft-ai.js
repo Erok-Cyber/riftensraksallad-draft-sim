@@ -133,7 +133,7 @@ function aiCompFitForMap(map,name){
     s+=n.zone*1.8+n.objective*1.1+p.melee*1.8+p.tanks*1.2;
     if(p.poke>=2)s-=2;
   }else if(name==="JUNGLE CARRY"){
-    if(["Viego","Kindred","Graves","Lillia"].includes(map.jungle))s+=9;
+    if(map.jungle&&window.RiftRoster.compOptions()[name].jungle.includes(map.jungle))s+=9;
     if(["Shen","Malphite","Sion"].includes(map.top))s+=3;
     if(["Taliyah","Ahri","Hwei"].includes(map.mid))s+=3;
     if(["Nautilus","Maokai","Leona"].includes(map.support))s+=3;
@@ -369,7 +369,7 @@ function aiCandidate(champ,role){
   let score=base.score*AI_CONFIG.baseWeight;
   const preferred=aiCompPreference(ownRoleMap(),'EARLY SKIRMISH')>0?'EARLY SKIRMISH':'PRESS R';
   const anchorAlready=base.reasons.filter(r=>r.label?.startsWith('core i ')||r.label?.startsWith('passar ')).reduce((sum,r)=>sum+Math.max(0,r.pts),0);
-  const identity=comps[preferred].core[role]===champ?8*(window.RiftRoster?.compWeight(role,champ)??1):(comps[preferred].alts[role]||[]).includes(champ)?4:0;
+  const identity=comps[preferred].core[role]===champ?8*(window.RiftRoster?.compWeight(role,champ)??1):(comps[preferred].alts[role]||[]).includes(champ)?4*(window.RiftRoster.affinity(preferred,role,champ)?.weight??1):0;
   score+=Math.max(0,identity-anchorAlready);
   score+=(state-50)*AI_CONFIG.stateWeight;
   score+=Math.max(-8,Math.min(8,(lookahead-state)*AI_CONFIG.lookaheadWeight));
@@ -533,7 +533,7 @@ function renderAIInsight(){
   document.getElementById("aiWhy").textContent=(best.reasons.join(" · ")||"Bäst total balans mellan comfort, comp och enemy draft.")+
     '. '+(best.execution?.label||'')+' Lookahead testar egna följdpicks; scoutade svar bedöms separat.';
 
-  const alternatives=list.slice(1,3).map(x=>roleNames[x.role]+" "+x.ch).join(" · ");
+  const alternatives=list.filter(x=>x.ch!==best.ch||x.role!==best.role).slice(0,2).map(x=>roleNames[x.role]+" "+x.ch).join(" · ");
   document.getElementById("aiAlternatives").textContent=alternatives||"—";
 }
 

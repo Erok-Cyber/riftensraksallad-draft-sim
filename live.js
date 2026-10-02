@@ -1492,7 +1492,7 @@ function scoreCandidateDetails(champ,role,compName){
   // A tied/open comp is not evidence to force its core picks.
   const anchorWeight=({öppen:0.25,låg:0.4,medel:0.7,hög:1})[compConfidence()]||0.25;
   if(c.core[role]===champ)add(18*anchorWeight*(window.RiftRoster?.compWeight(role,champ)??1),"core i "+compName);
-  else if((c.alts[role]||[]).includes(champ))add(9*anchorWeight,"passar "+compName);
+  else if((c.alts[role]||[]).includes(champ))add(9*anchorWeight*(window.RiftRoster.affinity(compName,role,champ)?.weight??1),"passar "+compName);
 
   if(need.front===0&&traits.frontline.has(champ))add(14,"ger frontline");
   if(need.engage===0&&traits.engage.has(champ))add(14,"ger engage");

@@ -379,13 +379,16 @@ function leavePractice(){
 
 const $=id=>document.getElementById(id);
 
+let workspaceInitialized=false;
 function setWorkspace(name){
   const workspace=name||"home";
   document.body.dataset.workspace=workspace;
   const next=workspace==="home"
     ?location.pathname
     :location.pathname+"?workspace="+encodeURIComponent(workspace);
-  history.replaceState({workspace},"",next);
+  if(!workspaceInitialized)history.replaceState({workspace},"",next);
+  else if(location.pathname+location.search!==next)history.pushState({workspace},"",next);
+  workspaceInitialized=true;
 }
 
 function applyInitialWorkspaceRoute(workspace){
@@ -402,6 +405,7 @@ function applyInitialWorkspaceRoute(workspace){
 champions.forEach(c=>{const o=document.createElement("option");o.value=c;$("champions").appendChild(o)});
 loadChampionRoster();
 setTrainerNav(false);
+window.addEventListener("popstate",()=>applyInitialWorkspaceRoute(new URLSearchParams(location.search).get("workspace")||"home"));
 const requestedWorkspace=new URLSearchParams(location.search).get("workspace")||"home";
 queueMicrotask(()=>applyInitialWorkspaceRoute(requestedWorkspace));
 
@@ -482,7 +486,8 @@ function openCompGuide(name){
   $("compGuideIdentity").textContent=g.identity;
   $("compGuideCall").textContent=base.call;
 
-  $("compGuideCore").innerHTML=(window.RiftRoster?compGuideRoles.map(r=>window.RiftRoster.compPlan(name)[r]||"Saknar alternativ"):base.core).map((ch,i)=>
+  const activePlan=window.RiftRoster?.compPlan(name);
+  $("compGuideCore").innerHTML=(activePlan?compGuideRoles.map(r=>activePlan[r]||"Saknar alternativ"):base.core).map((ch,i)=>
     '<div class="comp-core-slot"><span>'+compGuideRoleNames[compGuideRoles[i]]+'</span><strong>'+compGuideEscape(ch)+'</strong></div>'
   ).join("");
 
@@ -591,7 +596,7 @@ function renderMatchDayDashboard(){
   if(roster&&$("homeRosterSummary"))$("homeRosterSummary").textContent='Aktiv femma: '+roster.roles.map(r=>roster.player(r).name).join(' · ')+(window.RiftRosterSync?.status().dirty?' · lokalt utkast':'');
   const card=$("matchDayDashboard");
   if(!card)return;
-  if(mode){card.classList.add("hidden");return}
+  if(mode||document.body.dataset.workspace!=="home"){card.classList.add("hidden");return}
   const now=new Date();
   const plans=(window.RiftBanPlanner?.getPlans?.()||[])
     .filter(p=>p.status==="upcoming"&&(new Date(p.scheduledAt)>=now||sameLocalDay(p.scheduledAt,now)))
@@ -619,6 +624,7 @@ async function refreshPlannerData(){
 
 function showHomeView(){
   if(mode)leavePractice();
+  setWorkspace("home");
   $("analysisDashboard").classList.add("hidden");
   $("banPlannerDashboard")?.classList.add("hidden");
   $("modeSelect").classList.remove("hidden");
@@ -628,7 +634,6 @@ function showHomeView(){
   $("analysisTabBtn").classList.remove("active");
   $("plannerTabBtn")?.classList.remove("active");
   $("compLibraryTabBtn")?.classList.remove("active");
-  setWorkspace("home");
 }
 async function showAnalysisView(){
   if(mode)leavePractice();
@@ -1149,7 +1154,8 @@ function updateCoach(){
   const enemies=picks.filter(p=>p.side!==userSide).map(p=>p.champ);
   if(!ours.length){
     $("compName").textContent="Comp: Öppen";$("confidence").textContent="Öppen draft";
-    $("compWhy").textContent="Börja med safe/flex: Ashe, Ahri, Taliyah, Nautilus eller Maokai.";
+    const openers=window.RiftRoster?.compPlan("EARLY SKIRMISH");
+    $("compWhy").textContent="Utgå från aktiva poolen: "+(openers?Object.values(openers).filter(Boolean).join(", "):"välj era trygga champions")+". Kontrollera matchup innan ni låser.";
     $("nextFocus").textContent="Se enemy 2–3 picks innan ni låser identiteten.";
     $("watch").textContent="Spara niche/counters till senare.";
     $("coachCall").textContent="SAFE PICK FÖRST. Håll 2 comps öppna.";return;
@@ -1167,7 +1173,7 @@ function updateCoach(){
 function scoreSet(set,ours){return Math.min(3,ours.filter(x=>set.has(x)).length)}
 function updateScore(){
   const ours=picks.filter(p=>p.side===userSide).map(p=>p.champ);
-  const structure=window.RiftProfiles?.assess(ours);
+  const structure=window.RiftProfiles?.assess(picks.filter(p=>p.side===userSide));
   const e=structure?Math.min(3,Math.round(structure.engage)):scoreSet(engage,ours),f=structure?Math.min(3,Math.round(structure.front)):scoreSet(frontline,ours),d=structure?Math.min(3,structure.damage):scoreSet(damage,ours),er=scoreSet(early,ours);
   $("engageScore").textContent=e+"/3";$("frontScore").textContent=f+"/3";$("damageScore").textContent=d+"/3";$("earlyScore").textContent=er+"/3";
   const issues=[];if(e<1)issues.push("lite engage");if(f<1)issues.push("ingen tydlig frontline");if(d<2)issues.push("kan sakna damage");if(er<2)issues.push("svagare early");
@@ -1208,7 +1214,8 @@ function finishTest(){
   const suggested=window.RiftRoster?.compPlan(reference.ideal);
   $("recommendedPicks").textContent=(suggested?window.RiftRoster.roles.map(r=>suggested[r]).filter(Boolean):reference.recommended).join(" / ");
 
-  const good=ours.filter(ch=>reference.key.includes(ch));
+  const referenceOptions=window.RiftRoster?.compOptions()[reference.ideal];
+  const good=ownRows.filter(p=>referenceOptions?.[p.role]?.includes(p.champ)).map(p=>p.champ);
   const bad=ours.filter(ch=>reference.avoid.includes(ch));
   $("goodFeedback").textContent=good.length?good.join(", ")+" passade matchupen bra.":"Du hittade inte riktigt de tydligaste comp-picksen den här gången.";
   $("improveFeedback").textContent=bad.length?"Granska risken med "+bad.join(", ")+" i just detta scenario.":"Jämför er plan med "+reference.ideal+" som ett alternativ mot det enemy visade. Träningspoängen bedömer struktur, comp-fit och comfort – inte ett enda rätt facit.";
@@ -1239,6 +1246,7 @@ window.RiftChampionPicker?.attach({inputId:"championSearch",roster:()=>champions
  const originalVariants=JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(compGuides).map(([n,g])=>[n,g.variants]))));
  function apply(){
   const options=window.RiftRoster.compOptions();
+  champions=[...new Set([...champions,...window.RiftRoster.roles.flatMap(r=>window.RiftRoster.available(r))])].sort();
   Object.keys(comps).forEach(name=>{
    const picks=window.RiftRoster.compPlan(name),ordered=compGuideRoles.map(r=>picks[r]);
    comps[name].core=ordered.filter(Boolean);comps[name].alts=[...new Set(Object.values(options[name]).flat())].filter(ch=>!comps[name].core.includes(ch));

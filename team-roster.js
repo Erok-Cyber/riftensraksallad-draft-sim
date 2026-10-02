@@ -3,6 +3,7 @@
  const roster=window.RiftRoster,base=window.RiftTeamData.comps;
  function apply(){
   roles.forEach(role=>{const p=roster.player(role);teamPool[role]=roster.available(role);comfort[role]={...p.comfort};});
+  championRoster=[...new Set([...championRoster,...roles.flatMap(r=>teamPool[r])])].sort();
   const options=roster.compOptions();
   Object.keys(base).forEach(name=>roles.forEach(role=>{comps[name].alts[role]=options[name][role].filter(ch=>ch!==base[name].core[role]);}));
   const summary=document.getElementById('rosterSummary');if(summary)summary.textContent=roles.map(r=>roster.player(r).name).join(' · ');
