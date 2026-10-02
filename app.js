@@ -1203,12 +1203,13 @@ function finishTest(){
   $("resultTitle").textContent=(reference.opponentName?"Draft Test mot "+reference.opponentName:"Draft Test")+": "+score+"/100 · träningspoäng, inte vinstchans";
   $("testFeedback").classList.remove("hidden");
   $("idealComp").textContent=reference.ideal;
-  $("recommendedPicks").textContent=(window.RiftRoster?Object.values(window.RiftRoster.compPlan(reference.ideal)).filter(Boolean):reference.recommended).join(" / ");
+  const suggested=window.RiftRoster?.compPlan(reference.ideal);
+  $("recommendedPicks").textContent=(suggested?window.RiftRoster.roles.map(r=>suggested[r]).filter(Boolean):reference.recommended).join(" / ");
 
   const good=ours.filter(ch=>reference.key.includes(ch));
   const bad=ours.filter(ch=>reference.avoid.includes(ch));
   $("goodFeedback").textContent=good.length?good.join(", ")+" passade matchupen bra.":"Du hittade inte riktigt de tydligaste comp-picksen den här gången.";
-  $("improveFeedback").textContent=bad.length?"Undvik helst "+bad.join(", ")+" i just detta scenario.":"Titta främst på om din comp-riktning matchade "+reference.ideal+" mot det enemy faktiskt visade.";
+  $("improveFeedback").textContent=bad.length?"Granska risken med "+bad.join(", ")+" i just detta scenario.":"Jämför er plan med "+reference.ideal+" som ett alternativ mot det enemy visade. Träningspoängen bedömer struktur, comp-fit och comfort – inte ett enda rätt facit.";
 }
 
 

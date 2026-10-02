@@ -34,7 +34,8 @@
  add('Viego|Graves|Kindred|Yorick|Master Yi|Bel\'Veth','AD',0.5,0,0.5,'sustained');
  add('Lillia','AP',0.7,1.6,1,'melee sustained antiTank');
  add('Diana','AP',1,2.4,0.3,'melee burst');
- add('Elise|LeBlanc|Ahri','AP',0,1.2,0.8,'ranged burst');
+ add('Elise|LeBlanc','AP',0,1.2,0.8,'ranged burst');
+ add('Ahri','AP',0,1.2,0.8,'ranged burst wave');
  add('Annie','AP',0,2.7,1.2,'ranged burst wave');
  add('Vex','AP',0,1.8,1.9,'ranged burst wave');
  add('Lissandra|Neeko','AP',0,2.5,1.8,'ranged burst wave');
