@@ -157,9 +157,14 @@
       reasons.push("fallback "+(previousSnapshot.patch||"?"));
     }
 
+    const snapshot=cur?currentSnapshot:previousSnapshot;
+    const updated=Date.parse(snapshot?.updated||rawBundle?.generatedAt||'');
+    const age=Number.isFinite(updated)?Math.max(0,(Date.now()-updated)/86400000):Infinity;
+    const ageWeight=age<=7?1:age<=21?.65:age<=42?.3:0;
+    if(ageWeight<1)reasons.push(ageWeight===0?'För gammal/okänd metadatadatering – ingen poängpåverkan':'Äldre metadata – reducerad vikt');
     return {
       available:true,
-      points:clamp(points,-6,8),
+      points:clamp(points,-6,8)*ageWeight,
       reasons,
       tier,
       winrate:wr,

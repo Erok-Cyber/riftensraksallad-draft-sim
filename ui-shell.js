@@ -14,6 +14,7 @@
 
     document.querySelectorAll(".os-sidebar .os-nav-item").forEach(item=>{
       item.classList.toggle("active",item.dataset.workspaceTarget===current);
+      item.setAttribute("aria-current",item.dataset.workspaceTarget===current?"page":"false");
     });
   }
 

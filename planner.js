@@ -10,7 +10,8 @@
   function mayDiscard(){return !saving&&(!dirty||confirm("Du har osparade ändringar. Lämna redigeringen ändå?"));}
   window.addEventListener("beforeunload",e=>{if(dirty){e.preventDefault();e.returnValue="";}});
   document.addEventListener("click",e=>{
-    if(dirty&&e.target.closest(".os-sidebar a")&&!mayDiscard()){e.preventDefault();e.stopImmediatePropagation();}
+    const nav=e.target.closest(".os-sidebar .os-nav-item");
+    if(dirty&&nav&&nav.dataset.workspaceTarget!=="planner"&&!mayDiscard()){e.preventDefault();e.stopImmediatePropagation();}
   },true);
   let loading=false;
   let cmPollTimer=null;
@@ -177,7 +178,7 @@
     const person=row=>'<div class="planner-cm-person"><strong>'+esc(row.username||"Okänd")+'</strong>'+
       '<span>'+(row.riotId?'Playing as '+esc(row.riotId):'Riot ID saknas')+'</span></div>';
     return '<section class="planner-section planner-cm-section">'+
-      '<div class="planner-section-head"><h3>Challengermode Live</h3><span class="planner-cm-badge '+(cm.rosterChanged?'changed':'live')+'">'+(cm.rosterChanged?'ROSTER ÄNDRAD':'LIVE')+'</span></div>'+
+      '<div class="planner-section-head"><h3>Challengermode</h3><span class="planner-cm-badge '+(cm.rosterChanged?'changed':'')+'">'+(cm.rosterChanged?'ROSTER ÄNDRAD':'SPARAD SCOUTING')+'</span></div>'+
       '<div class="planner-cm-meta"><strong>'+esc(cm.teamName||plan.challengermodeTeamName||plan.opponent)+'</strong>'+
         '<span>'+esc(cm.tournamentName||"Rivals")+' · '+esc(cm.tournamentState||"")+'</span>'+
         '<small>Senast synkad '+esc(cmTime(cm.lastSyncedAt))+'</small></div>'+
@@ -329,6 +330,7 @@
       '<div class="planner-phase1">'+
         ['b1','b2','b3'].map((k,i)=>'<div class="planner-ban-call"><span>B'+(i+1)+'</span><strong>'+esc(plan.phase1Plan?.[k]||"Öppen")+'</strong></div>').join("")+
       '</div>'+
+      '<p class="planner-ban-note">Sparad banplan. Draft Brain omvärderar utifrån aktuell draft och verifierade motståndarpicks.</p>'+
       '<p class="planner-ban-note">'+esc(plan.phase1Plan?.note||"")+'</p>'+
       '<section class="planner-section planner-preparation">'+
         '<div class="planner-section-head"><h3>Scouting</h3><span class="planner-scout-badge '+esc(plan.scoutingStatus||"")+'">'+esc((plan.scoutingConfidence||"preliminary").toUpperCase())+'</span></div>'+

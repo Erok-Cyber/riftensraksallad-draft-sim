@@ -49,6 +49,7 @@ jobs:
           node --check brain-opponent.js
           node --check team-roster.js
           node --check team-data.js
+          node --check champion-profiles.js
           node --check roster-model.js
           node --check roster-sync.js
           node --check champs.js
@@ -59,6 +60,8 @@ jobs:
           node tests/groq-policy.cjs
           node tests/postmatch.cjs
           node tests/planner-review.cjs
+          node tests/integrity.cjs
+          node tests/match-api.cjs
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

@@ -17,7 +17,7 @@ function harness(files,fixtures={}){
       querySelectorAll:()=>[],querySelector:()=>element('query'),addEventListener(type,fn){listeners.set("document:"+type,fn);},dispatchEvent(){}},
     window:{addEventListener(){},scrollTo(){}}};
   vm.createContext(context);
-  files=['team-data.js','roster-model.js',...files.filter(f=>!['team-data.js','roster-model.js'].includes(f))];
+  files=['team-data.js','champion-profiles.js','roster-model.js',...files.filter(f=>!['team-data.js','champion-profiles.js','roster-model.js'].includes(f))];
   for(const file of files)vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
   return {context,run:s=>vm.runInContext(s,context),elements,storage,fire:(id,type)=>listeners.get(id+":"+type)?.()};
 }

@@ -6,7 +6,13 @@
   const options=roster.compOptions();
   Object.keys(base).forEach(name=>roles.forEach(role=>{comps[name].alts[role]=options[name][role].filter(ch=>ch!==base[name].core[role]);}));
   const summary=document.getElementById('rosterSummary');if(summary)summary.textContent=roles.map(r=>roster.player(r).name).join(' · ');
-  const warning=document.getElementById('rosterWarning');if(warning){const locked=ours().filter(e=>e.role&&!teamPool[e.role]?.includes(e.champ));warning.textContent=locked.length?'Låsta picks utanför aktiv pool: '+locked.map(e=>e.champ).join(', ')+'. Draften är oförändrad.':'';}
+  const warning=document.getElementById('rosterWarning');if(warning){
+    const locked=ours().filter(e=>e.role&&!teamPool[e.role]?.includes(e.champ));
+    const unknown=[...new Set(roles.flatMap(r=>teamPool[r]).filter(ch=>window.RiftProfiles&&!window.RiftProfiles.get(ch)))];
+    warning.textContent=[window.RiftRosterSync?.status().dirty?'Lokalt rosterutkast – inte publicerat för laget.':null,
+      locked.length?'Låsta picks utanför aktiv pool: '+locked.map(e=>e.champ).join(', ')+'. Draften är oförändrad.':null,
+      unknown.length?'Begränsad kitbedömning: '+unknown.join(', ')+'. Comfort används, men kontrollera compens helhet.':null].filter(Boolean).join(' ');
+  }
  }
   // Complete the support profiles in the existing explainable engine.
   ['frontline','tanks','melee'].forEach(trait=>traits[trait].add('Braum'));
@@ -26,5 +32,6 @@
 
  apply();
  roster.subscribe(()=>{apply();if(userSide)render();});
+ window.RiftRosterSync?.subscribe(()=>apply());
  if(userSide)render();
 })();

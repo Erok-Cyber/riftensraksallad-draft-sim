@@ -21,8 +21,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=20261001-review2" />
-  <link rel="stylesheet" href="postmatch.css?v=20261001-bundle1" />
+  <link rel="stylesheet" href="styles.css?v=20261002-integrity1" />
+  <link rel="stylesheet" href="postmatch.css?v=20261002-integrity1" />
 </head>
 <body class="draft-os" data-workspace="home">
   <aside class="os-sidebar" id="osSidebar">
@@ -65,22 +65,28 @@
       </div>
     </header>
 
+    <section id="matchDayDashboard" class="match-day-dashboard card hidden">
+      <div class="match-day-head">
+        <div>
+          <p class="eyebrow">NÄSTA MATCH</p>
+          <h2 id="matchDayOpponent">—</h2>
+          <p id="matchDayMeta" class="match-day-meta">—</p>
+        </div>
+        <button id="matchDayOpenPlanner" class="secondary" type="button">Öppna matchplan →</button>
+      </div>
+      <div id="matchDayBans" class="match-day-ban-grid"></div>
+      <div class="match-day-foot">
+        <span id="matchDayScout">—</span>
+        <span id="matchDayTargets">—</span>
+      </div>
+    </section>
+
     <section id="modeSelect" class="card">
       <div class="os-home-hero">
         <div class="os-home-copy">
           <p class="eyebrow">RIFTENSRÄKSALLAD · DRAFT CENTER</p>
-          <h2>Riftensräksallad Draft Center</h2>
-          <p>Draft Brain, scouting, banplaner och träningslägen samlade för laget.</p>
-          <div class="os-hero-actions">
-            <a class="primary os-hero-primary link-btn" href="live.html">Öppna Draft Brain →</a>
-            <button class="secondary" type="button" data-shell-focus="simModeBtn">Starta Draft Trainer</button>
-          </div>
-        </div>
-        <div class="os-hero-status">
-          <span class="mini-label">MATCH PREP SYSTEM</span>
-          <strong>RIVALS READY</strong>
-          <div><b>4</b><span>standardcomps</span></div>
-          <div><b>LIVE</b><span>Challengermode sync</span></div>
+          <h2>Redo för nästa draft</h2>
+          <p id="homeRosterSummary">Lagets draft, scouting och träning.</p>
         </div>
       </div>
       <div class="os-section-title">
@@ -103,27 +109,12 @@
         <button id="testModeBtn" class="mode-btn test-mode">
           <span class="mode-icon">▤</span>
           <strong>Draft Test</strong>
-          <span>Scenario + automatisk motståndare + facit</span>
+          <span>Scenario, automatisk motståndare och feedback</span>
           <span class="mode-arrow">→</span>
         </button>
       </div>
     </section>
 
-    <section id="matchDayDashboard" class="match-day-dashboard card hidden">
-      <div class="match-day-head">
-        <div>
-          <p class="eyebrow">MATCH DAY</p>
-          <h2 id="matchDayOpponent">—</h2>
-          <p id="matchDayMeta" class="match-day-meta">—</p>
-        </div>
-        <button id="matchDayOpenPlanner" class="secondary" type="button">Öppna matchplan →</button>
-      </div>
-      <div id="matchDayBans" class="match-day-ban-grid"></div>
-      <div class="match-day-foot">
-        <span id="matchDayScout">—</span>
-        <span id="matchDayTargets">—</span>
-      </div>
-    </section>
 
     <section id="banPlannerDashboard" class="ban-planner-dashboard hidden">
       <div class="planner-dashboard-head">
@@ -275,6 +266,7 @@
 
         <label for="championSearch">Välj champion</label>
         <input id="championSearch" list="champions" placeholder="Skriv champion..." autocomplete="off" />
+        <p id="pickError" class="pick-error" role="alert" aria-live="polite"></p>
         <datalist id="champions"></datalist>
         <button id="lockBtn" class="primary">Lås pick</button>
         <button id="randomEnemyBtn" class="secondary full">Slumpa enemy pick</button>
@@ -383,8 +375,8 @@
           <div id="champStats" class="champ-stat-list"></div>
         </section>
         <section class="analysis-panel">
-          <div class="panel-head"><h3>Mönster</h3><span class="analysis-note">Automatiskt</span></div>
-          <div id="patternInsights" class="pattern-list"></div>
+          <details><summary>Fler observationer från matchhistoriken</summary>
+          <div id="patternInsights" class="pattern-list"></div></details>
         </section>
       </div>
 
@@ -523,18 +515,19 @@
   </main>
   <button class="os-mobile-toggle" id="osMobileToggle" type="button" aria-label="Öppna navigation">☰</button>
 
-  <script src="brand.js?v=20260928-publicread3"></script>
-  <script src="db-config.js?v=20261002-team3"></script>
-  <script src="shared-data.js?v=20261001-bundle1"></script>
-  <script src="scouting-lineup.js?v=20260929-opponent1"></script>
-  <script src="postmatch.js?v=20261001-bundle1"></script>
-  <script src="planner.js?v=20261001-review2"></script>
-  <script src="champion-picker.js?v=20261002-champs1"></script>
-  <script src="team-data.js?v=20261002-champs1"></script>
-  <script src="roster-model.js?v=20261002-team3"></script>
-  <script src="roster-sync.js?v=20261002-team3"></script>
-  <script src="app.js?v=20261002-champs1"></script>
-  <script src="ui-shell.js?v=20260929-workspace1"></script>
+  <script src="brand.js?v=20261002-integrity1"></script>
+  <script src="db-config.js?v=20261002-integrity1"></script>
+  <script src="shared-data.js?v=20261002-integrity1"></script>
+  <script src="scouting-lineup.js?v=20261002-integrity1"></script>
+  <script src="postmatch.js?v=20261002-integrity1"></script>
+  <script src="planner.js?v=20261002-integrity1"></script>
+  <script src="champion-picker.js?v=20261002-integrity1"></script>
+  <script src="team-data.js?v=20261002-integrity1"></script>
+  <script src="champion-profiles.js?v=20261002-integrity1"></script>
+  <script src="roster-model.js?v=20261002-integrity1"></script>
+  <script src="roster-sync.js?v=20261002-integrity1"></script>
+  <script src="app.js?v=20261002-integrity1"></script>
+  <script src="ui-shell.js?v=20261002-integrity1"></script>
   <div id="workspaceReady" hidden></div>
 </body>
 </html>

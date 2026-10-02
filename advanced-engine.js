@@ -30,6 +30,23 @@ const ADV_PEEL_Q={
   "Anivia":2.2,"Vex":1.9,"Xayah":1.8,"Malphite":1.4,"Ashe":1.4
 };
 
+// One kit-profile source for Brain and practice; retain older fine-grained rules.
+Object.entries(window.RiftProfiles?.all()||{}).forEach(([ch,p])=>{
+  ADV_FRONT_Q[ch]=p.front;ADV_ENGAGE_Q[ch]=p.engage;ADV_PEEL_Q[ch]=p.peel;
+  damageType[ch]=p.damage;
+  if(p.front>=1.8)traits.frontline.add(ch);
+  if(p.engage>=2)traits.engage.add(ch);
+  if(p.peel>=2)smartTraits.peel.add(ch);
+  if(p.damage!=='UTIL')traits.damage.add(ch);
+  if(p.tags.includes('tank'))traits.tanks.add(ch);
+  if(p.tags.includes('melee'))traits.melee.add(ch);
+  if(p.tags.includes('wave'))smartTraits.waveclear.add(ch);
+  if(p.tags.includes('ranged')&&p.damage!=='UTIL')smartTraits.rangedDamage.add(ch);
+  if(p.tags.includes('antiTank'))smartTraits.antiTank.add(ch);
+  if(p.tags.includes('sustained'))ADV_SUSTAINED.add(ch);
+  if(p.tags.includes('burst'))ADV_BURST.add(ch);
+});
+
 const advClamp=(n,min,max)=>Math.max(min,Math.min(max,n));
 const advCount=(list,set)=>list.reduce((n,e)=>n+(set.has(e.champ)?1:0),0);
 const advQ=(list,map)=>list.reduce((n,e)=>n+(map[e.champ]||0),0);
@@ -186,10 +203,14 @@ function advPickDependency(champ,role){
 }
 
 function advFamiliarity(champ,role){
-  const pat=advTeamPattern();
-  if(pat.drafts<5)return 0;
-  const n=pat.roleFreq[role+"|"+champ]||0;
-  return advClamp((n/pat.drafts)*5,0,3);
+  const activeId=window.RiftRoster?.player(role)?.id||'core-'+role;
+  const rows=advArchive().filter(m=>{
+    const saved=m.draftContext?.roster?.players?.find(p=>p.role===role);
+    return saved?saved.id===activeId:!m.draftContext?.roster&&activeId==='core-'+role;
+  });
+  if(rows.length<5)return 0;
+  const n=rows.filter(m=>(m.ourPicks||[]).some(p=>p.role===role&&p.champ===champ)).length;
+  return advClamp((n/rows.length)*5,0,3);
 }
 
 function advCandidateStructuralBonus(champ,role){

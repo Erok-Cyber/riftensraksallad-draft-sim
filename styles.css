@@ -5,7 +5,7 @@
   --card2:var(--panel2);
   --accent:var(--gold);
   --text:#f4f0e7;
-  --muted:#98a5b6;
+  --muted:#b5c1d0;
   --gold:#e7b85b;
   --blue:#4ea1ff;
   --purple:#b86cff;
@@ -27,6 +27,8 @@ body{
   font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
 }
 button,input{font:inherit}
+.pick-error{color:#ffb0a6;font-size:14px;line-height:1.5;margin:8px 0;overflow-wrap:anywhere}
+.pick-error:empty{display:none}
 button{color:inherit}
 .app{max-width:1400px;margin:0 auto;padding:34px 38px 54px}
 header{
@@ -179,7 +181,7 @@ input{width:100%;padding:13px 14px;border-radius:10px;border:1px solid var(--bor
 .analysis-panel{padding:18px}
 .panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:13px}
 .panel-head h3{font-family:Georgia,"Times New Roman",serif;font-size:21px;margin:0}
-.analysis-note{color:var(--muted);font-size:12px;font-weight:700}
+.analysis-note{color:var(--muted);font-size:13px;font-weight:600;line-height:1.55}
 .stat-list{display:grid;gap:8px}
 .stat-row{display:grid;grid-template-columns:minmax(130px,1fr) 120px 58px;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid rgba(255,255,255,.05)}
 .stat-row:last-child{border-bottom:0}
@@ -740,8 +742,8 @@ body.draft-os:after{
 /* Home command center */
 .draft-os #modeSelect{margin-bottom:18px!important}
 .os-home-hero{
-  display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:28px;align-items:stretch;
-  min-height:278px;padding:29px 30px;margin-bottom:18px;overflow:hidden;position:relative;
+  display:grid;grid-template-columns:1fr;gap:24px;align-items:stretch;
+  min-height:170px;padding:24px 28px;margin-bottom:18px;overflow:hidden;position:relative;
   border:1px solid rgba(77,108,147,.58);border-radius:18px;
   background:
     radial-gradient(580px 280px at 90% 10%,rgba(93,93,200,.20),transparent 72%),
@@ -1263,7 +1265,7 @@ body.comp-guide-open .os-sidebar{
   min-height:42px;
 }
 .draft-os .os-nav-item b{
-  font-size:11px;
+  font-size:13px;
 }
 .draft-os .os-brand strong{
   font-size:12px;
@@ -1351,7 +1353,7 @@ body.comp-guide-open .os-sidebar{
   .draft-os .analysis-kpis{grid-template-columns:repeat(3,minmax(0,1fr))}
   .draft-os .analysis-two-col{grid-template-columns:1fr}
   .draft-os .draft-grid{grid-template-columns:1fr}
-  .draft-os .os-home-hero{grid-template-columns:minmax(0,1fr) 210px;gap:20px;padding:24px}
+  .draft-os .os-home-hero{grid-template-columns:1fr;gap:20px;padding:24px}
 }
 @media(max-width:900px){
   .draft-os .app.os-main{--space-panel:16px;padding:18px 20px 76px}

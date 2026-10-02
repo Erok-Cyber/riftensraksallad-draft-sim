@@ -109,7 +109,9 @@
   function summary(){
     const rows=evidence();
     if(!rows.length)return 'Scouting saknas för aktuella starters. Inga generiska target bans fylls på.';
-    return (rows.some(r=>r.manual)?'CM + bilder + OP.GG · ':'CM + OP.GG · ')+new Set(rows.map(r=>r.player)).size+' starters med data'+
+    const date=active()?.challengermode?.lastSyncedAt;
+    const freshness=date?' · CM synkad '+new Date(date).toLocaleDateString('sv-SE'):' · synktid saknas';
+    return (rows.some(r=>r.manual)?'CM + bilder + OP.GG · ':'CM + OP.GG · ')+new Set(rows.map(r=>r.player)).size+' starters med data'+freshness+
       (rows.some(r=>r.recent)?' · senaste matcher vägs in':' · OP.GG bygger på säsongsdata');
   }
   window.RiftOpponent={active,key:()=>selected+':'+revision,pickSignal,summary,

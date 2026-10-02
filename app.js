@@ -572,7 +572,7 @@ function syncPatchFilter(all){
   if(!select)return;
   const patches=[...new Set(all.map(m=>m.patch).filter(Boolean))].sort((a,b)=>patchSortValue(b)-patchSortValue(a));
   if(currentAnalysisPatch!=="all"&&!patches.includes(currentAnalysisPatch))currentAnalysisPatch="all";
-  select.innerHTML='<option value="all">Alla patchar</option>'+patches.map(p=>'<option value="'+p+'">'+p+'</option>').join("");
+  select.innerHTML='<option value="all">Alla patchar</option>'+patches.map(p=>'<option value="'+compGuideEscape(p)+'">'+compGuideEscape(p)+'</option>').join("");
   select.value=currentAnalysisPatch;
 }
 function filteredMatches(){
@@ -587,12 +587,14 @@ function sameLocalDay(a,b){
   return !isNaN(x)&&!isNaN(y)&&x.getFullYear()===y.getFullYear()&&x.getMonth()===y.getMonth()&&x.getDate()===y.getDate();
 }
 function renderMatchDayDashboard(){
+  const roster=window.RiftRoster;
+  if(roster&&$("homeRosterSummary"))$("homeRosterSummary").textContent='Aktiv femma: '+roster.roles.map(r=>roster.player(r).name).join(' · ')+(window.RiftRosterSync?.status().dirty?' · lokalt utkast':'');
   const card=$("matchDayDashboard");
   if(!card)return;
   if(mode){card.classList.add("hidden");return}
   const now=new Date();
   const plans=(window.RiftBanPlanner?.getPlans?.()||[])
-    .filter(p=>p.status==="upcoming"&&sameLocalDay(p.scheduledAt,now))
+    .filter(p=>p.status==="upcoming"&&(new Date(p.scheduledAt)>=now||sameLocalDay(p.scheduledAt,now)))
     .sort((a,b)=>new Date(a.scheduledAt)-new Date(b.scheduledAt));
   const plan=plans[0];
   if(!plan){card.classList.add("hidden");return}
@@ -600,7 +602,8 @@ function renderMatchDayDashboard(){
   $("matchDayOpponent").textContent=plan.opponent;
   const d=new Date(plan.scheduledAt);
   const time=isNaN(d)?"—":d.toLocaleTimeString("sv-SE",{hour:"2-digit",minute:"2-digit"});
-  $("matchDayMeta").textContent=["Idag "+time,"BO"+(plan.bestOf||3),plan.competition||null].filter(Boolean).join(" · ");
+  const day=sameLocalDay(d,now)?"Idag":d.toLocaleDateString("sv-SE",{weekday:"short",day:"numeric",month:"short"});
+  $("matchDayMeta").textContent=[day+" "+time,"BO"+(plan.bestOf||3),plan.competition||null].filter(Boolean).join(" · ");
   const calls=["b1","b2","b3"].map((key,i)=>({label:"B"+(i+1),champ:plan.phase1Plan?.[key]||"Öppen"}));
   $("matchDayBans").innerHTML=calls.map(x=>'<div><span>'+compGuideEscape(x.label)+'</span><strong>'+compGuideEscape(x.champ)+'</strong></div>').join("");
   $("matchDayScout").textContent="Scout: "+String(plan.scoutingConfidence||"preliminary").toUpperCase();
@@ -698,12 +701,12 @@ function renderAnalysis(){
   document.querySelectorAll(".analysis-panel,.analysis-kpis").forEach(el=>el.classList.toggle("hidden",all.length===0));
   if(!all.length)return;
 
-  const compsMap={};
+  const compsMap=Object.create(null);
   list.forEach(m=>{const k=m.comp||"Övrig";const x=compsMap[k]||(compsMap[k]={n:0,w:0});x.n++;if(m.result==="win")x.w++});
   const compRows=Object.entries(compsMap).sort((a,b)=>b[1].n-a[1].n);
   $("compStats").innerHTML=compRows.length?compRows.map(([name,x])=>{
     const wr=x.n?Math.round(x.w/x.n*100):0;
-    return '<div class="stat-row"><span class="stat-name">'+name+'</span><span class="stat-bar"><i style="width:'+wr+'%"></i></span><span class="stat-value">'+wr+'% <small>('+x.n+' · '+sampleConfidence(x.n).label+')</small></span></div>';
+    return '<div class="stat-row"><span class="stat-name">'+compGuideEscape(name)+'</span><span class="stat-bar"><i style="width:'+wr+'%"></i></span><span class="stat-value">'+wr+'% <small>('+x.n+' · '+sampleConfidence(x.n).label+')</small></span></div>';
   }).join(""):'<span class="analysis-note">Ingen data i filtret.</span>';
   const eligible=compRows.slice().sort((a,b)=>(b[1].w/b[1].n)-(a[1].w/a[1].n)||b[1].n-a[1].n)[0];
   $("bestCompStat").textContent=eligible?"Bäst observerad: "+eligible[0]+" · "+percent(eligible[1].w,eligible[1].n)+" · "+sampleConfidence(eligible[1].n).label:"Ingen sample ännu";
@@ -721,27 +724,27 @@ function renderAnalysis(){
     '<div><span>Blue matcher</span><strong>'+blue.n+'</strong></div>'+
     '<div><span>Red matcher</span><strong>'+red.n+'</strong></div>';
 
-  const champs={};
+  const champs=Object.create(null);
   list.forEach(m=>(m.ourPicks||[]).forEach(p=>{const ch=p.champ||p;champs[ch]=(champs[ch]||0)+1}));
   const champRows=Object.entries(champs).sort((a,b)=>b[1]-a[1]).slice(0,10);
-  $("champStats").innerHTML=champRows.map(([ch,n])=>'<div class="champ-stat"><strong>'+ch+'</strong><span>'+n+' picks</span></div>').join("")||'<span class="analysis-note">Ingen data.</span>';
+  $("champStats").innerHTML=champRows.map(([ch,n])=>'<div class="champ-stat"><strong>'+compGuideEscape(ch)+'</strong><span>'+n+' picks</span></div>').join("")||'<span class="analysis-note">Ingen data.</span>';
 
   const patterns=[];
   if(c.n>=3){
     if(blue.n>=2&&red.n>=2){
       const bw=blue.w/blue.n,rw=red.w/red.n;
-      if(Math.abs(bw-rw)>=.15)patterns.push((bw>rw?"Blue":"Red")+" side har hittills bättre resultat ("+percent(Math.max(blue.w,red.w),bw>rw?blue.n:red.n)+").");
+      if(Math.abs(bw-rw)>=.15)patterns.push((bw>rw?"Blue":"Red")+" side har hittills bättre resultat ("+percent(bw>rw?blue.w:red.w,bw>rw?blue.n:red.n)+").");
     }
-    if(eligible)patterns.push(eligible[0]+" är bästa comp-trenden med minst två matcher: "+percent(eligible[1].w,eligible[1].n)+" WR över "+eligible[1].n+" matcher.");
+    if(eligible&&eligible[1].n>=2)patterns.push(eligible[0]+" är bästa observerade comp-trenden: "+percent(eligible[1].w,eligible[1].n)+" WR över "+eligible[1].n+" matcher.");
     const recentFive=resultCounts(list.slice(0,5));
     if(recentFive.n>=3)patterns.push("Senaste "+recentFive.n+": "+recentFive.w+"W · "+recentFive.l+"L.");
-    const riskCounts={};
-    list.forEach(m=>{if(m.topRisk)riskCounts[m.topRisk]=(riskCounts[m.topRisk]||0)+1});
+    const riskCounts=Object.create(null);
+    list.forEach(m=>{if(m.topRisk&&!/^Inga?\b|^Ingen\b/i.test(m.topRisk))riskCounts[m.topRisk]=(riskCounts[m.topRisk]||0)+1});
     const topRisk=Object.entries(riskCounts).sort((a,b)=>b[1]-a[1])[0];
     if(topRisk&&topRisk[1]>=2)patterns.push("Återkommande draft-risk: "+topRisk[0]+" ("+topRisk[1]+" matcher).");
   }
   if(!patterns.length)patterns.push("Mer data behövs innan tydliga lagmönster går att skilja från enstaka matcher.");
-  $("patternInsights").innerHTML=patterns.slice(0,4).map(t=>'<div class="pattern-item">'+t+'</div>').join("");
+  $("patternInsights").innerHTML=patterns.slice(0,4).map(t=>'<div class="pattern-item">'+compGuideEscape(t)+'</div>').join("");
 
   renderTeamLearning(list);
 
@@ -749,17 +752,17 @@ function renderAnalysis(){
   $("matchHistory").innerHTML=list.slice(0,50).map(m=>{
     const d=new Date(m.savedAt);const date=isNaN(d)?m.savedAt:d.toLocaleDateString("sv-SE",{month:"2-digit",day:"2-digit"});
     const picks=(m.ourPicks||[]).map(p=>p.champ||p).join(" · ");
-    const matchup=m.matchup?.score!=null?'<span class="matchup-mini">'+m.matchup.score+'/100</span>':'';
+    const matchup=Number.isFinite(m.matchup?.score)?'<span class="matchup-mini">'+m.matchup.score+'/100</span>':'';
     const canDelete=!!window.RiftSharedData?.hasTeamKey?.();
     return '<div class="match-row">'+
-      '<span class="match-result '+m.result+'">'+(m.result==="win"?"WIN":"LOSS")+'</span>'+
+      '<span class="match-result '+(m.result==="win"?"win":"loss")+'">'+(m.result==="win"?"WIN":"LOSS")+'</span>'+
       '<span class="match-type">'+(m.matchType==="league"?"LIGA":"FLEX")+'</span>'+
-      '<span class="match-date">'+date+(m.patch?' · '+m.patch:'')+'</span>'+
-      '<span class="match-comp">'+(m.comp||"—")+' '+matchup+'</span>'+
-      '<span class="match-picks">'+picks+'</span>'+
+      '<span class="match-date">'+compGuideEscape(date)+(m.patch?' · '+compGuideEscape(m.patch):'')+'</span>'+
+      '<span class="match-comp">'+compGuideEscape(m.comp||"—")+' '+matchup+'</span>'+
+      '<span class="match-picks">'+compGuideEscape(picks)+'</span>'+
       '<span class="match-actions">'+
-        '<button class="review-match" data-review-match="'+m.id+'">Review</button>'+
-        (canDelete?'<button class="delete-match" data-delete-match="'+m.id+'" title="Radera match">×</button>':'')+
+        '<button class="review-match" data-review-match="'+compGuideEscape(m.id)+'">Review</button>'+
+        (canDelete?'<button class="delete-match" data-delete-match="'+compGuideEscape(m.id)+'" title="Radera match">×</button>':'')+
       '</span>'+
     '</div>';
   }).join("")||'<span class="analysis-note">Ingen data i filtret.</span>';
@@ -771,7 +774,7 @@ function roleChamp(match,role){
   return p?.champ||null;
 }
 function groupedRecord(list,keyFn){
-  const map={};
+  const map=Object.create(null);
   list.forEach(m=>{
     const key=keyFn(m);
     if(!key)return;
@@ -823,7 +826,7 @@ function renderTeamLearning(list){
     ["TOTALT",percent(c.w,c.n),c.w+"W · "+c.l+"L · "+confidence.label]
   ];
   $("learningCards").innerHTML=cards.map(([label,value,sub])=>
-    '<div class="learning-card"><span>'+label+'</span><strong>'+value+'</strong><small>'+sub+'</small></div>'
+    '<div class="learning-card"><span>'+compGuideEscape(label)+'</span><strong>'+compGuideEscape(value)+'</strong><small>'+compGuideEscape(sub)+'</small></div>'
   ).join("");
 
   const insights=[];
@@ -838,7 +841,7 @@ function renderTeamLearning(list){
   const recent=resultCounts(list.slice(0,5)),older=resultCounts(list.slice(5,15));
   if(recent.n>=5&&older.n>=5)insights.push("Senaste 5: "+percent(recent.w,recent.n)+" · föregående "+older.n+": "+percent(older.w,older.n)+".");
   if(!insights.length)insights.push("Mer data behövs för att skilja lagmönster från normal matchvarians.");
-  $("learningInsights").innerHTML=insights.slice(0,5).map(x=>'<div class="learning-insight">'+x+'</div>').join("");
+  $("learningInsights").innerHTML=insights.slice(0,5).map(x=>'<div class="learning-insight">'+compGuideEscape(x)+'</div>').join("");
 }
 
 function reviewEscape(value){
@@ -1028,7 +1031,18 @@ function seedScenarioEnemyPicks(){
   autoEnemy();
 }
 
+function practiceAssignment(champs){
+  const roster=window.RiftRoster;if(!roster)return null;
+  let best=null,bestScore=-1;
+  function walk(i,used,result,total){
+    if(i===champs.length){if(total>bestScore){best=result;bestScore=total;}return;}
+    for(const role of roster.roles){if(used.has(role)||!roster.available(role).includes(champs[i]))continue;
+      walk(i+1,new Set([...used,role]),[...result,role],total+roster.comfort(role,champs[i]));}
+  }
+  walk(0,new Set(),[],0);return best;
+}
 function lockPick(randomEnemy){
+  $("pickError").textContent="";
   if(step>=order.length)return;
   const turn=order[step];
   const used=new Set(picks.map(p=>p.champ));
@@ -1046,8 +1060,14 @@ function lockPick(randomEnemy){
     }
   }
 
-  if(!champions.includes(champ)){$("coachCall").textContent="Välj en champion från listan.";return;}
-  if(used.has(champ)){$("coachCall").textContent="Championen är redan pickad.";return;}
+  if(!champions.includes(champ)){$("pickError").textContent="Välj en champion från söklistan.";return;}
+  if(used.has(champ)){$("pickError").textContent="Championen är redan pickad. Välj en annan.";return;}
+
+  if(turn.side===userSide&&window.RiftRoster){
+    const own=picks.filter(p=>p.side===userSide),assignment=practiceAssignment([...own.map(p=>p.champ),champ]);
+    if(!assignment){$("pickError").textContent="Valet kan inte fylla en ledig roll i er aktiva, opausade pool. Byt champion eller uppdatera Våra champs.";return;}
+    own.forEach((p,i)=>p.role=assignment[i]);role=assignment[own.length];
+  }
 
   picks.push({...turn,champ,role});
   step++;
@@ -1108,7 +1128,7 @@ function renderSide(side,id){
     const p=picks.filter(x=>x.side===side)[i];
     const div=document.createElement("div");div.className="pick";
     const roleText=p&&p.role?" · "+trainerRoleNames[p.role]:"";
-    div.innerHTML='<span class="slot">'+(side==="blue"?"B":"R")+(i+1)+roleText+'</span><span class="champ">'+(p?p.champ:"—")+'</span>';
+    div.innerHTML='<span class="slot">'+(side==="blue"?"B":"R")+(i+1)+compGuideEscape(roleText)+'</span><span class="champ">'+compGuideEscape(p?p.champ:"—")+'</span>';
     list.appendChild(div);
   });
 }
@@ -1145,10 +1165,11 @@ function updateCoach(){
 function scoreSet(set,ours){return Math.min(3,ours.filter(x=>set.has(x)).length)}
 function updateScore(){
   const ours=picks.filter(p=>p.side===userSide).map(p=>p.champ);
-  const e=scoreSet(engage,ours),f=scoreSet(frontline,ours),d=scoreSet(damage,ours),er=scoreSet(early,ours);
+  const structure=window.RiftProfiles?.assess(ours);
+  const e=structure?Math.min(3,Math.round(structure.engage)):scoreSet(engage,ours),f=structure?Math.min(3,Math.round(structure.front)):scoreSet(frontline,ours),d=structure?Math.min(3,structure.damage):scoreSet(damage,ours),er=scoreSet(early,ours);
   $("engageScore").textContent=e+"/3";$("frontScore").textContent=f+"/3";$("damageScore").textContent=d+"/3";$("earlyScore").textContent=er+"/3";
   const issues=[];if(e<1)issues.push("lite engage");if(f<1)issues.push("ingen tydlig frontline");if(d<2)issues.push("kan sakna damage");if(er<2)issues.push("svagare early");
-  $("finalPlan").textContent=issues.length?"WATCH: "+issues.join(" · "):"Bra grund. Spela efter comp-identiteten och konvertera fights till objectives.";
+  $("finalPlan").textContent=(issues.length?"WATCH: "+issues.join(" · "):"Bra grund. Spela efter comp-identiteten och konvertera fights till objectives.")+(structure?.unknown.length?" Begränsad kitdata: "+structure.unknown.join(', ')+'.':'');
 }
 
 function finishTest(){
@@ -1166,17 +1187,23 @@ function finishTest(){
     };
   }
   const best=bestComp(ours);
-  let score=0;
-  ours.forEach(ch=>{if(reference.key.includes(ch))score+=12;if(reference.recommended.includes(ch))score+=6;if(reference.avoid.includes(ch))score-=10;});
-  if(best.name===reference.ideal)score+=20;
+  // Training score: shared kit structure + active comp fit + individual comfort.
+  // Not a win probability; matchup-specific advice remains separate below.
+  const ownRows=picks.filter(p=>p.side===userSide),kit=window.RiftProfiles?.assess(ours);
+  const fit=window.RiftRoster?.compOptions()[best.name];
+  const compScore=ownRows.reduce((n,p)=>n+(fit?.[p.role]?.includes(p.champ)?8:0),0);
+  const comfortScore=ownRows.reduce((n,p)=>n+(p.role?window.RiftRoster?.comfort(p.role,p.champ)||0:0),0)*.4;
+  const structureScore=kit?(Math.min(1,kit.front/2.2)+Math.min(1,kit.engage/2)+Math.min(1,kit.damage/2)+Math.min(1,kit.wave))*10:0;
+  let score=Math.round(compScore+comfortScore+structureScore);
+  if(kit?.unknown.length)score=Math.min(score,69);
   if(score<0)score=0;if(score>100)score=100;
 
   const grade=score>=85?"S":score>=70?"A":score>=55?"B":score>=40?"C":"D";
   $("testGrade").classList.remove("hidden");$("testGrade").textContent=grade;
-  $("resultTitle").textContent=(reference.opponentName?"Draft Test mot "+reference.opponentName:"Draft Test")+": "+score+"/100";
+  $("resultTitle").textContent=(reference.opponentName?"Draft Test mot "+reference.opponentName:"Draft Test")+": "+score+"/100 · träningspoäng, inte vinstchans";
   $("testFeedback").classList.remove("hidden");
   $("idealComp").textContent=reference.ideal;
-  $("recommendedPicks").textContent=reference.recommended.join(" / ");
+  $("recommendedPicks").textContent=(window.RiftRoster?Object.values(window.RiftRoster.compPlan(reference.ideal)).filter(Boolean):reference.recommended).join(" / ");
 
   const good=ours.filter(ch=>reference.key.includes(ch));
   const bad=ours.filter(ch=>reference.avoid.includes(ch));
