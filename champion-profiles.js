@@ -57,6 +57,8 @@
  // https://www.leagueoflegends.com/en-us/champions/xerath/ (reviewed 2026-10-02)
  add('Xerath','AP',0,.2,.5,'ranged wave zone');
  profiles.Xerath.roles=['mid','support'];
+ // Existing enemy-role priors and the team's pool both support jungle Maokai.
+ profiles.Maokai.roles=['top','jungle'];
  // Roles and tactical tags shared by practice and Brain (migrated from existing engine data).
  const kitRoles={
   top:["Sion", "Ornn", "Malphite", "Shen", "Poppy", "Galio", "Gragas", "Mordekaiser", "Trundle", "Renekton", "Garen", "Darius", "Olaf", "Camille", "Gnar", "Yorick", "Kennen", "Heimerdinger", "Rumble"],

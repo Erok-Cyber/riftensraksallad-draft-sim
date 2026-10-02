@@ -52,6 +52,8 @@ i leveransmeddelandet. Inga riktiga spelare eller matcher har raderats under tes
   grundprofil som AP/range/waveclear, utan att räknas som primary engage.
   Underlag: https://www.leagueoflegends.com/en-us/champions/xerath/.
   De numeriska strukturvärdena är verktygets heuristik, inte Riot-statistik.
+  Maokais jungleroll saknades dessutom i den gamla rollistan och ingår nu
+  i den gemensamma profilen: PRESS R och Objective Control kan bedömas automatiskt.
 - Automatisk comp-affinity bedömer roll, tidig styrka, engage, uppföljning,
   damage, waveclear och skydd utifrån dessa profiler.
 - Kärnor och manuellt bedömda alternativ behålls. Automatiska kit-alternativ
