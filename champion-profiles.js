@@ -52,6 +52,11 @@
  add('Senna','AD',0,0.5,1.7,'ranged sustained');
  add('Lulu|Renata Glasc|Ivern','UTIL',0,0.7,3,'ranged');
  add('Zyra','AP',0,1.3,2,'ranged wave');
+ // Active-pool coverage: Riot champion page describes magic area damage/slow.
+ // Heuristic values describe structure, not measured strength or patch statistics.
+ // https://www.leagueoflegends.com/en-us/champions/xerath/ (reviewed 2026-10-02)
+ add('Xerath','AP',0,.2,.5,'ranged wave zone');
+ profiles.Xerath.roles=['mid','support'];
  // Roles and tactical tags shared by practice and Brain (migrated from existing engine data).
  const kitRoles={
   top:["Sion", "Ornn", "Malphite", "Shen", "Poppy", "Galio", "Gragas", "Mordekaiser", "Trundle", "Renekton", "Garen", "Darius", "Olaf", "Camille", "Gnar", "Yorick", "Kennen", "Heimerdinger", "Rumble"],

@@ -48,6 +48,10 @@ i leveransmeddelandet. Inga riktiga spelare eller matcher har raderats under tes
 ## Draftmotor och AI
 
 - 84 befintliga kitprofiler har gemensamma roll- och taktiska egenskaper.
+  Livekontrollen hittade dessutom Xerath i er aktiva pool; han har nu en
+  grundprofil som AP/range/waveclear, utan att räknas som primary engage.
+  Underlag: https://www.leagueoflegends.com/en-us/champions/xerath/.
+  De numeriska strukturvärdena är verktygets heuristik, inte Riot-statistik.
 - Automatisk comp-affinity bedömer roll, tidig styrka, engage, uppföljning,
   damage, waveclear och skydd utifrån dessa profiler.
 - Kärnor och manuellt bedömda alternativ behålls. Automatiska kit-alternativ
@@ -65,6 +69,8 @@ i leveransmeddelandet. Inga riktiga spelare eller matcher har raderats under tes
 
 ## UX, design och prestanda
 
+- Draft Brains startvy har kortare, praktiska instruktioner i stället för slogan
+  och en missvisande allmän "Brain online"-indikator.
 - Rosterstatus visar **Lagets sparade roster**, utan tekniskt versionsnummer.
   Den interna revisionen finns kvar för konfliktkontroll.
 - Namn kan ändras på en vald spelare utan nytt ID eller ändrad matchhistorik.
