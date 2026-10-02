@@ -1,0 +1,27 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const original=fs.readFileSync(__dirname+'/brain-regression.cjs','utf8');
+const harness=vm.runInNewContext(original.slice(0,original.indexOf('const brain=harness'))+'\nharness',{require,__dirname,console,URLSearchParams,AbortController,AbortSignal});
+(async()=>{
+ const h=harness(['live.js','advanced-engine.js','draft-ai.js','team-roster.js']),m=h.context.window.RiftRoster;
+ h.run('userSide="blue";step=6;events=[]');
+ const archive='[{"id":"historical","draftContext":{"roster":{"players":[{"id":"jacob-support","role":"support"}]}}}]';h.storage.set('rs_draft_archive',archive);
+ m.removePlayer('support','jacob-support');assert.equal(m.profile('support','jacob-support'),null);assert.equal(m.player('support').id,'core-support');
+ let reload=harness([],Object.fromEntries(h.storage));assert.equal(reload.context.window.RiftRoster.profile('support','jacob-support'),null,'default sub must stay deleted');
+ assert.throws(()=>m.removePlayer('top','core-top'),/minst en/);
+ const id=m.savePlayer('top','','Replacement',['Ornn'],false);
+ assert.throws(()=>m.removePlayer('top','core-top','core-jungle'),/ersättare/);
+ m.removePlayer('top','core-top',id);assert.equal(m.player('top').id,id);
+ assert.equal(h.run('teamPool.top.join()'),'Ornn','active pool updates immediately');
+ reload=harness([],Object.fromEntries(h.storage));assert.equal(reload.context.window.RiftRoster.profile('top','core-top'),null);assert.equal(reload.context.window.RiftRoster.player('top').id,id);
+ const {validateRoster}=await import('../supabase/functions/rift-team-roster/policy.mjs');
+ const payload=m.snapshot();payload.profiles=payload.profiles.map(p=>m.profile(p.role,p.id));
+ const accepted=validateRoster(payload);assert(!accepted.profiles.some(p=>p.id==='core-top'));m.replace(accepted);assert.equal(m.player('top').id,id);
+ assert.throws(()=>validateRoster({...payload,profiles:payload.profiles.filter(p=>p.role!=='top')}));
+ assert.equal(h.storage.get('rs_draft_archive'),archive,'historical roster must not change');
+ m.addChampion('jungle','Diana');assert(m.compOptions()['PRESS R'].jungle.includes('Diana'));
+ assert(h.run('aiRoleCandidates("jungle").some(x=>x.ch==="Diana")'));
+ const score=h.run('aiRoleCandidates("jungle").find(x=>x.ch==="Diana").score');m.setComfort('jungle','Diana',9);
+ assert(h.run('aiRoleCandidates("jungle").find(x=>x.ch==="Diana").score')>score);
+ m.pauseChampion('jungle','Diana',true);assert(!h.run('aiRoleCandidates("jungle").some(x=>x.ch==="Diana")'));
+ console.log('PASS: reserve/core deletion, safe active replacement, last-role guard, no resurrection on reload/server roundtrip, immutable history and new champion/comfort/comp propagation.');
+})().catch(e=>{console.error(e);process.exitCode=1;});

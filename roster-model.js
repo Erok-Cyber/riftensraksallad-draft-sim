@@ -30,7 +30,10 @@
       profile.paused=pool.filter(ch=>Array.isArray(p.paused)&&p.paused.includes(ch));
       const i=out.profiles.findIndex(x=>x.id===p.id);if(i<0)out.profiles.push(profile);else if(out.profiles[i].role===p.role)out.profiles[i]=profile;
     }
-    roles.forEach(r=>{if(out.profiles.some(p=>p.role===r&&p.id===raw?.active?.[r]))out.active[r]=raw.active[r];});
+    // Complete saved rosters are authoritative: do not resurrect deleted defaults.
+    const provided=out.profiles.filter(p=>seen.has(p.id));
+    if(roles.every(r=>provided.some(p=>p.role===r)))out.profiles=provided;
+    roles.forEach(r=>{out.active[r]=out.profiles.find(p=>p.role===r&&p.id===raw?.active?.[r])?.id||out.profiles.find(p=>p.role===r)?.id;});
     return out;
   }
   const read=()=>{try{return validate(JSON.parse(localStorage.getItem(KEY)||'null'));}catch{return clone(defaults);}};
@@ -76,13 +79,21 @@
     }
     walk(0,new Set(),{},0);return best.picks;
   }
+  function removePlayer(role,id,replacementId){
+    const p=profile(role,id);if(!p)throw Error('Spelaren finns inte längre.');
+    const alternatives=state.profiles.filter(x=>x.role===role&&x.id!==id);
+    if(!alternatives.length)throw Error('Behåll minst en spelare per roll. Lägg till en ersättare först.');
+    const replacement=alternatives.find(x=>x.id===replacementId);
+    if(state.active[role]===id&&!replacement)throw Error('Välj en ersättare i samma roll innan du tar bort den aktiva spelaren.');
+    mutate(()=>{if(state.active[role]===id)state.active[role]=replacement.id;state.profiles=state.profiles.filter(x=>x.id!==id);});
+  }
   function select(role,id){if(!state.profiles.some(p=>p.role===role&&p.id===id))return false;mutate(()=>state.active[role]=id);return true;}
   function setComfort(role,ch,value,id){const p=profile(role,id);if(!p?.pool.includes(ch)||!validScore(value))throw Error('Comfort ska vara 1–10 för en champion i poolen.');mutate(()=>{p.comfort={...p.comfort,[ch]:Number(value)};});}
   function addChampion(role,name,id){const p=profile(role,id),ch=canonical(name);if(!p||!ch)throw Error('Välj en champion från sökningen.');if(p.pool.includes(ch))return;if(p.pool.length>=60)throw Error('Poolen kan ha högst 60 champions.');mutate(()=>{p.pool.push(ch);p.comfort={...p.comfort,[ch]:5};});}
   function removeChampion(role,ch,id){const p=profile(role,id);if(!p?.pool.includes(ch))return;if(p.pool.length<=1)throw Error('Behåll minst en champion i poolen.');mutate(()=>{p.pool=p.pool.filter(x=>x!==ch);p.paused=(p.paused||[]).filter(x=>x!==ch);delete p.comfort?.[ch];});}
   function pauseChampion(role,ch,paused,id){const p=profile(role,id);if(!p?.pool.includes(ch))throw Error('Champion saknas i poolen.');mutate(()=>{p.paused=(p.paused||[]).filter(x=>x!==ch);if(paused)p.paused.push(ch);});}
   window.addEventListener('storage',e=>{if(e.key===KEY||e.key===null){state=read();notify('external');}});
-  window.RiftRoster={roles,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);},select,savePlayer,parsePool,setComfort,addChampion,removeChampion,pauseChampion,
+  window.RiftRoster={roles,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);},select,savePlayer,removePlayer,parsePool,setComfort,addChampion,removeChampion,pauseChampion,
     profile:(r,id)=>{const p=profile(r,id);return p?clone({...p,comfort:Object.fromEntries(p.pool.map(ch=>[ch,score(p,ch)]))}):null;},
     available:r=>player(r).pool.filter(ch=>!player(r).paused?.includes(ch)),
     replace:raw=>mutate(()=>{state=validate(raw);}),

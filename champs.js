@@ -7,7 +7,7 @@
  const edited=()=>model.profile(role,editId)||model.player(role);
  const sync=()=>window.RiftRosterSync;
  const message=text=>{$('champsMessage').textContent=text;};
- function act(fn){try{const s=sync()?.status();if(s&&(!s.unlocked||!s.ready||s.busy))throw Error('Lås upp med lagkoden och invänta synkningen.');fn();message('Ändrat lokalt. Klicka Spara för laget för att dela ändringen.');render();}catch(e){message(e.message);}}
+ function act(fn){try{const s=sync()?.status();if(s&&(!s.unlocked||!s.ready||s.busy))throw Error('Lås upp med lagkoden och invänta synkningen.');if(fn()===false)return;message('Ändrat lokalt. Klicka Spara för laget för att dela ändringen.');render();}catch(e){message(e.message);}}
  function render(){
   const state=model.snapshot(),p=edited(),options=model.compOptions();editId=p.id;
   $('champsEditor').innerHTML=state.profiles.map(x=>'<option value="'+esc(x.id)+'" '+(x.id===editId?'selected':'')+'>'+esc(x.name)+' · '+names[x.role]+'</option>').join('');
@@ -22,10 +22,14 @@
    const picks=model.compPlan(name);
    return '<article class="champs-comp"><h3>'+esc(name)+'</h3><small>'+(name==='EARLY SKIRMISH'?'FÖRSTAVAL':name==='PRESS R'?'FALLBACK':'ALTERNATIV')+'</small>'+roles.map(r=>'<div><span>'+names[r]+'</span><strong>'+esc(picks[r]||'Saknar comp-alternativ')+'</strong><span>'+ (picks[r]?model.comfort(r,picks[r])+'/10':'—')+'</span></div>').join('')+(roles.some(r=>!picks[r]||model.comfort(r,picks[r])<5)?'<p class="champs-caution">Saknat alternativ eller låg comfort. Kontrollera compen före match.</p>':'')+'</article>';
   }).join('');
+  const canDelete=state.profiles.some(x=>x.role===role&&x.id!==p.id);
+  $('champsDeletePlayer').disabled=!canDelete;
+  $('champsDeleteHint').textContent=canDelete?'Borttagning gäller spelarprofilen. Tidigare matcher behålls.':'Minst en spelare måste finnas kvar i rollen. Lägg till en ersättare för att kunna ta bort denna spelare.';
   renderSync();
  }
  function renderSync(){const s=sync()?.status();if(!s)return;const locked=!s.unlocked||!s.ready||s.busy;
   $('champsSyncStatus').textContent=s.error|| (s.busy?'Synkar…':s.dirty?'Lokala ändringar · inte delade ännu':s.hasRemote?'Lagets sparade roster · version '+s.revision:'Ingen delad roster ännu · spara din befintliga pool för laget');
+  $('champsDeletePlayer').disabled=locked||!model.snapshot().profiles.some(x=>x.role===role&&x.id!==edited().id);
   $('champsSave').disabled=locked; $('champsRefresh').disabled=s.busy;
   document.querySelectorAll('[data-active-role], [data-comfort], [data-remove], [data-pause], #champsSearch, #champsNew, #champsNewForm button[type="submit"]').forEach(e=>e.disabled=locked);
  }
@@ -34,6 +38,13 @@
  $('champsRoster').addEventListener('change',e=>{if(e.target.dataset.activeRole)act(()=>model.select(e.target.dataset.activeRole,e.target.value));});
  $('champsPool').addEventListener('change',e=>{if(e.target.dataset.comfort)act(()=>model.setComfort(role,e.target.dataset.comfort,e.target.value,editId));});
  $('champsPool').addEventListener('click',e=>{const b=e.target.closest('[data-remove]'),p=e.target.closest('[data-pause]');if(b)act(()=>model.removeChampion(role,b.dataset.remove,editId));if(p)act(()=>model.pauseChampion(role,p.dataset.pause,!edited().paused?.includes(p.dataset.pause),editId));});
+ $('champsDeletePlayer').addEventListener('click',()=>act(()=>{
+  const p=edited(),state=model.snapshot(),replacement=state.profiles.find(x=>x.role===role&&x.id!==p.id);
+  if(!replacement)throw Error('Lägg till en ersättare i rollen först.');
+  const active=state.active[role]===p.id;
+  if(!confirm('Ta bort '+p.name+' och spelarens championpool?'+(active?' '+replacement.name+' tar över '+names[role]+' i matchuppställningen.':'')+' Tidigare matcher behålls. Ändringen delas när du klickar Spara för laget.'))return false;
+  model.removePlayer(role,p.id,active?replacement.id:undefined);editId=model.player(role).id;$('champsSearch').value='';
+ }));
  $('champsNew').addEventListener('click',()=>{$('champsNewForm').classList.remove('hidden');$('champsName').focus();});
  $('champsCancelNew').addEventListener('click',()=>{$('champsNewForm').classList.add('hidden');$('champsName').value='';});
  $('champsNewForm').addEventListener('submit',e=>{e.preventDefault();act(()=>{editId=model.savePlayer(role,'',$('champsName').value,edited().pool,false);$('champsNewForm').classList.add('hidden');$('champsName').value='';});});

@@ -56,10 +56,10 @@
       <h2>Matchuppställning</h2><p class="analysis-note">Dessa fem används av Draft Brain och comp-förslagen. Redigera en annan spelare nedanför utan att byta uppställning.</p>
       <div id="champsRoster" class="roster-players"></div>
       <label>Redigera spelare<select id="champsEditor" aria-label="Redigera spelare"></select></label>
-      <div class="champs-heading"><h2 id="champsTitle"></h2><button id="champsNew" class="secondary" type="button">Ny spelare / sub</button></div>
+      <div class="champs-heading"><h2 id="champsTitle"></h2><button id="champsNew" class="secondary" type="button">Ny spelare / sub</button><button id="champsDeletePlayer" class="secondary" type="button">Ta bort spelare</button></div><p id="champsDeleteHint" class="analysis-note"></p>
       <form id="champsNewForm" class="champs-new hidden"><label>Namn<input id="champsName" maxlength="40" required autocomplete="off"></label><p>Startar med den redigerade spelarens pool. Matchuppställningen ändras inte.</p><button type="submit">Skapa spelare</button><button id="champsCancelNew" type="button" class="secondary">Avbryt</button></form>
       <label class="champs-search-label" for="champsSearch">Lägg till champion</label><input id="champsSearch" type="search" placeholder="Sök champion…" autocomplete="off">
-      <p class="analysis-note">Comfort: 1–3 ovan · 4–6 okej · 7–8 trygg · 9–10 mycket trygg. Nya champions börjar på 5.</p>
+      <p class="analysis-note">Comfort: 1–3 ovan · 4–6 okej · 7–8 trygg · 9–10 mycket trygg. Nya champions börjar på 5.</p><p class="analysis-note">Champions i den aktiva spelarens pool tas med i Draft Brain. Bedömda comp-alternativ visas under namnet; övriga är valbara utan comp-bonus. Pausade champions föreslås inte.</p>
       <p id="champsMessage" role="status" aria-live="polite"></p>
       <div id="champsPool" class="champs-pool"></div>
     </section>
@@ -70,10 +70,10 @@
   <script src="team-data.js?v=20261002-integrity1"></script>
   <script src="db-config.js?v=20261002-integrity1"></script>
   <script src="champion-profiles.js?v=20261002-decisions1"></script>
-  <script src="roster-model.js?v=20261002-decisions1"></script>
+  <script src="roster-model.js?v=20261002-player-delete1"></script>
   <script src="roster-sync.js?v=20261002-integrity1"></script>
   <script src="champion-picker.js?v=20261002-integrity1"></script>
-  <script src="champs.js?v=20261002-integrity1"></script>
+  <script src="champs.js?v=20261002-player-delete1"></script>
   <script src="ui-shell.js?v=20261002-integrity1"></script>
   <div id="workspaceReady" hidden></div>
 </body></html>

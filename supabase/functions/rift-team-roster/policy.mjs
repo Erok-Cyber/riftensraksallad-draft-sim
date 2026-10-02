@@ -11,7 +11,6 @@ export function validateRoster(raw){
   return {id:p.id,role:p.role,name:p.name.trim(),pool:p.pool,comfort,paused:[...new Set(paused)]};
  });
  const active=Object.fromEntries(roles.map(r=>{if(!profiles.some(p=>p.role===r&&p.id===raw.active?.[r]))throw Error('Välj en aktiv spelare per roll.');return [r,raw.active[r]];}));
- // The browser migration retains core profiles, so reject payloads that would recreate them silently.
- if(roles.some(r=>!profiles.some(p=>p.id==='core-'+r&&p.role===r)))throw Error('Ordinarie profiler måste finnas kvar.');
+ // Active-player validation above guarantees all five roles, even when a former core was removed.
  return {profiles,active};
 }
