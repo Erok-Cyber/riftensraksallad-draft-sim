@@ -1136,7 +1136,9 @@ function renderSide(side,id){
 function bestComp(ours){
   let bestName=null,best=-1;
   Object.entries(comps).forEach(([name,c])=>{
-    const score=ours.reduce((s,ch)=>s+(c.core.includes(ch)?3:c.alts.includes(ch)?1:0),0);
+    const assignment=practiceAssignment(ours)||[];
+    const map=Object.fromEntries(assignment.map((role,i)=>[role,ours[i]]));
+    const score=window.RiftRoster.compFit(name,map)*.3;
     if(score>best){best=score;bestName=name}
   });
   return {name:bestName,score:best};
@@ -1189,7 +1191,7 @@ function finishTest(){
   const best=bestComp(ours);
   // Training score: shared kit structure + active comp fit + individual comfort.
   // Not a win probability; matchup-specific advice remains separate below.
-  const ownRows=picks.filter(p=>p.side===userSide),kit=window.RiftProfiles?.assess(ours);
+  const ownRows=picks.filter(p=>p.side===userSide),kit=window.RiftProfiles?.assess(picks.filter(p=>p.side===userSide));
   const fit=window.RiftRoster?.compOptions()[best.name];
   const compScore=ownRows.reduce((n,p)=>n+(fit?.[p.role]?.includes(p.champ)?8:0),0);
   const comfortScore=ownRows.reduce((n,p)=>n+(p.role?window.RiftRoster?.comfort(p.role,p.champ)||0:0),0)*.4;

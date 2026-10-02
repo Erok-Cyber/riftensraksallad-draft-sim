@@ -119,12 +119,7 @@ function aiCompFitForMap(map,name){
   const c=comps[name];
   const p=enemyProfile();
   let s=aiCompPreference(map,name);
-  roles.forEach(role=>{
-    const ch=map[role];
-    if(!ch)return;
-    if(c.core[role]===ch)s+=10*(window.RiftRoster?.compWeight(role,ch)??1);
-    else if((c.alts[role]||[]).includes(ch))s+=5;
-  });
+  s+=window.RiftRoster.compFit(name,map);
 
   const n=aiNeeds(map);
   if(name==="EARLY SKIRMISH"){
@@ -351,6 +346,8 @@ function aiCandidate(champ,role){
   score+=history.bonus;
   const scouting=window.RiftOpponent?.pickSignal(champ,role);
   score+=scouting?.points||0;
+  const responseRisk=aiResponseRisk(map);
+  score-=responseRisk;
 
   // Preserve the current core direction, but reward a useful second pivot.
   if(compRanks[1]&&compRanks[1].score>=9)score+=2;
@@ -361,6 +358,7 @@ function aiCandidate(champ,role){
     if(!hasSetup)score-=12;
     reasons.unshift(hasSetup?"follow-up på lagets engage":"behöver engage/setup från annan roll");
   }
+  if(responseRisk>=2)reasons.push('kvarvarande sårbarhet mot deras observerade pool');
   if(scouting?.points>=1&&scouting.reason)reasons.unshift(scouting.reason);
   if(history.n>=3&&history.bonus>=.35)reasons.unshift("teamdata "+history.w+"W/"+history.l+"L · "+history.label);
   if(flex>=4)reasons.push("håller flera pivots öppna");
@@ -369,10 +367,20 @@ function aiCandidate(champ,role){
   reasons.unshift('comfort '+rating+'/10'+(rating<=4?' · ovan champion':''));
 
   return {
-    ch:champ,role,score,state,lookahead,flex,risk,history,
+    ch:champ,role,score,state,lookahead,flex,risk,history,responses:scouting?.responses||[],
     reasons:[...new Set(reasons)].slice(0,4),
     anchors:compRanks.slice(0,2)
   };
+}
+
+function aiResponseRisk(map){
+  const used=new Set(Object.values(map));
+  const predicted=(window.RiftOpponent?.prospects?.()||[]).filter(p=>!used.has(p.champ));
+  const n=aiNeeds(map);
+  if(n.count<3||!predicted.length)return 0;
+  const mass=set=>Math.min(2,predicted.reduce((sum,p)=>sum+(set.has(p.champ)?p.weight:0),0));
+  // Bounded structural risk, not a win probability or a fabricated enemy pick.
+  return Math.min(6,(n.peel===0?mass(traits.dive)*2:0)+(n.antiTank===0?mass(traits.tanks)*1.5:0)+(n.engage===0?mass(traits.poke)*2:0));
 }
 
 function aiRoleCandidates(role){
@@ -397,9 +405,7 @@ function aiRoleTimingBonus(role){
   if(!enemyRoleShown(role)&&role==="top")s-=7;
   if(!enemyRoleShown(role)&&role==="mid")s-=4;
 
-  const remaining=(teamPool[role]||[]).filter(ch=>!unavailable().has(ch.toLowerCase())).length;
-  if(remaining<=2)s+=9;
-  else if(remaining<=4)s+=4;
+  // Scarcity is counted once, by aiPickUrgency, only when waiting exposes the pick.
   return s;
 }
 
@@ -424,16 +430,17 @@ function aiDecision(forcedRole=null){
 }
 
 function aiPickUrgency(candidate,ranked){
-  const turnIndex=step;
-  const nextOwn=draftOrder.findIndex((t,i)=>i>turnIndex&&t.side===userSide&&t.type==='pick');
-  const intervening=nextOwn<0?[]:draftOrder.slice(turnIndex+1,nextOwn);
-  const exposed=intervening.some(t=>t.side!==userSide||t.type==='ban');
-  const alternatives=ranked.filter(x=>x.ch!==candidate.ch&&x.score>=candidate.score-10);
+  const nextOwn=draftOrder.findIndex((t,i)=>i>step&&t.side===userSide&&t.type==='pick');
+  const turns=nextOwn<0?[]:draftOrder.slice(step+1,nextOwn).filter(t=>t.side!==userSide);
+  const alternatives=ranked.filter(x=>x.ch!==candidate.ch&&(comfort[x.role]?.[x.ch]??5)>=7&&x.score>=candidate.score-10);
   const observed=window.RiftOpponent?.scouting?.().filter(x=>x.champ===candidate.ch)||[];
   const contested=observed.some(x=>x.cm>0||x.recent>=3);
-  let points=exposed&&alternatives.length===0?5:0;
-  if(exposed&&contested)points+=4;
-  return {points,reason:points?`${contested?'Finns i deras observerade pool. ':''}${alternatives.length===0?'Få jämnstarka alternativ. ':''}Risk att vänta till nästa egna pick.`:'Ingen belagd brådska; prioritera comp och comfort.',alternatives:alternatives.slice(0,2).map(x=>x.ch)};
+  const safe=(comfort[candidate.role]?.[candidate.ch]??5)>=7;
+  const scarce=safe&&alternatives.length===0;
+  const points=turns.length?Math.min(9,(scarce?5:0)+(contested&&safe?4:0)):0;
+  const reason=points?`${contested?'Finns i deras observerade pool. ':''}${scarce?'Inget jämnstarkt comfort-alternativ. ':''}${turns.length} motståndarturer före nästa egna pick.`:
+    !turns.length?'Ingen motståndartur före nästa egna pick.':!safe?'Låg comfort motiverar inte ett brådskande pick.':'Trygga alternativ finns; prioritera comp och comfort.';
+  return {points,reason,alternatives:alternatives.slice(0,2).map(x=>x.ch)};
 }
 
 // Replace per-role ranking with the hybrid AI score.
@@ -532,15 +539,20 @@ function renderRecommendation(){
     $("recommendReason").textContent=top.groqReason+(top.groqRisk?' · Risk: '+top.groqRisk:'');
     $("recommendStrength").textContent='AI-prioritering · kontrollerad mot draft och roster';
   }
+  let timing=document.getElementById('recommendTiming');
+  const overall=t.type==='pick'?[...localList].sort((a,b)=>b.score-a.score)[0]:null;
+  if(timing)timing.textContent=t.type==='pick'?(top.urgency.points?'Välj nu: ':'Pickordning: ')+top.urgency.reason+(overall&&overall.ch!==top.ch?' Högst grundbedömning utan pickordning: '+overall.ch+'.':''):'';
+  const responses=document.getElementById('recommendResponses');
+  if(responses)responses.textContent=t.type==='pick'&&top.responses?.length?'Möjliga svar ur deras pool: '+top.responses.map(x=>x.champ+' ('+x.source+')').join(' · ')+'. Prognos, inte låsta picks.':'';
   const change=$("recommendChange");
-  const context=JSON.stringify(events.map(e=>[e.side,e.type,e.champ,e.role]));
+  const context=JSON.stringify({draft:events.map(e=>[e.side,e.type,e.champ,e.role]),roster:window.RiftRoster.key(),scout:window.RiftOpponent?.key?.()});
   const prior=aiPreviousCall;
   if(t.type==="pick"){
-    if(prior&&prior.side===userSide&&prior.context!==context&&prior.ch!==top.ch){
+    if(prior&&prior.side===userSide&&prior.context!==context&&(prior.ch!==top.ch||prior.pickRole!==top.role)){
       const unavailableNow=unavailable().has(prior.ch.toLowerCase());
-      change.textContent=prior.ch+" → "+top.ch+": "+(unavailableNow?"tidigare förstaval är pickat eller bannat":(top.reasons?.[0]||"bättre balans i den nya draften"))+".";
+      change.textContent=prior.ch+" → "+top.ch+": "+(unavailableNow?"tidigare förstaval är pickat eller bannat":(prior.roster!==window.RiftRoster.key()?"roster eller comfort har ändrats":top.reasons?.find(x=>!x.startsWith("comfort "))||"bättre balans i den nya draften"))+".";
     }else if(!prior||prior.context!==context||prior.role!==selectedRole){change.textContent="";}
-    aiPreviousCall={side:userSide,context,ch:top.ch,role:selectedRole};
+    aiPreviousCall={side:userSide,context,ch:top.ch,pickRole:top.role,role:selectedRole,roster:window.RiftRoster.key()};
   }else change.textContent="";
   renderAIInsight();
 }

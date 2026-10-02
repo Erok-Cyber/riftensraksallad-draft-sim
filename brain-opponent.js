@@ -80,7 +80,7 @@
     if(traits.engage.has(champ)||smartTraits.pick.has(champ))add(mass(traits.poke)*5,'access mot deras poke-pool');
     if(smartTraits.antiTank.has(champ))add(mass(traits.tanks)*5,'damage mot deras tank-pool');
     if(smartTraits.zone.has(champ))add(mass(traits.melee)*3,'zonkontroll mot deras melee-pool');
-    return {points:Math.min(24,points),reason:threats.length?'Scout: svar mot '+[...new Set(threats)].slice(0,2).join('/')+' om de väljs':answers.length?'Scout: '+answers[0]:''};
+    return {responses:predicted.filter(p=>p.champ!==champ).sort((a,b)=>b.weight-a.weight).slice(0,3).map(p=>({champ:p.champ,role:p.role,source:p.cm?'CM':'OP.GG'})),points:Math.min(24,points),reason:threats.length?'Scout: svar mot '+[...new Set(threats)].slice(0,2).join('/')+' om de väljs':answers.length?'Scout: '+answers[0]:''};
   }
   function sourceText(row){
     const parts=[];
@@ -114,7 +114,7 @@
     return (rows.some(r=>r.manual)?'CM + bilder + OP.GG · ':'CM + OP.GG · ')+new Set(rows.map(r=>r.player)).size+' starters med data'+freshness+
       (rows.some(r=>r.recent)?' · senaste matcher vägs in':' · OP.GG bygger på säsongsdata');
   }
-  window.RiftOpponent={active,key:()=>selected+':'+revision,pickSignal,summary,
+  window.RiftOpponent={active,prospects,key:()=>selected+':'+revision,pickSignal,summary,
     plans:()=>plans.filter(p=>p.status!=='cancelled').map(p=>({id:String(p.id),opponent:p.opponent,scheduledAt:p.scheduledAt,bestOf:p.bestOf||3,status:p.status})),
     scouting:(final=false)=>(final?evidence():availableEvidence()).map(({champ,role,cm,season,recent,roleCertain})=>({champ,role,cm,season,recent,roleCertain})),
     bans:()=>banRows().slice(0,3).map(r=>r.ch),

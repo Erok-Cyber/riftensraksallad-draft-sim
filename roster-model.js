@@ -37,7 +37,8 @@
   let state=read(),catalog=[...data.champions],images={...(data.images||{})},listeners=new Set();
   const player=r=>state.profiles.find(p=>p.id===state.active[r]&&p.role===r);
   const profile=(r,id)=>id?state.profiles.find(p=>p.role===r&&p.id===id):player(r);
-  function notify(source='local'){listeners.forEach(fn=>fn(source));}
+  let optionsCache=null;
+  function notify(source='local'){optionsCache=null;listeners.forEach(fn=>fn(source));}
   function mutate(fn){const before=clone(state);try{fn();localStorage.setItem(KEY,JSON.stringify(state));}catch(e){state=before;throw Error('Kunde inte spara: '+e.message);}notify();}
   const canonical=name=>({naut:'Nautilus',mao:'Maokai',j4:'Jarvan IV'}[String(name).toLowerCase()]||catalog.find(c=>c.toLowerCase()===String(name).trim().toLowerCase()));
   function parsePool(text){const entries=String(text).split(/[,;\n]/).map(s=>s.trim()).filter(Boolean);if(!entries.length||entries.length>60)throw Error('Välj 1–60 champions.');return [...new Set(entries.map(n=>{const c=canonical(n);if(!c)throw Error('Okänd champion: '+n);return c;}))];}
@@ -47,12 +48,20 @@
     let savedId;mutate(()=>{let p=state.profiles.find(x=>x.id===id&&x.role===role);if(!p){p={id:'sub-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),role,comfort:{}};state.profiles.push(p);}Object.assign(p,{name,pool});p.comfort=Object.fromEntries(pool.map(ch=>[ch,score(p,ch)]));p.paused=(p.paused||[]).filter(ch=>pool.includes(ch));if(activate)state.active[role]=p.id;savedId=p.id;});return savedId;
   }
   function compOptions(){
-    return Object.fromEntries(Object.entries(data.comps).map(([name,c])=>[name,Object.fromEntries(roles.map(role=>{
+    if(optionsCache)return optionsCache;
+    return optionsCache=Object.fromEntries(Object.entries(data.comps).map(([name,c])=>[name,Object.fromEntries(roles.map(role=>{
       const fit=new Set([c.core[role],...(c.alts[role]||[]),...(roleFits[name]?.[role]||[]),...(role==='support'?Object.keys(supportFits[name]||{}):[])]);
       const p=player(role),options=p.pool.filter(ch=>fit.has(ch)&&!p.paused?.includes(ch));
       options.sort((a,b)=>score(p,b)-score(p,a)||Number(b===c.core[role])-Number(a===c.core[role])||a.localeCompare(b));
       return [role,options];
     }))]));
+  }
+  function compFit(name,map){
+    const options=compOptions()[name];if(!options)return 0;
+    return roles.reduce((total,role)=>{
+      const ch=map[role];if(!ch||!options[role].includes(ch))return total;
+      return total+(ch===data.comps[name].core[role]?10:5)*score(player(role),ch)/10;
+    },0);
   }
   function compPlan(name){
     const options=compOptions()[name];if(!options)return null;
@@ -79,7 +88,7 @@
     replace:raw=>mutate(()=>{state=validate(raw);}),
     player:r=>{const p=player(r);return clone({...p,comfort:Object.fromEntries(p.pool.map(ch=>[ch,score(p,ch)]))});},snapshot:()=>clone(state),
     comfort:(r,ch)=>score(player(r),ch),compWeight:(r,ch)=>score(player(r),ch)/10,
-    compOptions:()=>clone(compOptions()),compPlan,key:()=>JSON.stringify(state),
+    compOptions:()=>clone(compOptions()),compPlan,compFit,key:()=>JSON.stringify(state),
     catalog:()=>[...catalog],image:ch=>images[ch]||'',
     rolesFor:ch=>roles.filter(role=>data.pools[role].includes(ch)||Object.entries(data.comps).some(([name,c])=>c.core[role]===ch||(c.alts[role]||[]).includes(ch)||(roleFits[name]?.[role]||[]).includes(ch)||(role==='support'&&Object.hasOwn(supportFits[name]||{},ch)))),
     async loadCatalog(){try{const versions=await fetch('https://ddragon.leagueoflegends.com/api/versions.json').then(r=>r.json());const raw=await fetch('https://ddragon.leagueoflegends.com/cdn/'+versions[0]+'/data/en_US/champion.json').then(r=>r.json());if(!raw.data)throw Error('Missing catalog');catalog=Object.values(raw.data).map(c=>c.name).sort();images=Object.fromEntries(Object.values(raw.data).map(c=>[c.name,'https://ddragon.leagueoflegends.com/cdn/'+versions[0]+'/img/champion/'+c.image.full]));return true;}catch{return false;}}

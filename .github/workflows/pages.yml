@@ -60,6 +60,7 @@ jobs:
           node tests/groq-policy.cjs
           node tests/postmatch.cjs
           node tests/planner-review.cjs
+          node tests/decision-scenarios.cjs
           node tests/integrity.cjs
           node tests/match-api.cjs
 

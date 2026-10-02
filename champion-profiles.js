@@ -57,7 +57,7 @@
   const known=picks.map(p=>typeof p==='string'?p:p.champ),unknown=known.filter(ch=>!get(ch));
   const sum=key=>known.reduce((n,ch)=>n+(get(ch)?.[key]||0),0);
   const count=tag=>known.filter(ch=>get(ch)?.tags.includes(tag)).length;
-  return {front:sum('front'),engage:sum('engage'),peel:sum('peel'),damage:known.filter(ch=>get(ch)&&get(ch).damage!=='UTIL').length,
+  return {front:sum('front'),engage:sum('engage'),peel:sum('peel'),damage:picks.filter(p=>(typeof p==='string'||p.role!=='support')&&get(typeof p==='string'?p:p.champ)&&get(typeof p==='string'?p:p.champ).damage!=='UTIL').length,
    wave:count('wave'),unknown,complete:unknown.length===0};
  }
  window.RiftProfiles={get,all:()=>profiles,assess};

@@ -863,7 +863,7 @@ function finalAnalysisKey(){
   return events.map(e=>e.type+"@"+e.side+"@"+e.champ+"@"+(e.role||"")).join("|");
 }
 function getFinalAnalysis(){
-  const key=(window.RIFT_ENGINE_VERSION||"base")+"::"+finalAnalysisKey();
+  const key=(window.RIFT_ENGINE_VERSION||"base")+"::"+finalAnalysisKey()+"::"+window.RiftRoster.key();
   if(finalAnalysisCache.key===key&&finalAnalysisCache.value)return finalAnalysisCache.value;
 
   let value=buildFinalGameplan()||{};
@@ -924,8 +924,13 @@ function shortLoadingPlan(gp){
   if(jungle.length>135)jungle=jungle.split(".").slice(0,2).join(".")+".";
   if(!map.jungle)jungle="Spela mot sidan som faktiskt har prio.";
 
-  const call="Vi spelar "+comp+". "+plan+" "+objective+" "+fight+" WATCH: "+watch;
-  return {comp,plan,jungle,objective,fight,watch,call};
+  const starter=ours().find(e=>(window.RiftProfiles?.get(e.champ)?.engage||0)>=2);
+  const carry=comp==='JUNGLE CARRY'?map.jungle:map.adc||map.mid;
+  const protect=carry?'Skydda '+carry+'. Spara peel tills deras engage används.':'Skydda den carry som kan göra damage utan att gå först.';
+  const engage=starter?starter.champ+' startar när laget kan följa. '+fight:'Ingen säker hård engage: spela på deras misstag och er setup.';
+  const behind=gp.behindDetail||gp.behind||'Ta säkra waves, håll ihop och tradea objectives utan vision.';
+  const call=plan+' '+engage+' '+protect+' Hot: '+watch+' Vid underläge: '+behind;
+  return {comp,plan,jungle,objective,fight:engage,watch,protect,behind,call};
 }
 
 function renderFinalGameplan(){
@@ -939,8 +944,8 @@ function renderFinalGameplan(){
   $("finalCompBadge").textContent=call.comp;
   $("gpLoadingCall").textContent=call.call;
   $("gpCallPlan").textContent=call.plan;
-  $("gpCallJungle").textContent=call.jungle;
-  $("gpCallObjective").textContent=call.objective;
+  $("gpCallJungle").textContent=call.protect;
+  $("gpCallObjective").textContent=call.behind;
   $("gpCallFight").textContent=call.fight;
   $("gpCallWatch").textContent=call.watch;
 
@@ -1460,6 +1465,7 @@ function compFitScore(name){
 }
 
 function compRankings(){
+  if(typeof aiCompRankForMap==='function')return aiCompRankForMap(ownRoleMap());
   return Object.keys(comps).map(n=>({name:n,score:compFitScore(n)})).sort((a,b)=>b.score-a.score);
 }
 
