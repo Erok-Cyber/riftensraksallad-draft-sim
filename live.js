@@ -5,72 +5,9 @@ const fallbackChampions = [
 let championRoster = [...fallbackChampions];
 let championMeta = {};
 
-const teamPool = {
-  top:["Renekton","Malphite","Shen","Mordekaiser","Sion","Garen","Darius","Olaf","Trundle","Heimerdinger","Yorick","Galio"],
-  jungle:["Xin Zhao","Jarvan IV","Viego","Volibear","Udyr","Lillia","Vi","Wukong","Graves","Kindred"],
-  mid:["Ahri","Annie","Vex","Hwei","Taliyah","Viktor","Sylas","Anivia"],
-  adc:["Ashe","Varus","Xayah","Jinx","Senna"],
-  support:["Nautilus","Leona","Maokai"]
-};
-
-const comfort = {
-  top:{"Renekton":10,"Malphite":10,"Shen":9,"Mordekaiser":9,"Sion":8,"Garen":8,"Darius":7,"Olaf":7,"Trundle":7,"Heimerdinger":6,"Yorick":6,"Galio":6},
-  jungle:{"Xin Zhao":10,"Jarvan IV":10,"Viego":9,"Volibear":9,"Udyr":9,"Lillia":4,"Vi":8,"Wukong":7,"Graves":7,"Kindred":6},
-  mid:{"Ahri":10,"Annie":10,"Vex":9,"Hwei":8,"Taliyah":8,"Viktor":8,"Sylas":6,"Anivia":6},
-  adc:{"Ashe":10,"Varus":9,"Xayah":9,"Jinx":8,"Senna":6},
-  support:{"Nautilus":10,"Leona":9,"Maokai":9}
-};
-
-const comps = {
-  "EARLY SKIRMISH":{
-    core:{top:"Renekton",jungle:"Xin Zhao",mid:"Ahri",adc:"Ashe",support:"Nautilus"},
-    alts:{
-      top:["Garen","Darius","Mordekaiser","Olaf","Trundle"],
-      jungle:["Viego","Wukong","Volibear"],
-      mid:["Taliyah","Vex","Sylas"],
-      adc:["Varus","Xayah"],
-      support:["Leona","Maokai"]
-    },
-    plan:"Prio först → fighta 2v2/3v3 → objective. INTE chase.",
-    wincon:"Vinn midgame genom river-prio, picks och första objectives."
-  },
-  "PRESS R":{
-    core:{top:"Malphite",jungle:"Jarvan IV",mid:"Annie",adc:"Jinx",support:"Leona"},
-    alts:{
-      top:["Galio","Mordekaiser","Shen","Sion"],
-      jungle:["Xin Zhao","Vi","Wukong","Viego"],
-      mid:["Vex","Hwei","Taliyah","Viktor"],
-      adc:["Ashe","Xayah"],
-      support:["Nautilus","Maokai"]
-    },
-    plan:"5v5 → tydlig GO-knapp → chain CC → carry följer → reset.",
-    wincon:"Tvinga fights där flera kan följa samma engage direkt."
-  },
-  "OBJECTIVE CONTROL":{
-    core:{top:"Mordekaiser",jungle:"Udyr",mid:"Taliyah",adc:"Varus",support:"Maokai"},
-    alts:{
-      top:["Sion","Shen","Galio","Heimerdinger"],
-      jungle:["Volibear","Xin Zhao","Lillia"],
-      mid:["Hwei","Ahri","Viktor","Anivia"],
-      adc:["Ashe","Xayah"],
-      support:["Nautilus","Leona"]
-    },
-    plan:"Push → reset → river → håll chokes. JAGA INTE.",
-    wincon:"Kom först till objective och tvinga enemy att gå in i er zon."
-  },
-  "JUNGLE CARRY":{
-    core:{top:"Shen",jungle:"Viego",mid:"Taliyah",adc:"Ashe",support:"Nautilus"},
-    alts:{
-      top:["Malphite","Sion","Mordekaiser"],
-      jungle:["Kindred","Graves","Lillia"],
-      mid:["Ahri","Hwei","Viktor"],
-      adc:["Varus","Senna","Xayah"],
-      support:["Leona","Maokai"]
-    },
-    plan:"Lanes skapar prio/setup → jungle tar river/enemy camps → spela runt jungle.",
-    wincon:"Junglern får resurser och blir primär carry; lanes enablear istället för att kräva allt."
-  }
-};
+const teamPool = JSON.parse(JSON.stringify(window.RiftTeamData.pools));
+const comfort = JSON.parse(JSON.stringify(window.RiftTeamData.comfort));
+const comps = JSON.parse(JSON.stringify(window.RiftTeamData.comps));
 
 const draftOrder = [
   {type:"ban",side:"blue",label:"B1 BAN"},{type:"ban",side:"red",label:"R1 BAN"},
@@ -549,8 +486,8 @@ function ruleBoost(champ,role){
 
 function candidateScore(champ,role,compName){
   const c=comps[compName],enemy=enemies(),need=currentNeeds();let s=(comfort[role]?.[champ]||5)*3;
-  if(c.core[role]===champ)s+=34;
-  if((c.alts[role]||[]).includes(champ))s+=18;
+  if(c.core[role]===champ)s+=34*(window.RiftRoster?.compWeight(role,champ)??1);
+  if((c.alts[role]||[]).includes(champ))s+=18*(window.RiftRoster?.compWeight(role,champ)??1);
 
   if(need.front===0&&traits.frontline.has(champ))s+=15;
   if(need.engage===0&&traits.engage.has(champ))s+=15;
@@ -1548,7 +1485,7 @@ function scoreCandidateDetails(champ,role,compName){
   add((comfort[role]?.[champ]||5)*3,"comfort");
   // A tied/open comp is not evidence to force its core picks.
   const anchorWeight=({öppen:0.25,låg:0.4,medel:0.7,hög:1})[compConfidence()]||0.25;
-  if(c.core[role]===champ)add(18*anchorWeight,"core i "+compName);
+  if(c.core[role]===champ)add(18*anchorWeight*(window.RiftRoster?.compWeight(role,champ)??1),"core i "+compName);
   else if((c.alts[role]||[]).includes(champ))add(9*anchorWeight,"passar "+compName);
 
   if(need.front===0&&traits.frontline.has(champ))add(14,"ger frontline");

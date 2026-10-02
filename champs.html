@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Do not paint a partial shell before routing scripts have run. -->
+  <link rel="expect" blocking="render" href="#workspaceReady" />
+  <title>Våra champs · Riftensräksallad Draft OS</title>
+  <script>
+    (() => {
+      const q=new URLSearchParams(location.search);
+      if(q.get("open")||q.get("view")||location.hash==="#comps"){
+        document.documentElement.classList.add("route-pending");
+      }
+    })();
+  </script>
+  <style>
+    html{background:#07101b}
+    html.route-pending body{visibility:hidden!important}
+  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=20261001-review2" />
+  <link rel="stylesheet" href="team-roster.css?v=20261002-champs1" />
+  <link rel="stylesheet" href="postmatch.css?v=20261001-bundle1" />
+</head>
+<body class="draft-os champs-os" data-workspace="champs">
+  <aside class="os-sidebar" id="osSidebar">
+    <div class="os-brand">
+      <div class="os-mark"><img class="team-logo os-logo" alt="Riftens Räksallad" hidden></div>
+      <div><strong>Riftensräksallad</strong><span>Draft OS</span></div>
+    </div>
+    <nav class="os-nav" aria-label="Huvudnavigation">
+      <span class="os-nav-label">WORKSPACE</span>
+      <a class="os-nav-item" href="index.html?workspace=home" data-workspace-target="home"><span>⌂</span><b>Home</b></a>
+      <a class="os-nav-item" href="live.html" data-workspace-target="brain"><span>◉</span><b>Draft Brain</b><em>LIVE</em></a>
+      <a class="os-nav-item" href="index.html?workspace=trainer" data-workspace-target="trainer"><span>⚔</span><b>Draft Trainer</b></a>
+      <a class="os-nav-item" href="index.html?workspace=test" data-workspace-target="test"><span>▤</span><b>Draft Test</b></a>
+      <a class="os-nav-item" href="index.html?workspace=planner" data-workspace-target="planner"><span>◎</span><b>Ban Planner</b></a>
+      <a class="os-nav-item" href="index.html?workspace=analysis" data-workspace-target="analysis"><span>▥</span><b>Analys</b></a>
+      <span class="os-nav-label os-nav-label-gap">TEAM</span>
+      <a class="os-nav-item" href="champs.html" data-workspace-target="champs"><span>♙</span><b>Våra champs</b></a>
+      <a class="os-nav-item" href="index.html?workspace=comps" data-workspace-target="comps"><span>◇</span><b>Comp Library</b></a>
+    </nav>
+    <div class="os-side-footer">
+      <div class="os-status-row"><i></i><span>Rivals League · Div 6</span></div>
+      <div class="os-patch-row"><span>PATCH</span><strong>26.19</strong></div>
+    </div>
+  </aside>
+  <main class="app os-main">
+    <p id="replayNotice" class="replay-notice hidden" role="status"></p>
+    <header><div><p class="eyebrow">RIFTENSRÄKSALLAD · LAGET</p><h1>Våra champs</h1><p class="sub">Spelare, championpooler och comfort på ett ställe.</p></div></header>
+    <section class="card champs-workspace">
+      <p class="analysis-note">Sparas i denna webbläsare och används i Draft Brain, träningslägenas comp-bedömning och Comp Library. Byt spelare inför matchen.</p>
+      <div id="champsRoster" class="roster-players"></div>
+      <div class="champs-heading"><h2 id="champsTitle"></h2><button id="champsNew" class="secondary" type="button">Ny spelare / sub</button></div>
+      <form id="champsNewForm" class="champs-new hidden"><label>Namn<input id="champsName" maxlength="40" required autocomplete="off"></label><p>Startar med nuvarande spelares pool. Anpassa den efteråt.</p><button type="submit">Skapa och använd</button><button id="champsCancelNew" type="button" class="secondary">Avbryt</button></form>
+      <label class="champs-search-label" for="champsSearch">Lägg till champion</label><input id="champsSearch" type="search" placeholder="Sök champion…" autocomplete="off">
+      <p class="analysis-note">Comfort: 1–3 ovan · 4–6 okej · 7–8 trygg · 9–10 mycket trygg. Nya champions börjar på 5.</p>
+      <p id="champsMessage" role="status" aria-live="polite"></p>
+      <div id="champsPool" class="champs-pool"></div>
+    </section>
+    <section class="card"><div class="champs-heading"><h2>Våra comp-förslag</h2><a href="index.html?workspace=comps">Öppna guider →</a></div><p class="analysis-note">Sorteras efter comfort bland champions som passar rollen och compen. Matchup och lagets helhet vägs också in i Draft Brain.</p><div id="champsComps" class="champs-comps"></div></section>
+  </main>
+  <button class="os-mobile-toggle" id="osMobileToggle" type="button" aria-label="Öppna navigation">☰</button>
+  <script src="brand.js?v=20260928-publicread3"></script>
+  <script src="team-data.js?v=20261002-champs1"></script>
+  <script src="roster-model.js?v=20261002-champs1"></script>
+  <script src="champion-picker.js?v=20261002-champs1"></script>
+  <script src="champs.js?v=20261002-champs1"></script>
+  <script src="ui-shell.js?v=20260929-workspace1"></script>
+  <div id="workspaceReady" hidden></div>
+</body></html>

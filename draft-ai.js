@@ -122,7 +122,7 @@ function aiCompFitForMap(map,name){
   roles.forEach(role=>{
     const ch=map[role];
     if(!ch)return;
-    if(c.core[role]===ch)s+=10;
+    if(c.core[role]===ch)s+=10*(window.RiftRoster?.compWeight(role,ch)??1);
     else if((c.alts[role]||[]).includes(ch))s+=5;
   });
 
@@ -338,7 +338,7 @@ function aiCandidate(champ,role){
 
   let score=base.score*AI_CONFIG.baseWeight;
   const preferred=aiCompPreference(ownRoleMap(),'EARLY SKIRMISH')>0?'EARLY SKIRMISH':'PRESS R';
-  if(comps[preferred].core[role]===champ)score+=8;
+  if(comps[preferred].core[role]===champ)score+=8*(window.RiftRoster?.compWeight(role,champ)??1);
   else if((comps[preferred].alts[role]||[]).includes(champ))score+=4;
   score+=(state-50)*AI_CONFIG.stateWeight;
   score+=(lookahead-50)*AI_CONFIG.lookaheadWeight;

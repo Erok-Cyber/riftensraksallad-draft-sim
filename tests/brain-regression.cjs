@@ -17,6 +17,7 @@ function harness(files,fixtures={}){
       querySelectorAll:()=>[],querySelector:()=>element('query'),addEventListener(type,fn){listeners.set("document:"+type,fn);},dispatchEvent(){}},
     window:{addEventListener(){},scrollTo(){}}};
   vm.createContext(context);
+  files=['team-data.js','roster-model.js',...files.filter(f=>!['team-data.js','roster-model.js'].includes(f))];
   for(const file of files)vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
   return {context,run:s=>vm.runInContext(s,context),elements,storage,fire:(id,type)=>listeners.get(id+":"+type)?.()};
 }
@@ -253,3 +254,28 @@ assert(!xenia.run('window.RiftOpponent.banReason("Lulu").includes("CM:")'));
 xenia.run('events=[{side:"red",type:"pick",role:"support",champ:"Lulu"}];');
 assert(!xenia.run('window.RiftOpponent.banCandidates().includes("Lulu")'));
 console.log('PASS: Xenia screenshots feed exact starters, off-role tournament picks and accurate source labels.');
+
+const editable=harness(['live.js','advanced-engine.js','draft-ai.js','team-roster.js']);
+editable.run('userSide="blue";step=6;events=[];');
+const keyBefore=editable.run('window.RiftRoster.key()');
+const highScore=editable.run('aiCandidate("Xin Zhao","jungle").score');
+editable.run('window.RiftRoster.setComfort("jungle","Xin Zhao",1);');
+assert.equal(editable.run('comfort.jungle["Xin Zhao"]'),1);
+assert(editable.run('aiCandidate("Xin Zhao","jungle").score')<highScore);
+assert.notEqual(editable.run('window.RiftRoster.key()'),keyBefore);
+assert.notEqual(editable.run('window.RiftRoster.compPlan("EARLY SKIRMISH").jungle'),'Xin Zhao');
+editable.run('window.RiftRoster.addChampion("support","Rell");window.RiftRoster.setComfort("support","Rell",10);');
+assert(editable.run('window.RiftRoster.compOptions()["PRESS R"].support.includes("Rell")'));
+assert(editable.run('aiRoleCandidates("support").some(c=>c.ch==="Rell")'));
+editable.run('window.RiftRoster.setComfort("support","Nautilus",1);window.RiftRoster.setComfort("support","Leona",1);');
+assert.equal(editable.run('window.RiftRoster.compPlan("PRESS R").support'),'Rell');
+editable.run('window.RiftRoster.select("support","jacob-support");');
+assert.equal(editable.run('comfort.support.Nautilus'),8,'comfort must be player-specific');
+editable.run('window.RiftRoster.select("support","core-support");window.RiftRoster.removeChampion("support","Rell");');
+assert(!editable.run('aiRoleCandidates("support").some(c=>c.ch==="Rell")'));
+const comfortReload=harness(['live.js','advanced-engine.js','draft-ai.js','team-roster.js'],{'rs_own_roster_v1':editable.storage.get('rs_own_roster_v1')});
+assert.equal(comfortReload.run('comfort.jungle["Xin Zhao"]'),1);
+assert.throws(()=>editable.run('window.RiftRoster.setComfort("jungle","Xin Zhao",11)'));
+assert.throws(()=>editable.run('window.RiftRoster.setComfort("jungle","Xin Zhao",0)'));
+assert.equal(editable.run('new Set(Object.values(window.RiftRoster.compPlan("JUNGLE CARRY")).filter(Boolean)).size'),5);
+console.log('PASS: editable comfort changes AI ranking, comp variants, cache key, isolated players, remove, reload and unique lineup.');

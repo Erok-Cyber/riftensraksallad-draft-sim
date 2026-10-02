@@ -1,19 +1,15 @@
-.draft-os .app.os-main>.team-roster{width:min(100%,var(--shell-max));max-width:var(--shell-max);box-sizing:border-box;margin:0 auto 20px;padding:16px 20px;border:1px solid #35465c;border-radius:14px;background:#0d1927;color:#eef3fa}
-.team-roster>summary{cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:8px 18px;font-family:Oxanium,Inter,sans-serif;font-weight:700;font-size:16px;min-height:28px}
-.team-roster>summary::before{content:'▸';color:#e8bb55}.team-roster[open]>summary::before{content:'▾'}
-#rosterSummary{font:400 14px/1.6 Inter,sans-serif;color:#c6d2e0}
-.team-roster p,.team-roster small{font:400 14px/1.6 Inter,sans-serif;color:#c6d2e0}
+.draft-os .app.os-main>.team-roster{box-sizing:border-box;margin:0 auto 20px;padding:16px 20px;border:1px solid #35465c;border-radius:14px;background:#0d1927;color:#eef3fa}
 .roster-players{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px;margin:18px 0}
 .roster-slot{display:flex;flex-direction:column;gap:8px;min-width:0;font:600 13px Oxanium,Inter,sans-serif;color:#ebbf61}
-.team-roster select,.team-roster input,.team-roster textarea{width:100%;box-sizing:border-box;min-height:44px;border:1px solid #53657e;border-radius:8px;background:#132337;color:#f4f7fc;padding:10px 12px;font:400 15px/1.5 Inter,sans-serif}
-.team-roster select:focus-visible,.team-roster input:focus-visible,.team-roster textarea:focus-visible{outline:2px solid #e8bb55;outline-offset:2px}
-.team-roster textarea{resize:vertical;min-height:92px}.team-roster select option{background:#132337;color:#f4f7fc}
-.roster-edit-grid{display:grid;grid-template-columns:180px 1fr;gap:14px;margin:16px 0}.roster-edit-grid label{display:grid;gap:8px;font-size:14px}.roster-edit-grid .roster-pool{grid-column:1/-1}
-.roster-actions{display:flex;gap:10px;flex-wrap:wrap}.roster-actions button{min-height:44px}
-#rosterEditor{margin-top:18px;border-top:1px solid #35465c;padding-top:14px}
-#rosterEditor>summary{display:inline-flex;align-items:center;gap:10px;cursor:pointer;list-style:none;padding:10px 14px;min-height:44px;box-sizing:border-box;border:1px solid #465d78;border-radius:9px;background:#132337;color:#e7edf6;font:600 14px/1.4 Inter,sans-serif}
-#rosterEditor>summary::before{content:'+';color:#ebbf61;font-size:18px}#rosterEditor[open]>summary::before{content:'−'}#rosterEditor>summary::-webkit-details-marker{display:none}
-#rosterEditor>summary:hover{background:#1c3049;border-color:#c5a15a}#rosterEditor>summary:focus-visible{outline:2px solid #ebbf61;outline-offset:3px}
-#rosterWarning,#rosterMessage{color:#f1cd80}#rosterWarning:empty,#rosterMessage:empty{display:none}
+.roster-slot select{width:100%;min-width:0}
+#rosterSummary{font:400 14px/1.6 Inter,sans-serif;color:#c6d2e0}#rosterWarning{color:#f1cd80}#rosterWarning:empty{display:none}
 @media(max-width:950px){.roster-players{grid-template-columns:repeat(2,minmax(0,1fr))}}
-@media(max-width:600px){.draft-os .app.os-main>.team-roster{padding:14px}.roster-edit-grid{grid-template-columns:1fr}.roster-edit-grid .roster-pool{grid-column:auto}}
+.roster-compact{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.roster-compact p{margin:6px 0}
+.champs-workspace input,.champs-workspace select{background:#132337;color:#f4f7fc;border:1px solid #53657e;border-radius:8px;padding:10px 12px;min-height:44px;font:inherit;box-sizing:border-box}
+.champs-workspace input:focus-visible,.champs-workspace select:focus-visible,.champs-role:focus-visible{outline:2px solid #e8bb55;outline-offset:2px}
+.champs-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin:20px 0}
+.champs-heading h2{margin:0}.champs-heading a{color:#ebbf61}.champs-search-label{display:block;margin:16px 0 8px;font-weight:600}
+#champsSearch{width:100%}.champs-pool{display:grid;gap:10px;margin-top:16px}.champs-role{width:100%;background:#132337;color:#d8e5f6;border:1px solid #465d78;border-radius:8px;min-height:42px}.champs-role.active{color:#f2cb76;border-color:#e8bb55;background:#302b21}
+.champs-champion{display:flex;gap:14px;align-items:center;padding:14px;border:1px solid #35465c;border-radius:12px;background:#0d1927}.champs-champion img{border-radius:8px}.champs-champion-name{flex:1;min-width:0}.champs-champion-name strong{font-size:16px}.champs-champion-name small{display:block;color:#b9c8dc;line-height:1.6;margin-top:4px;font-size:12px}.champs-champion label{display:grid;gap:5px;color:#c6d2e0;font-size:12px}.champs-champion select{min-width:90px}.champs-champion button{min-height:44px}
+.champs-comps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.champs-comp{border:1px solid #35465c;border-radius:12px;padding:18px;background:#0d1927}.champs-comp h3{margin:0 0 5px}.champs-comp>small{color:#ebbf61}.champs-comp>div{display:grid;grid-template-columns:72px 1fr 45px;gap:10px;margin-top:13px;font-size:14px}.champs-comp>div span{color:#bacade}.champs-caution,#champsMessage{color:#f2cb76;line-height:1.6}#champsMessage:empty{display:none}.champs-new{border:1px solid #53657e;border-radius:10px;padding:16px;margin:18px 0}.champs-new label{display:grid;gap:8px}.champs-new button{margin-right:8px}
+@media(max-width:760px){.champs-comps{grid-template-columns:1fr}.champs-champion{flex-wrap:wrap}.champs-champion-name{flex-basis:calc(100% - 60px)}.champs-champion label{flex:1}.champs-champion select{width:100%}.champs-comp>div{grid-template-columns:60px 1fr 42px}.champs-heading h2{font-size:20px}}

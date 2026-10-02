@@ -1,5 +1,5 @@
 /* Shared progressive champion search. Native input/Enter remains the lock action. */
-window.RiftChampionPicker={attach({inputId,roster,used,rolesFor,imageFor,onSelect}){
+window.RiftChampionPicker={attach({inputId,roster,used,rolesFor,imageFor,onSelect,hintText,takenText="upptagen",clearOnSelect=false}){
   const input=document.getElementById(inputId);if(!input)return;
   input.removeAttribute("list");
   const panel=document.createElement("div");panel.className="champion-picker hidden";
@@ -8,7 +8,7 @@ window.RiftChampionPicker={attach({inputId,roster,used,rolesFor,imageFor,onSelec
     const option=document.createElement("option");option.value=value;option.textContent=label;filter.appendChild(option);
   }
   const list=document.createElement("div");list.className="champion-results";
-  const hint=document.createElement("small");hint.textContent="Välj champion, tryck sedan Enter för att låsa. Rollfiltret visar kända rollpooler.";
+  const hint=document.createElement("small");hint.textContent=hintText||"Välj champion, tryck sedan Enter för att låsa. Rollfiltret visar kända rollpooler.";
   panel.append(filter,list,hint);input.after(panel);
   let selected=null;
   const normalize=s=>s.toLowerCase().replace(/[\s'’.-]/g,"");
@@ -22,8 +22,8 @@ window.RiftChampionPicker={attach({inputId,roster,used,rolesFor,imageFor,onSelec
       button.disabled=taken.has(ch.toLowerCase());button.className="champion-result";
       const url=imageFor(ch);
       if(url){const img=document.createElement("img");img.src=url;img.alt="";img.width=28;img.height=28;img.loading="lazy";img.addEventListener("error",()=>img.remove(),{once:true});button.appendChild(img);}
-      const label=document.createElement("span");label.textContent=ch+(button.disabled?" · upptagen":"");button.appendChild(label);
-      button.addEventListener("click",()=>{selected=ch;input.value=ch;onSelect(ch,filter.value||null);input.focus();panel.classList.add("hidden");});
+      const label=document.createElement("span");label.textContent=ch+(button.disabled?" · "+takenText:"");button.appendChild(label);
+      button.addEventListener("click",()=>{selected=ch;input.value=ch;onSelect(ch,filter.value||null);if(clearOnSelect){input.value="";selected=null;}input.focus();panel.classList.add("hidden");});
       list.appendChild(button);
     }
     if(!matches.length)list.textContent="Ingen champion matchar sökningen.";

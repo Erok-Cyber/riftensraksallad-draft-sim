@@ -3,6 +3,7 @@ const fs=require('node:fs'),vm=require('node:vm'),{stripTypeScriptTypes}=require
 (async()=>{
  const policy=await import('../supabase/functions/rift-draft-coach/policy.mjs');
  const raw={side:'blue',events:[],pools:{support:['Braum']},targeted:true,scouting:[{champ:'Zoe',role:'mid',season:100}],candidates:[{ch:'Zoe',score:40},{ch:'Nocturne',score:50}]};
+ const large=policy.sanitizeDraft({...raw,pools:{top:Array.from({length:60},(_,i)=>'Champ'+i),support:['Braum']},comfort:[...Array.from({length:60},(_,i)=>({role:'top',ch:'Champ'+i,value:8})),{role:'support',ch:'Braum',value:3}]});assert.equal(large.comfort.find(c=>c.ch==='Braum').value,3);
  const draft=policy.sanitizeDraft(raw);assert.deepEqual(draft.candidates.map(x=>x.ch),['Zoe']);
  assert.throws(()=>policy.sanitizeDraft({...raw,scouting:[]}));
  assert.throws(()=>policy.validateAnswer({choices:[{id:'ban:Nocturne',reason:'invented'}]},draft));

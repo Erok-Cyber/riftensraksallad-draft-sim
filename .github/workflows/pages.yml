@@ -48,6 +48,9 @@ jobs:
           node --check scouting-lineup.js
           node --check brain-opponent.js
           node --check team-roster.js
+          node --check team-data.js
+          node --check roster-model.js
+          node --check champs.js
           node --check groq-coach.js
           node --check postmatch.js
           node tests/brain-regression.cjs

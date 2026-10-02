@@ -482,7 +482,7 @@ function openCompGuide(name){
   $("compGuideIdentity").textContent=g.identity;
   $("compGuideCall").textContent=base.call;
 
-  $("compGuideCore").innerHTML=base.core.map((ch,i)=>
+  $("compGuideCore").innerHTML=(window.RiftRoster?compGuideRoles.map(r=>window.RiftRoster.compPlan(name)[r]||"Saknar alternativ"):base.core).map((ch,i)=>
     '<div class="comp-core-slot"><span>'+compGuideRoleNames[compGuideRoles[i]]+'</span><strong>'+compGuideEscape(ch)+'</strong></div>'
   ).join("");
 
@@ -1202,3 +1202,20 @@ window.RiftChampionPicker?.attach({inputId:"championSearch",roster:()=>champions
   used:()=>new Set(picks.map(p=>p.champ.toLowerCase())),
   rolesFor:ch=>trainerRoles.filter(r=>(trainerRolePools[r]||[]).includes(ch)),
   imageFor:ch=>championImages[ch],onSelect:()=>{}});
+
+// The shared roster drives comp variants here and the comfort engine in Draft Brain.
+(()=>{
+ if(!window.RiftRoster)return;
+ const originalVariants=JSON.parse(JSON.stringify(Object.fromEntries(Object.entries(compGuides).map(([n,g])=>[n,g.variants]))));
+ function apply(){
+  const options=window.RiftRoster.compOptions();
+  Object.keys(comps).forEach(name=>{
+   const picks=window.RiftRoster.compPlan(name),ordered=compGuideRoles.map(r=>picks[r]);
+   comps[name].core=ordered.filter(Boolean);comps[name].alts=[...new Set(Object.values(options[name]).flat())].filter(ch=>!comps[name].core.includes(ch));
+   compGuides[name].roles=options[name];
+   compGuides[name].variants=[{name:'Aktiv roster & comfort',tag:name==='EARLY SKIRMISH'?'FÖRSTAVAL':name==='PRESS R'?'FALLBACK':'AKTUELL',picks:ordered.map(ch=>ch||'Saknar alternativ'),why:'Anpassad efter era aktiva spelare. Kontrollera engage, damage och matchup innan ni låser.'},...originalVariants[name].filter(v=>v.picks.every((ch,i)=>options[name][compGuideRoles[i]].includes(ch))&&!v.picks.every((ch,i)=>ch===ordered[i]))];
+   document.querySelectorAll('[data-comp-guide="'+name+'"]').forEach(card=>{const p=card.querySelector('p');if(p)p.textContent=ordered.map(ch=>ch||'Saknar alternativ').join(' · ');});
+  });
+ }
+ apply();window.RiftRoster.subscribe(apply);
+})();
