@@ -27,7 +27,7 @@
  $('champsCancelNew').addEventListener('click',()=>{$('champsNewForm').classList.add('hidden');$('champsName').value='';});
  $('champsNewForm').addEventListener('submit',e=>{e.preventDefault();act(()=>{model.savePlayer(role,'',$('champsName').value,model.player(role).pool);$('champsNewForm').classList.add('hidden');$('champsName').value='';});});
  model.subscribe(render);render();
- window.RiftChampionPicker.attach({inputId:'champsSearch',roster:model.catalog,used:()=>new Set(model.player(role).pool.map(c=>c.toLowerCase())),rolesFor:ch=>roles.filter(r=>Object.values(model.compOptions()).some(c=>c[r].includes(ch))||window.RiftTeamData.pools[r].includes(ch)),imageFor:model.image,
+ window.RiftChampionPicker.attach({inputId:'champsSearch',roster:model.catalog,used:()=>new Set(model.player(role).pool.map(c=>c.toLowerCase())),rolesFor:model.rolesFor,imageFor:model.image,
   onSelect:ch=>act(()=>model.addChampion(role,ch)),clearOnSelect:true,takenText:'redan i poolen',hintText:'Klicka för att lägga till med comfort 5. Alla roller visar hela championlistan.'});
  model.loadCatalog().then(ok=>{if(!ok)message('Sökningen använder den inbyggda championlistan.');});
 })();

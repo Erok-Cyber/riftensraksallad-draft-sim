@@ -264,6 +264,7 @@ assert.equal(editable.run('comfort.jungle["Xin Zhao"]'),1);
 assert(editable.run('aiCandidate("Xin Zhao","jungle").score')<highScore);
 assert.notEqual(editable.run('window.RiftRoster.key()'),keyBefore);
 assert.notEqual(editable.run('window.RiftRoster.compPlan("EARLY SKIRMISH").jungle'),'Xin Zhao');
+assert(editable.run('window.RiftRoster.rolesFor("Rell").includes("support")'),'unowned champions remain searchable with role filter');
 editable.run('window.RiftRoster.addChampion("support","Rell");window.RiftRoster.setComfort("support","Rell",10);');
 assert(editable.run('window.RiftRoster.compOptions()["PRESS R"].support.includes("Rell")'));
 assert(editable.run('aiRoleCandidates("support").some(c=>c.ch==="Rell")'));

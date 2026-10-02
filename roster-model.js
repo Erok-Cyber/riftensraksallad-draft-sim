@@ -75,6 +75,7 @@
     comfort:(r,ch)=>score(player(r),ch),compWeight:(r,ch)=>score(player(r),ch)/10,
     compOptions:()=>clone(compOptions()),compPlan,key:()=>JSON.stringify(state),
     catalog:()=>[...catalog],image:ch=>images[ch]||'',
+    rolesFor:ch=>roles.filter(role=>data.pools[role].includes(ch)||Object.entries(data.comps).some(([name,c])=>c.core[role]===ch||(c.alts[role]||[]).includes(ch)||(roleFits[name]?.[role]||[]).includes(ch)||(role==='support'&&Object.hasOwn(supportFits[name]||{},ch)))),
     async loadCatalog(){try{const versions=await fetch('https://ddragon.leagueoflegends.com/api/versions.json').then(r=>r.json());const raw=await fetch('https://ddragon.leagueoflegends.com/cdn/'+versions[0]+'/data/en_US/champion.json').then(r=>r.json());if(!raw.data)throw Error('Missing catalog');catalog=Object.values(raw.data).map(c=>c.name).sort();images=Object.fromEntries(Object.values(raw.data).map(c=>[c.name,'https://ddragon.leagueoflegends.com/cdn/'+versions[0]+'/img/champion/'+c.image.full]));return true;}catch{return false;}}
   };
 })();
