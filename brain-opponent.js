@@ -111,7 +111,7 @@
       // Rank is only a bounded strength proxy. No role gets a free jungle/carry bonus.
       const rankBonus=lowest!=null&&row.tier?Math.min(18,Math.max(0,tiers.indexOf(row.tier)-lowest)*4):0;
       const replacement=replacementValue(row,availableEvidence());
-      const score=evidenceScore(row)+rankBonus+replacement.bonus,existing=merged.get(row.champ);
+      const score=evidenceScore(row)*(.65+.35*reliability(row))+rankBonus*reliability(row)+replacement.bonus,existing=merged.get(row.champ);
       if(!existing||score>existing.score)merged.set(row.champ,{ch:row.champ,score,reason:sourceText(row)+' · '+replacement.reason});
     });
     return [...merged.values()].sort((a,b)=>b.score-a.score||a.ch.localeCompare(b.ch));
