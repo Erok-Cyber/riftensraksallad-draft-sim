@@ -2,6 +2,10 @@
    Supabase Edge Function + local cache/offline fallback. */
 (function(){
   const LOCAL_MATCHES="rs_match_history";
+  const OUTBOX="rs_match_outbox_v2";
+  function pending(){try{const rows=JSON.parse(localStorage.getItem(OUTBOX)||"[]");return Array.isArray(rows)?rows.filter(m=>m&&typeof m.id==='string'):[]}catch{return[]}}
+  function queue(match){localStorage.setItem(OUTBOX,JSON.stringify(uniqueById([...pending().filter(m=>m.id!==match.id),match])))}
+  function dequeue(id){localStorage.setItem(OUTBOX,JSON.stringify(pending().filter(m=>m.id!==id)))}
   const TEAM_KEY_STORAGE="rs_team_access_key";
   const cfg=()=>window.RIFT_DB_CONFIG||{};
   let state={mode:"local",status:"Lokal",lastSync:null,error:null,syncing:false};
@@ -49,7 +53,7 @@
     try{data=text?JSON.parse(text):null}catch{data={error:text}}
     if(!res.ok){
       const message=data?.error||("Shared DB "+res.status);
-      throw new Error(message);
+      const err=new Error(message);err.status=res.status;throw err;
     }
     return data;
   }
@@ -87,13 +91,16 @@
     }
 
     const local=uniqueById([...localMatches(),match]);
+    queue(match);
     writeLocal(local);
 
     try{
       await uploadOne(match);
+      dequeue(match.id);
       setState({mode:"shared",status:"Delad · skrivning",lastSync:new Date().toISOString(),error:null});
       return {cloud:true,match};
     }catch(err){
+      if(err.status===410){dequeue(match.id);writeLocal(localMatches().filter(m=>m.id!==match.id));throw err;}
       console.warn("Shared save failed; local copy kept.",err);
       setState({mode:"offline",status:"Offline · lokalt sparad",error:String(err)});
       return {cloud:false,match,error:err};
@@ -126,6 +133,7 @@
 
     try{
       await request("DELETE","?id="+encodeURIComponent(id));
+      dequeue(id);
       setState({mode:"shared",status:"Delad",lastSync:new Date().toISOString(),error:null});
       return {cloud:true};
     }catch(err){
@@ -144,22 +152,25 @@
     state.syncing=true;
     setState({status:"Synkar…"});
     try{
-      const local=localMatches();
+      // Keep legacy offline data recoverable without treating every cached row as a new write.
+      if(!localStorage.getItem('rs_match_cache_before_outbox_v2'))localStorage.setItem('rs_match_cache_before_outbox_v2',JSON.stringify(localMatches()));
       const remote=await fetchRemote();
 
       if(hasTeamKey()){
-        const remoteIds=new Set(remote.map(m=>m.id));
-        for(const m of local){
-          if(m?.id&&m?.result&&m?.matchType&&!remoteIds.has(m.id))await uploadOne(m);
+        for(const m of pending()){
+          try{await uploadOne(m);dequeue(m.id);}catch(err){
+            if(err.status===410){dequeue(m.id);continue;}
+            throw err;
+          }
         }
         const fresh=await fetchRemote();
-        const merged=uniqueById([...local,...fresh]);
+        const merged=uniqueById([...fresh,...pending()]);
         writeLocal(merged);
         setState({mode:"shared",status:"Delad · skrivning",lastSync:new Date().toISOString(),error:null});
         return merged;
       }
 
-      writeLocal(remote);
+      writeLocal(uniqueById([...remote,...pending()]));
       setState({mode:"readonly",status:"Delad · läsning",lastSync:new Date().toISOString(),error:null});
       return remote;
     }catch(err){
