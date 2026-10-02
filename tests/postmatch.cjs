@@ -27,5 +27,7 @@ const root=path.join(__dirname,'..');
  assert.equal(lastPayload.postReview.draftIssue,'peel');assert.deepEqual(lastPayload.draftContext,original.draftContext);
  assert.equal(el('postmatchStatus').textContent,'Sparad ✓');
  const html=ui.seriesHTML({id:'series-1'});assert(html.includes('1–0'));assert(!html.includes('series-2'));
+ const wo=ui.seriesHTML({id:'series-1',administrativeGames:[{id:'wo-1',type:'walkover',gameNumber:1,result:'loss',reason:'IRL <problem>'}]});
+ assert(wo.includes('1–1 i registrerade games'));assert(wo.includes('Game 1 · W/O · LOSS'));assert(wo.includes('IRL &lt;problem&gt;'));assert(!wo.includes('data-series-review="wo-1"'));assert.equal(ui.seriesGames('series-1').length,1,'W/O must stay out of played-match history');
  console.log('PASS: protected metadata updates, fresh payload preservation, failure rollback, exact series links, bounded review, escaped historical data.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

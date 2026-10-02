@@ -73,6 +73,7 @@
       challengermode:plan.challengermode||null,
       competitiveEvidence:plan.competitiveEvidence||null,
       seriesReview:plan.seriesReview||null,
+      administrativeGames:Array.isArray(plan.administrativeGames)?plan.administrativeGames:[],
       competition:plan.competition||"",
       scoutingConfidence:plan.scoutingConfidence||"preliminary",
       scoutingUpdatedAt:plan.scoutingUpdatedAt||"",

@@ -54,11 +54,14 @@
     finally{saving=false;$('postmatchSave').disabled=false;fields.forEach(el=>el.disabled=false);}
   }
   function seriesHTML(plan){
-    const games=seriesGames(plan.id),wins=games.filter(m=>m.result==='win').length,losses=games.length-wins;
+    const played=seriesGames(plan.id);
+    const administrative=(Array.isArray(plan.administrativeGames)?plan.administrativeGames:[]).filter(g=>g?.type==='walkover'&&['win','loss'].includes(g.result)&&Number.isInteger(g.gameNumber)&&g.gameNumber>0);
+    const games=[...played,...administrative.map(g=>({...g,walkover:true}))].sort((a,b)=>(a.gameNumber||Infinity)-(b.gameNumber||Infinity)||new Date(a.savedAt)-new Date(b.savedAt));
+    const wins=games.filter(m=>m.result==='win').length,losses=games.length-wins;
     const unlinked=matches().filter(m=>!m.series?.id&&m.matchType==='league').sort((a,b)=>new Date(b.savedAt)-new Date(a.savedAt));
     const title=games.length?`${wins}–${losses} i registrerade games`:'Inga games kopplade ännu';
-    return '<section class="planner-section"><h3>'+title+'</h3><p class="analysis-note">Räknar endast kopplade games. Bekräftar inte automatiskt att serien är färdig.</p>'+
-      games.map((m,i)=>'<div class="postmatch-game"><span><b>Game '+(i+1)+' · '+(m.result==='win'?'WIN':'LOSS')+'</b> · '+esc(m.comp||'Draft')+'<small>'+esc(new Date(m.savedAt).toLocaleString('sv-SE'))+'</small></span><button type="button" class="secondary" data-series-review="'+esc(m.id)+'">Draft & review</button></div>').join('')+
+    return '<section class="planner-section"><h3>'+title+'</h3><p class="analysis-note">Räknar kopplade games och registrerade W/O. W/O påverkar inte draftstatistik. Serien avslutas separat.</p>'+
+      games.map((m,i)=>m.walkover?'<div class="postmatch-game"><span><b>Game '+m.gameNumber+' · W/O · '+(m.result==='win'?'WIN':'LOSS')+'</b><small>'+esc(m.reason||'Walkover – ej spelat')+'</small></span><span class="analysis-note">Ej spelat</span></div>':'<div class="postmatch-game"><span><b>Game '+(i+1)+' · '+(m.result==='win'?'WIN':'LOSS')+'</b> · '+esc(m.comp||'Draft')+'<small>'+esc(new Date(m.savedAt).toLocaleString('sv-SE'))+'</small></span><button type="button" class="secondary" data-series-review="'+esc(m.id)+'">Draft & review</button></div>').join('')+
       (unlinked.length?'<details><summary>Koppla ett tidigare ligagame</summary><p class="analysis-note">Välj bara ett game som hör till denna serie. Ingen datumgissning görs.</p><select id="plannerUnlinkedGame" aria-label="Tidigare ligagame">'+unlinked.map(m=>'<option value="'+esc(m.id)+'">'+esc(new Date(m.savedAt).toLocaleString('sv-SE'))+' · '+(m.result==='win'?'WIN':'LOSS')+' · '+esc(m.comp||'')+' · '+esc((m.ourPicks||[]).map(p=>p.champ).join('/'))+'</option>').join('')+'</select><button type="button" class="secondary" data-planner-action="link-game">Öppna för koppling</button></details>':'')+'</section>';
   }
   window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});

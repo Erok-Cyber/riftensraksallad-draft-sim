@@ -10,6 +10,6 @@ export function preserveEvidence(incoming,stored){
   const rows=[...(stored?.competitiveEvidence?.games||[]).filter(g=>g.source==='manual-screenshot'),...(incoming?.competitiveEvidence?.games||[])];
   const ids=new Set(),signatures=new Set();
   const games=rows.filter(g=>{const f=g.playedAt&&g.duration?fingerprint(g):null;if((g.id&&ids.has(g.id))||(f&&signatures.has(f)))return false;if(g.id)ids.add(g.id);if(f)signatures.add(f);return true;});
-  return {...incoming,seriesReview:incoming.seriesReview||stored?.seriesReview||null,
+  return {...incoming,administrativeGames:stored?.administrativeGames||[],seriesReview:incoming.seriesReview||stored?.seriesReview||null,
     competitiveEvidence:games.length?{...(stored?.competitiveEvidence||{}),...(incoming.competitiveEvidence||{}),games}:incoming.competitiveEvidence};
 }
