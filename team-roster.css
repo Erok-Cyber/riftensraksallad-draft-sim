@@ -5,7 +5,8 @@
 #rosterSummary{font:400 14px/1.6 Inter,sans-serif;color:#c6d2e0}#rosterWarning{color:#f1cd80}#rosterWarning:empty{display:none}
 @media(max-width:950px){.roster-players{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .roster-compact{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap}.roster-compact p{margin:6px 0}
-.champs-workspace input,.champs-workspace select{background:#132337;color:#f4f7fc;border:1px solid #53657e;border-radius:8px;padding:10px 12px;min-height:44px;font:inherit;box-sizing:border-box}
+.champs-workspace input,.champs-workspace select{background:#132337;color:#f4f7fc;border:1px solid #53657e;border-radius:8px;padding:10px 12px;min-height:44px;font:inherit;box-sizing:border-box;max-width:100%}
+.champs-sync{padding:16px;border:1px solid #53657e;border-radius:12px;margin-bottom:24px;background:#101e30}.champs-sync p{margin-top:0;color:#f2cb76}.champs-sync button{margin:4px 8px 4px 0}.champs-sync summary{cursor:pointer;margin-top:12px;color:#cfdaeb}.champs-sync form{display:flex;gap:10px;align-items:end;flex-wrap:wrap;margin-top:12px}.champs-sync label{display:grid;gap:6px}.champs-champion.is-paused{border-style:dashed}.champs-champion.is-paused strong{color:#e6bf76}.champs-workspace :disabled{opacity:.65;cursor:not-allowed}#champsEditor{margin:8px 0 0 10px}.champs-workspace{margin-bottom:20px!important}
 .champs-workspace input:focus-visible,.champs-workspace select:focus-visible,.champs-role:focus-visible{outline:2px solid #e8bb55;outline-offset:2px}
 .champs-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;margin:20px 0}
 .champs-heading h2{margin:0}.champs-heading a{color:#ebbf61}.champs-search-label{display:block;margin:16px 0 8px;font-weight:600}

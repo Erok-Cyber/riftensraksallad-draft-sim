@@ -50,10 +50,12 @@ jobs:
           node --check team-roster.js
           node --check team-data.js
           node --check roster-model.js
+          node --check roster-sync.js
           node --check champs.js
           node --check groq-coach.js
           node --check postmatch.js
           node tests/brain-regression.cjs
+          node tests/roster-sync.cjs
           node tests/groq-policy.cjs
           node tests/postmatch.cjs
           node tests/planner-review.cjs

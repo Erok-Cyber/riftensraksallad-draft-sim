@@ -27,6 +27,7 @@
       seen.add(p.id);const profile={id:p.id,role:p.role,name:p.name.trim().slice(0,40),pool,comfort:{}};
       pool.forEach(ch=>{if(validScore(p.comfort?.[ch]))profile.comfort[ch]=Number(p.comfort[ch]);});
       if(profile.id==='core-support'&&profile.name==='Ordinarie support')profile.name='Frippen';
+      profile.paused=pool.filter(ch=>Array.isArray(p.paused)&&p.paused.includes(ch));
       const i=out.profiles.findIndex(x=>x.id===p.id);if(i<0)out.profiles.push(profile);else if(out.profiles[i].role===p.role)out.profiles[i]=profile;
     }
     roles.forEach(r=>{if(out.profiles.some(p=>p.role===r&&p.id===raw?.active?.[r]))out.active[r]=raw.active[r];});
@@ -35,19 +36,20 @@
   const read=()=>{try{return validate(JSON.parse(localStorage.getItem(KEY)||'null'));}catch{return clone(defaults);}};
   let state=read(),catalog=[...data.champions],images={...(data.images||{})},listeners=new Set();
   const player=r=>state.profiles.find(p=>p.id===state.active[r]&&p.role===r);
-  function notify(){listeners.forEach(fn=>fn());}
+  const profile=(r,id)=>id?state.profiles.find(p=>p.role===r&&p.id===id):player(r);
+  function notify(source='local'){listeners.forEach(fn=>fn(source));}
   function mutate(fn){const before=clone(state);try{fn();localStorage.setItem(KEY,JSON.stringify(state));}catch(e){state=before;throw Error('Kunde inte spara: '+e.message);}notify();}
   const canonical=name=>({naut:'Nautilus',mao:'Maokai',j4:'Jarvan IV'}[String(name).toLowerCase()]||catalog.find(c=>c.toLowerCase()===String(name).trim().toLowerCase()));
   function parsePool(text){const entries=String(text).split(/[,;\n]/).map(s=>s.trim()).filter(Boolean);if(!entries.length||entries.length>60)throw Error('Välj 1–60 champions.');return [...new Set(entries.map(n=>{const c=canonical(n);if(!c)throw Error('Okänd champion: '+n);return c;}))];}
-  function savePlayer(role,id,name,pool){
+  function savePlayer(role,id,name,pool,activate=true){
     if(!roles.includes(role))throw Error('Välj en roll.');name=String(name).trim();if(!name||name.length>40)throw Error('Ange ett namn, högst 40 tecken.');
     pool=parsePool(Array.isArray(pool)?pool.join(','):pool);
-    let savedId;mutate(()=>{let p=state.profiles.find(x=>x.id===id&&x.role===role);if(!p){p={id:'sub-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),role,comfort:{}};state.profiles.push(p);}Object.assign(p,{name,pool});p.comfort=Object.fromEntries(pool.map(ch=>[ch,score(p,ch)]));state.active[role]=p.id;savedId=p.id;});return savedId;
+    let savedId;mutate(()=>{let p=state.profiles.find(x=>x.id===id&&x.role===role);if(!p){p={id:'sub-'+Date.now()+'-'+Math.random().toString(36).slice(2,8),role,comfort:{}};state.profiles.push(p);}Object.assign(p,{name,pool});p.comfort=Object.fromEntries(pool.map(ch=>[ch,score(p,ch)]));p.paused=(p.paused||[]).filter(ch=>pool.includes(ch));if(activate)state.active[role]=p.id;savedId=p.id;});return savedId;
   }
   function compOptions(){
     return Object.fromEntries(Object.entries(data.comps).map(([name,c])=>[name,Object.fromEntries(roles.map(role=>{
       const fit=new Set([c.core[role],...(c.alts[role]||[]),...(roleFits[name]?.[role]||[]),...(role==='support'?Object.keys(supportFits[name]||{}):[])]);
-      const p=player(role),options=p.pool.filter(ch=>fit.has(ch));
+      const p=player(role),options=p.pool.filter(ch=>fit.has(ch)&&!p.paused?.includes(ch));
       options.sort((a,b)=>score(p,b)-score(p,a)||Number(b===c.core[role])-Number(a===c.core[role])||a.localeCompare(b));
       return [role,options];
     }))]));
@@ -61,16 +63,20 @@
       if(i===ordered.length){if(value>best.value)best={value,picks:{...picks}};return;}
       const role=ordered[i],pool=options[role].filter(ch=>!used.has(ch)).slice(0,8);
       if(!pool.length){walk(i+1,used,{...picks,[role]:null},value-1000);return;}
-      pool.forEach(ch=>{used.add(ch);walk(i+1,used,{...picks,[role]:ch},value+score(player(role),ch)+(ch===data.comps[name].core[role]?0.01:0));used.delete(ch);});
+      pool.forEach(ch=>{used.add(ch);walk(i+1,used,{...picks,[role]:ch},value+score(player(role),ch)+(ch===data.comps[name].core[role]?1.1:0));used.delete(ch);});
     }
     walk(0,new Set(),{},0);return best.picks;
   }
   function select(role,id){if(!state.profiles.some(p=>p.role===role&&p.id===id))return false;mutate(()=>state.active[role]=id);return true;}
-  function setComfort(role,ch,value){const p=player(role);if(!p?.pool.includes(ch)||!validScore(value))throw Error('Comfort ska vara 1–10 för en champion i poolen.');mutate(()=>{p.comfort={...p.comfort,[ch]:Number(value)};});}
-  function addChampion(role,name){const p=player(role),ch=canonical(name);if(!p||!ch)throw Error('Välj en champion från sökningen.');if(p.pool.includes(ch))return;if(p.pool.length>=60)throw Error('Poolen kan ha högst 60 champions.');mutate(()=>{p.pool.push(ch);p.comfort={...p.comfort,[ch]:5};});}
-  function removeChampion(role,ch){const p=player(role);if(!p?.pool.includes(ch))return;if(p.pool.length<=1)throw Error('Behåll minst en champion i poolen.');mutate(()=>{p.pool=p.pool.filter(x=>x!==ch);delete p.comfort?.[ch];});}
-  window.addEventListener('storage',e=>{if(e.key===KEY||e.key===null){state=read();notify();}});
-  window.RiftRoster={roles,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);},select,savePlayer,parsePool,setComfort,addChampion,removeChampion,
+  function setComfort(role,ch,value,id){const p=profile(role,id);if(!p?.pool.includes(ch)||!validScore(value))throw Error('Comfort ska vara 1–10 för en champion i poolen.');mutate(()=>{p.comfort={...p.comfort,[ch]:Number(value)};});}
+  function addChampion(role,name,id){const p=profile(role,id),ch=canonical(name);if(!p||!ch)throw Error('Välj en champion från sökningen.');if(p.pool.includes(ch))return;if(p.pool.length>=60)throw Error('Poolen kan ha högst 60 champions.');mutate(()=>{p.pool.push(ch);p.comfort={...p.comfort,[ch]:5};});}
+  function removeChampion(role,ch,id){const p=profile(role,id);if(!p?.pool.includes(ch))return;if(p.pool.length<=1)throw Error('Behåll minst en champion i poolen.');mutate(()=>{p.pool=p.pool.filter(x=>x!==ch);p.paused=(p.paused||[]).filter(x=>x!==ch);delete p.comfort?.[ch];});}
+  function pauseChampion(role,ch,paused,id){const p=profile(role,id);if(!p?.pool.includes(ch))throw Error('Champion saknas i poolen.');mutate(()=>{p.paused=(p.paused||[]).filter(x=>x!==ch);if(paused)p.paused.push(ch);});}
+  window.addEventListener('storage',e=>{if(e.key===KEY||e.key===null){state=read();notify('external');}});
+  window.RiftRoster={roles,subscribe:fn=>{listeners.add(fn);return()=>listeners.delete(fn);},select,savePlayer,parsePool,setComfort,addChampion,removeChampion,pauseChampion,
+    profile:(r,id)=>{const p=profile(r,id);return p?clone({...p,comfort:Object.fromEntries(p.pool.map(ch=>[ch,score(p,ch)]))}):null;},
+    available:r=>player(r).pool.filter(ch=>!player(r).paused?.includes(ch)),
+    replace:raw=>mutate(()=>{state=validate(raw);}),
     player:r=>{const p=player(r);return clone({...p,comfort:Object.fromEntries(p.pool.map(ch=>[ch,score(p,ch)]))});},snapshot:()=>clone(state),
     comfort:(r,ch)=>score(player(r),ch),compWeight:(r,ch)=>score(player(r),ch)/10,
     compOptions:()=>clone(compOptions()),compPlan,key:()=>JSON.stringify(state),

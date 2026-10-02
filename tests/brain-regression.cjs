@@ -280,3 +280,14 @@ assert.throws(()=>editable.run('window.RiftRoster.setComfort("jungle","Xin Zhao"
 assert.throws(()=>editable.run('window.RiftRoster.setComfort("jungle","Xin Zhao",0)'));
 assert.equal(editable.run('new Set(Object.values(window.RiftRoster.compPlan("JUNGLE CARRY")).filter(Boolean)).size'),5);
 console.log('PASS: editable comfort changes AI ranking, comp variants, cache key, isolated players, remove, reload and unique lineup.');
+editable.run('window.RiftRoster.pauseChampion("jungle","Viego",true);');
+assert(!editable.run('aiRoleCandidates("jungle").some(c=>c.ch==="Viego")'));
+assert(editable.run('window.RiftRoster.player("jungle").pool.includes("Viego")'));
+editable.run('window.RiftRoster.pauseChampion("jungle","Viego",false);');
+assert(editable.run('aiRoleCandidates("jungle").some(c=>c.ch==="Viego")'));
+assert(editable.run('aiCandidate("Viego","jungle").reasons[0].startsWith("comfort ")'));
+const feasibility=harness(['live.js','advanced-engine.js','draft-ai.js']);
+feasibility.run('userSide="blue";events=[];teamPool.top=["Shen"];teamPool.support=["Shen"];comps["EARLY SKIRMISH"].alts.top=["Shen"];comps["EARLY SKIRMISH"].alts.support=["Shen"];comfort.top.Shen=8;comfort.support.Shen=8;');
+assert.equal(feasibility.run('aiCompPreference({},"EARLY SKIRMISH")'),0,'one flex champion cannot fill two open roles');
+assert(feasibility.run('aiCompPreference({},"PRESS R")')>0);
+console.log('PASS: paused picks excluded, comfort explained, duplicate flex completion rejected.');

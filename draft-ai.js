@@ -150,9 +150,13 @@ function aiCompFitForMap(map,name){
 
 function aiCompPreference(map,name){
   const core=comps['EARLY SKIRMISH'],used=unavailable();
-  const viable=roles.every(role=>map[role]
-    ?map[role]===core.core[role]||(core.alts[role]||[]).includes(map[role])
-    :[core.core[role],...(core.alts[role]||[])].some(ch=>teamPool[role]?.includes(ch)&&!used.has(ch.toLowerCase())));
+  const open=roles.filter(role=>!map[role]);
+  const options=Object.fromEntries(open.map(role=>[role,[core.core[role],...(core.alts[role]||[])].filter(ch=>teamPool[role]?.includes(ch)&&!used.has(ch.toLowerCase())&&!Object.values(map).includes(ch)&&(comfort[role]?.[ch]??5)>=5)]));
+  open.sort((a,b)=>options[a].length-options[b].length);
+  // A flex champion cannot fill two remaining slots. Do not promise a viable
+  // go-to comp when its only completion needs duplicate or very low-comfort picks.
+  function complete(i,taken){if(i===open.length)return true;return options[open[i]].some(ch=>{if(taken.has(ch))return false;taken.add(ch);const ok=complete(i+1,taken);taken.delete(ch);return ok;});}
+  const viable=roles.every(role=>!map[role]||map[role]===core.core[role]||(core.alts[role]||[]).includes(map[role]))&&complete(0,new Set());
   // Team identity is a prior, not a demand to abandon already locked picks.
   if(name==='EARLY SKIRMISH')return viable?12:0;
   if(name==='PRESS R')return viable?0:8;
@@ -351,7 +355,7 @@ function aiCandidate(champ,role){
   // Preserve the current core direction, but reward a useful second pivot.
   if(compRanks[1]&&compRanks[1].score>=9)score+=2;
 
-  const reasons=base.reasons.filter(x=>x.pts>0&&x.label!=="comfort").slice(0,3).map(x=>x.label);
+  const reasons=base.reasons.filter(x=>x.pts>0&&x.label!=="comfort").sort((a,b)=>b.pts-a.pts).slice(0,3).map(x=>x.label);
   if(role==="support"&&["Galio","Shen"].includes(champ)){
     const hasSetup=ours().some(e=>ADV_HARD_ENGAGE.has(e.champ));
     if(!hasSetup)score-=12;
@@ -361,6 +365,8 @@ function aiCandidate(champ,role){
   if(history.n>=3&&history.bonus>=.35)reasons.unshift("teamdata "+history.w+"W/"+history.l+"L · "+history.label);
   if(flex>=4)reasons.push("håller flera pivots öppna");
   if(lookahead>=70)reasons.push("bra struktur efter egna följdpicks");
+  const rating=comfort[role]?.[champ]??5;
+  reasons.unshift('comfort '+rating+'/10'+(rating<=4?' · ovan champion':''));
 
   return {
     ch:champ,role,score,state,lookahead,flex,risk,history,
