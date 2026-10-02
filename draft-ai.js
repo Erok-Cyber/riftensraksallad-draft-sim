@@ -586,8 +586,8 @@ function renderRecommendation(){
   list.slice(1).forEach(x=>addButton(x,alternatives));
   $("recommendStrength").textContent=t.type==="pick"?aiConfidenceLabel(list[1]?top.total-list[1].total:20)+" · regelbaserat stöd":window.RiftOpponent?.active()?"Endast styrkta motståndarpicks":"Alternativ om banplanen ändras";
   if(top.groqReason){
-    $("recommendReason").textContent=top.groqReason+(top.groqRisk?' · Risk: '+top.groqRisk:'');
-    $("recommendStrength").textContent='AI-prioritering · kontrollerad mot draft och roster';
+    $("recommendReason").textContent=top.groqReason+(top.groqComparison?' · Jämförelse: '+top.groqComparison:'')+(top.groqRisk?' · Risk: '+top.groqRisk:'');
+    $("recommendStrength").textContent='AI-bedömning · förslag inom aktuell championpool';
   }
   let timing=document.getElementById('recommendTiming');
   const overall=t.type==='pick'?[...localList].sort((a,b)=>b.score-a.score)[0]:null;

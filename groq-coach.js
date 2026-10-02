@@ -35,7 +35,7 @@
   function recommendations(list){
     if(answer?.final)return list;
     const s=snapshot();if(!enabled||!answer||!s||answer.key!==s.key)return list;
-    const order=answer.advice.choices;const legal=candidates();const chosen=order.map(choice=>{const c=legal.find(x=>id(x)===choice.id);return c?{...c,groqReason:choice.reason,groqRisk:choice.risk}:null;}).filter(Boolean);
+    const order=answer.advice.choices;const legal=candidates();const chosen=order.map(choice=>{const c=legal.find(x=>id(x)===choice.id);return c?{...c,groqReason:choice.reason,groqRisk:choice.risk,groqComparison:choice.id===order[0].id?answer.advice.comparison:''}:null;}).filter(Boolean);
     return [...chosen,...list.filter(c=>!chosen.some(x=>id(x)===id(c)))];
   }
   async function post(payload,key,signal){
@@ -50,7 +50,7 @@
     }
     const choices=data?.advice?.choices,allowed=new Set(s.payload.candidates.map(c=>id(c))),seen=new Set();
     if(!Array.isArray(choices)||!choices.length||choices.length>3||choices.some(c=>!c||!allowed.has(c.id)||seen.has(c.id)||!seen.add(c.id)||typeof c.reason!=='string'||!c.reason.trim()))throw Error('INVALID_AI_RESPONSE');
-    return {key:s.key,advice:{choices:choices.map(c=>({id:c.id,reason:c.reason.slice(0,240),risk:typeof c.risk==='string'?c.risk.slice(0,180):''})),plan:String(data.advice.plan||'').slice(0,260),nextStep:String(data.advice.nextStep||'').slice(0,220),uncertainty:String(data.advice.uncertainty||'').slice(0,200)}};
+    return {key:s.key,advice:{comparison:String(data.advice.comparison||'').slice(0,320),choices:choices.map(c=>({id:c.id,reason:c.reason.slice(0,240),risk:typeof c.risk==='string'?c.risk.slice(0,180):''})),plan:String(data.advice.plan||'').slice(0,260),nextStep:String(data.advice.nextStep||'').slice(0,220),uncertainty:String(data.advice.uncertainty||'').slice(0,200)}};
   }
   async function analyze(force=false){
     const s=snapshot();if(!enabled||!s||busy)return;
