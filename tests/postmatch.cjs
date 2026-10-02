@@ -2,8 +2,8 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const root=path.join(__dirname,'..');
 (async()=>{
  const original={id:'game-1',savedAt:'2026-09-30T18:00:00Z',result:'win',matchType:'league',side:'blue',draftContext:{roster:{players:[{id:'sub',role:'top',name:'Original'}]},aiPlan:{advice:{call:'Original plan'}}}};
- const storage=new Map([['rs_match_history',JSON.stringify([original])]]),nodes=new Map();
- const el=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:'',value:'',addEventListener(){}});return nodes.get(id);};
+ const storage=new Map([['rs_match_history',JSON.stringify([original])]]),nodes=new Map(),handlers=new Map();
+ const el=id=>{if(!nodes.has(id))nodes.set(id,{innerHTML:'',textContent:'',value:'',addEventListener(type,fn){handlers.set(id+":"+type,fn);}});return nodes.get(id);};
  let remote={...original,serverOnly:'must survive'},fail=false,posts=0,lastPayload;
  const window={RIFT_DB_CONFIG:{enabled:false},addEventListener(){},dispatchEvent(){}};
  const c={window,document:{getElementById:el},localStorage:{getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v),removeItem:k=>storage.delete(k)},Date,Map,Set,JSON,console,CustomEvent:class{},queueMicrotask(){},confirm:()=>true,
@@ -23,6 +23,9 @@ const root=path.join(__dirname,'..');
  assert.equal(ui.cleanReview({worked:'x'.repeat(900)}).worked.length,600);
  const dangerous={...updated,postReview:{worked:'<img src=x onerror=alert(1)>'},draftContext:{roster:{players:[{name:'<script>',role:'top',pool:['<img>']}]}}};
  ui.render(dangerous);assert(!el('postmatchReview').innerHTML.includes('<script>'));assert(el('postmatchReview').innerHTML.includes('&lt;script&gt;'));assert(!el('postmatchReview').innerHTML.includes('<img src'));
+ fail=false;el('postmatchSeries').value='series-1';el('postmatchDraftIssue').value='peel';await handlers.get('postmatchSave:click')();
+ assert.equal(lastPayload.postReview.draftIssue,'peel');assert.deepEqual(lastPayload.draftContext,original.draftContext);
+ assert.equal(el('postmatchStatus').textContent,'Sparad ✓');
  const html=ui.seriesHTML({id:'series-1'});assert(html.includes('1–0'));assert(!html.includes('series-2'));
  console.log('PASS: protected metadata updates, fresh payload preservation, failure rollback, exact series links, bounded review, escaped historical data.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

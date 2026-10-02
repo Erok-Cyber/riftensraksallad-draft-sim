@@ -54,12 +54,22 @@
     const winBonus=sample&&row.winrate!=null?Math.max(0,(row.winrate-50)*sample/(sample+20))*0.2:0;
     return (row.cm?32+Math.min(32,(row.cm-1)*8):0)+Math.min(18,Math.log2(row.season+1)*2)+Math.log2(row.recent+1)*10+winBonus;
   }
+  function reliability(row){
+    const sample=row.cm?Math.min(1,.65+row.cm*.12):row.recent?Math.min(.95,.45+row.recent*.05):Math.min(.75,.25+row.season/100);
+    return sample*(row.roleCertain?1:.7);
+  }
+  function replacementValue(row,rows){
+    const alternatives=rows.filter(r=>r.player===row.player&&r.role===row.role&&r.champ!==row.champ).sort((a,b)=>evidenceScore(b)-evidenceScore(a));
+    if(!alternatives.length)return {bonus:0,reason:'Alternativ saknas i underlaget; betyder inte att spelaren saknar fler picks.'};
+    const next=alternatives[0],gap=Math.max(0,1-evidenceScore(next)/Math.max(1,evidenceScore(row)));
+    return {bonus:Math.min(10,gap*10)*reliability(row),reason:'Nästa observerade alternativ: '+next.champ+(gap>=.35?' · tydligt mindre spelat.':' · ingen tydlig lucka i observerad pool.')};
+  }
   function prospects(){
     const rows=availableEvidence(),out=[];
     for(const role of roles){
       const pool=rows.filter(r=>r.role===role).sort((a,b)=>evidenceScore(b)-evidenceScore(a)).slice(0,4);
       const total=pool.reduce((n,r)=>n+evidenceScore(r),0);
-      pool.forEach(r=>out.push({...r,weight:(r.roleCertain?1:0.7)*evidenceScore(r)/(total||1)}));
+      pool.forEach(r=>out.push({...r,weight:reliability(r)*evidenceScore(r)/(total||1)}));
     }
     return out;
   }
@@ -74,13 +84,13 @@
     }
     // Broad comp answers also cover scouted champions without a handwritten matchup rule.
     const mass=set=>predicted.reduce((sum,p)=>sum+(set.has(p.champ)?p.weight:0),0);
-    const answers=[];
-    const add=(value,label)=>{if(value>0){points+=value;if(value>=0.5)answers.push(label);}};
+    const answers=[];let broadPoints=0;
+    const add=(value,label)=>{if(value>0){broadPoints+=value;if(value>=0.5)answers.push(label);}};
     if(smartTraits.peel.has(champ)||traits.disengage.has(champ))add(mass(traits.dive)*5,'peel mot deras dive-pool');
     if(traits.engage.has(champ)||smartTraits.pick.has(champ))add(mass(traits.poke)*5,'access mot deras poke-pool');
     if(smartTraits.antiTank.has(champ))add(mass(traits.tanks)*5,'damage mot deras tank-pool');
     if(smartTraits.zone.has(champ))add(mass(traits.melee)*3,'zonkontroll mot deras melee-pool');
-    return {responses:predicted.filter(p=>p.champ!==champ).sort((a,b)=>b.weight-a.weight).slice(0,3).map(p=>({champ:p.champ,role:p.role,source:p.cm?'CM':'OP.GG'})),points:Math.min(24,points),reason:threats.length?'Scout: svar mot '+[...new Set(threats)].slice(0,2).join('/')+' om de väljs':answers.length?'Scout: '+answers[0]:''};
+    return {responses:predicted.filter(p=>p.champ!==champ).sort((a,b)=>b.weight-a.weight).slice(0,3).map(p=>({champ:p.champ,role:p.role,source:(p.cm?(p.manual===p.cm?'bildverifierat':'CM'):'OP.GG')+(p.roleCertain?'':' · uppskattad roll')})),points:Math.min(24,Math.max(points,broadPoints)),reason:threats.length?'Scout: svar mot '+[...new Set(threats)].slice(0,2).join('/')+' om de väljs':answers.length?'Scout: '+answers[0]:''};
   }
   function sourceText(row){
     const parts=[];
@@ -89,6 +99,7 @@
     if(row.recent)parts.push('OP.GG: '+row.recent+' senaste matcher');
     else if(row.season)parts.push('OP.GG: '+row.season+' säsongsmatcher');
     if(row.winrate!=null&&row.season>=10)parts.push(row.winrate+'% / '+row.season+' matcher');
+    parts.push(row.roleCertain?'Tävlingsroll bekräftad':'Roll uppskattad · lägre vikt');
     if(row.tier)parts.push(row.tier+' · rankproxy, inte bevis på carry');
     return parts.join(' · ')+' · '+row.player;
   }
@@ -99,10 +110,9 @@
     availableEvidence().forEach(row=>{
       // Rank is only a bounded strength proxy. No role gets a free jungle/carry bonus.
       const rankBonus=lowest!=null&&row.tier?Math.min(18,Math.max(0,tiers.indexOf(row.tier)-lowest)*4):0;
-      const pool=all.filter(r=>r.player===row.player),volume=pool.reduce((sum,r)=>sum+r.season+r.recent*2+r.cm*8,0);
-      const concentration=volume?(row.season+row.recent*2+row.cm*8)/volume:0;
-      const score=evidenceScore(row)+rankBonus+concentration*8,existing=merged.get(row.champ);
-      if(!existing||score>existing.score)merged.set(row.champ,{ch:row.champ,score,reason:sourceText(row)});
+      const replacement=replacementValue(row,availableEvidence());
+      const score=evidenceScore(row)+rankBonus+replacement.bonus,existing=merged.get(row.champ);
+      if(!existing||score>existing.score)merged.set(row.champ,{ch:row.champ,score,reason:sourceText(row)+' · '+replacement.reason});
     });
     return [...merged.values()].sort((a,b)=>b.score-a.score||a.ch.localeCompare(b.ch));
   }

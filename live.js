@@ -1486,7 +1486,7 @@ function scoreCandidateDetails(champ,role,compName){
   const c=comps[compName], need=currentNeeds(), p=enemyProfile(), enemyMap=enemyRoleMap();
   const reasons=[];
   let s=0;
-  const add=(pts,label)=>{s+=pts;if(pts>=5&&label)reasons.push({pts,label})};
+  const add=(pts,label)=>{s+=pts;if(pts!==0&&label)reasons.push({pts,label})};
 
   add((comfort[role]?.[champ]||5)*3,"comfort");
   // A tied/open comp is not evidence to force its core picks.

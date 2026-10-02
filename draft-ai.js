@@ -20,7 +20,7 @@ let aiContextKey="";
 const aiRoleCache=new Map(),aiStateCache=new Map();
 function aiEnsureContext(){
   const key=JSON.stringify([userSide,events.map(e=>[e.side,e.type,e.role,e.champ]),
-    window.RiftStats?.getStatus?.(),window.RiftOpponent?.key(),window.RiftRoster?.key(),localStorage.getItem("rs_draft_archive"),Object.keys(championMeta).length]);
+    window.RiftStats?.getStatus?.(),window.RiftOpponent?.key(),window.RiftRoster?.key(),localStorage.getItem("rs_draft_archive"),localStorage.getItem("rs_match_history"),Object.keys(championMeta).length]);
   if(key!==aiContextKey){aiContextKey=key;aiRoleCache.clear();aiStateCache.clear();}
 }
 let aiHistoryCacheRaw=null;
@@ -164,6 +164,38 @@ function aiCompRankForMap(map){
     .sort((a,b)=>b.score-a.score);
 }
 
+function aiExecution(map){
+  const list=aiSimList(map),n=aiNeeds(map);
+  if(list.length<3)return {points:0,label:'Execution bedöms när minst tre picks är kända.'};
+  const starter=list.some(e=>(window.RiftProfiles?.get(e.champ)?.engage||0)>=2);
+  const follow=list.some(e=>e.role!=='support'&&smartTraits.reliableFollow.has(e.champ));
+  const unfamiliar=list.filter(e=>(comfort[e.role]?.[e.champ]??5)<7).length;
+  const clear=starter&&follow&&n.damage>=2;
+  const points=Math.max(-5,Math.min(5,(clear?5:0)-unfamiliar*1.5));
+  return {points,label:unfamiliar?'Execution: '+unfamiliar+' picks under trygg comfort.':clear?'Tydlig engage och uppföljning med trygga picks.':'Execution: spela setup; enkel engage-kedja är inte säkrad.'};
+}
+
+function aiReviewSignal(champ,role){
+  if(new URLSearchParams(location.search).has('replay'))return {points:0,n:0,label:''};
+  let rows=[];try{rows=JSON.parse(localStorage.getItem('rs_match_history')||'[]');}catch{}
+  if(!Array.isArray(rows))return {points:0,n:0,label:''};
+  const active=window.RiftRoster.snapshot().active,seen=new Set(),now=Date.now();
+  rows=rows.filter(m=>{
+    if(!m||typeof m!=='object')return false;
+    const age=now-Date.parse(m.savedAt),players=m.draftContext?.roster?.players;
+    if(!m.id||seen.has(String(m.id))||!['win','loss'].includes(m.result)||!Number.isFinite(age)||age<0||age>90*86400000||!Array.isArray(players)||!roles.every(r=>players.some(p=>p?.role===r&&p.id===active[r])))return false;
+    seen.add(String(m.id));return true;
+  }).sort((a,b)=>Date.parse(b.savedAt)-Date.parse(a.savedAt)).slice(0,20);
+  const sets={engage:traits.engage,peel:smartTraits.peel,wave:smartTraits.waveclear};
+  const needs=aiNeeds(ownRoleMap());
+  let points=0,n=0,labels=[];
+  for(const [issue,set] of Object.entries(sets)){
+    const count=rows.filter(m=>m.postReview?.draftIssue===issue).length;
+    if(count>=3&&set.has(champ)&&!(issue==='engage'&&role==='support'&&champ==='Galio')&&needs[issue]===0){points=Math.max(points,Math.min(2,count*.4));n=Math.max(n,count);labels.push({engage:'engage',peel:'skydd för carry',wave:'waveclear'}[issue]);}
+  }
+  return {points,n,label:points?'Lagreview: '+labels.join('/')+' saknades i minst '+n+' matcher med samma femma.':''};
+}
+
 function aiStateScore(map){
   const key=roles.map(r=>map[r]||"").join("|");
   if(aiStateCache.has(key))return aiStateCache.get(key);
@@ -208,9 +240,8 @@ function aiStateScore(map){
     else s-=5;
   }
 
-  // Ease of execution matters for this team.
-  if(n.front>0&&n.engage>0&&n.damage>=2)s+=5;
-  if(n.engage>=2&&n.damage>=2)s+=2;
+  // Execution depends on this lineup's comfort and actual follow-up.
+  s+=aiExecution(map).points;
   // Initiation is only useful when allies can reach the same fight.
   const carries=aiSimList(map).filter(e=>e.role!=="support");
   const follow=carries.filter(e=>smartTraits.reliableFollow.has(e.champ)).length;
@@ -337,13 +368,17 @@ function aiCandidate(champ,role){
 
   let score=base.score*AI_CONFIG.baseWeight;
   const preferred=aiCompPreference(ownRoleMap(),'EARLY SKIRMISH')>0?'EARLY SKIRMISH':'PRESS R';
-  if(comps[preferred].core[role]===champ)score+=8*(window.RiftRoster?.compWeight(role,champ)??1);
-  else if((comps[preferred].alts[role]||[]).includes(champ))score+=4;
+  const anchorAlready=base.reasons.filter(r=>r.label?.startsWith('core i ')||r.label?.startsWith('passar ')).reduce((sum,r)=>sum+Math.max(0,r.pts),0);
+  const identity=comps[preferred].core[role]===champ?8*(window.RiftRoster?.compWeight(role,champ)??1):(comps[preferred].alts[role]||[]).includes(champ)?4:0;
+  score+=Math.max(0,identity-anchorAlready);
   score+=(state-50)*AI_CONFIG.stateWeight;
-  score+=(lookahead-50)*AI_CONFIG.lookaheadWeight;
+  score+=Math.max(-8,Math.min(8,(lookahead-state)*AI_CONFIG.lookaheadWeight));
   score+=flex*AI_CONFIG.flexibilityWeight;
-  score-=risk.value*2.4;
-  score+=history.bonus;
+  // Dependency penalties already exist in the deterministic score.
+  const dependencyRisk=base.advanced?.dependency?.penalty>=4?2:base.advanced?.dependency?.penalty>=2?1:0;
+  score-=Math.max(0,risk.value-dependencyRisk)*2.4;
+  const learning=aiReviewSignal(champ,role);
+  score+=Math.max(-3,Math.min(3,history.bonus+learning.points));
   const scouting=window.RiftOpponent?.pickSignal(champ,role);
   score+=scouting?.points||0;
   const responseRisk=aiResponseRisk(map);
@@ -363,11 +398,14 @@ function aiCandidate(champ,role){
   if(history.n>=3&&history.bonus>=.35)reasons.unshift("teamdata "+history.w+"W/"+history.l+"L · "+history.label);
   if(flex>=4)reasons.push("håller flera pivots öppna");
   if(lookahead>=70)reasons.push("bra struktur efter egna följdpicks");
+  if(learning.points)reasons.unshift(learning.label);
+  const execution=aiExecution(map);
+  if(Object.keys(map).filter(r=>map[r]).length>=3)reasons.push(execution.label);
   const rating=comfort[role]?.[champ]??5;
   reasons.unshift('comfort '+rating+'/10'+(rating<=4?' · ovan champion':''));
 
   return {
-    ch:champ,role,score,state,lookahead,flex,risk,history,responses:scouting?.responses||[],
+    ch:champ,role,score,state,lookahead,flex,risk,history,execution,learning,responses:scouting?.responses||[],
     reasons:[...new Set(reasons)].slice(0,4),
     anchors:compRanks.slice(0,2)
   };
@@ -479,7 +517,8 @@ function renderAIInsight(){
   if(!list.length){card.classList.add("hidden");return;}
   card.classList.remove("hidden");
 
-  const best=list[0],second=list[1];
+  const shown=aiPreviousCall?.side===userSide&&aiPreviousCall?.step===step?list.find(x=>x.ch===aiPreviousCall.ch&&x.role===aiPreviousCall.pickRole):null;
+  const best=shown||list[0],second=list.find(x=>x!==best);
   const gap=second?best.total-second.total:20;
   const confidence=aiConfidenceLabel(gap);
   const anchor=best.anchors[0]?.name||desiredComp();
@@ -492,14 +531,20 @@ function renderAIInsight(){
   document.getElementById("aiLookahead").textContent=Math.round(best.lookahead)+"/100 · struktur, inte vinstchans";
   document.getElementById("aiRisk").textContent=best.risk.label+(best.risk.reasons.length?" · "+best.risk.reasons.join(", "):"");
   document.getElementById("aiWhy").textContent=(best.reasons.join(" · ")||"Bäst total balans mellan comfort, comp och enemy draft.")+
-    ". Lookahead testar egna följdpicks; motståndarens framtida svar simuleras inte.";
+    '. '+(best.execution?.label||'')+' Lookahead testar egna följdpicks; scoutade svar bedöms separat.';
 
   const alternatives=list.slice(1,3).map(x=>roleNames[x.role]+" "+x.ch).join(" · ");
   document.getElementById("aiAlternatives").textContent=alternatives||"—";
 }
 
 // One primary call, two alternatives. Extra analysis stays behind disclosure controls.
-let aiPreviousCall=null;
+let aiPreviousCall=null,aiDisplayChoice=null;
+function aiStableChoices(list,key,previous){
+  if(!list.length||previous?.key!==key)return list;
+  const old=list.find(x=>x.ch===previous.ch&&x.role===previous.role),best=list[0];
+  if(!old||best.total-old.total>=3||(best.urgency?.points||0)>(old.urgency?.points||0))return list;
+  return [old,...list.filter(x=>x!==old)];
+}
 function renderRecommendation(){
   window.RiftGroq?.refresh();
   const t=current(),box=$("recommendationBox");
@@ -507,7 +552,12 @@ function renderRecommendation(){
   box.classList.remove("hidden");
   $("scoreBreakdown").replaceChildren();
   const localList=t.type==="ban"?banRecommendations().slice(0,3).map(ch=>({ch})):aiDecision(selectedRole||null);
-  const list=(window.RiftGroq?.recommendations(localList)||localList).slice(0,3);
+  const displayKey=JSON.stringify([userSide,step,events,selectedRole,window.RiftRoster.key(),window.RiftOpponent?.key?.()]);
+  const stable=t.type==='pick'?aiStableChoices(localList,displayKey,aiDisplayChoice):localList;
+  const list=(window.RiftGroq?.recommendations(stable)||stable).slice(0,3);
+  if(t.type==='pick'&&list[0])aiDisplayChoice={key:displayKey,ch:list[0].ch,role:list[0].role};
+  else aiDisplayChoice=null;
+  for(const id of ['recommendTiming','recommendResponses'])if($(id))$(id).textContent='';
   if(!list.length){
     if(t.type==="ban"&&window.RiftOpponent?.active()){
       $("recommendEyebrow").textContent="MOTSTÅNDARSCOUTING";$("recommendRole").textContent="BAN";
@@ -552,7 +602,7 @@ function renderRecommendation(){
       const unavailableNow=unavailable().has(prior.ch.toLowerCase());
       change.textContent=prior.ch+" → "+top.ch+": "+(unavailableNow?"tidigare förstaval är pickat eller bannat":(prior.roster!==window.RiftRoster.key()?"roster eller comfort har ändrats":top.reasons?.find(x=>!x.startsWith("comfort "))||"bättre balans i den nya draften"))+".";
     }else if(!prior||prior.context!==context||prior.role!==selectedRole){change.textContent="";}
-    aiPreviousCall={side:userSide,context,ch:top.ch,pickRole:top.role,role:selectedRole,roster:window.RiftRoster.key()};
+    aiPreviousCall={side:userSide,step,context,ch:top.ch,pickRole:top.role,role:selectedRole,roster:window.RiftRoster.key()};
   }else change.textContent="";
   renderAIInsight();
 }

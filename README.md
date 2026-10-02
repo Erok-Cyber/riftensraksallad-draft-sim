@@ -76,3 +76,9 @@ The browser never contains a service-role/secret database key. Each device enter
 - match IDs deduplicate across devices
 - Test Mode never writes match data
 - Analysis reads the synced local cache for fast rendering
+
+### Beslutsregler och lagreview
+
+Draftmotorn begränsar överlapp mellan comp-prioritet, egna följdpicks och scoutade svar. Banvärde väger in nästa observerade alternativ; saknad scouting behandlas inte som en tom championpool. Jämna rekommendationer behålls bara inom samma draft-, roster-, roll- och motståndarkontext.
+
+Eftermatchreview kan frivilligt markera brist på engage, peel eller waveclear. Minst tre unika matcher med exakt samma fem spelare under de senaste 90 dagarna krävs, bland de 20 senaste matcherna med den femman. Bonusen är högst två poäng, bara för ett olöst behov. Fritext och förlustresultat skapar aldrig en sådan markering automatiskt. `tests/quality-policy.cjs` testar dessa gränser offline.
