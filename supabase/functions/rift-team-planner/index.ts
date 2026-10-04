@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 
 import { mergeReview, preserveEvidence } from "./plan-policy.mjs";
+import { seriesHistory } from "./rivals-history.mjs";
 
 const corsHeaders={
   "Access-Control-Allow-Origin":"*",
@@ -792,6 +793,62 @@ async function scoutPlan(plan:any){
   return next;
 }
 
+// Public history reads use only series already associated with a saved team plan.
+// Coalesce requests and cache projections; this route never writes shared data.
+const rivalsCache=new Map<string,{until:number;promise:Promise<any>}>();
+async function rivalsHistory(plan:any){
+  const team=clean(plan.challengermode?.teamName||plan.challengermodeTeamName||plan.opponent,100);
+  const series=(plan.challengermode?.series||[]).filter((s:any)=>s.state==="COMPLETED")
+    .sort((a:any,b:any)=>Date.parse(b.startedAt||0)-Date.parse(a.startedAt||0)).slice(0,8);
+  const cacheKey=team+":"+series.map((s:any)=>s.id).join(":");
+  const cached=rivalsCache.get(cacheKey);if(cached&&cached.until>Date.now())return cached.promise;
+  const promise=(async()=>{
+    const champions=await championMap(),rows:any[]=[];let failed=0;
+    // Small sequential batches bound external API concurrency and response size.
+    for(let i=0;i<series.length;i+=2){
+      await Promise.all(series.slice(i,i+2).map(async(s:any)=>{
+        try{
+          const data=await cmGraphql(`query RivalsHistory($id: UUID!) {
+            matchSeries(matchSeriesId: $id) {
+              id title startedAt lineups { name members { user { id username } } }
+              matches(includeFailed: false) {
+                id state results { lineupResults { lineupNumber score placement } }
+                lineups { number members { user {id username} } }
+              }
+            }
+          }`,{id:s.id});
+          await Promise.all((data.matchSeries?.matches||[]).filter((m:any)=>m.state==="COMPLETED").slice(0,5).map(async(match:any)=>{
+            let after:string|null=null,nodes:any[]=[],partial=false;
+            try{
+              for(let n=0;n<10;n++){
+                const next=await cmGraphql(`query RivalsStats($id: UUID!, $after: String) {
+                  match(matchId: $id) { statistics { gameSessionStatistics {
+                    competitorStatistics(first: 100, after: $after) {
+                      pageInfo {hasNextPage endCursor}
+                      nodes {name formattedValue serializedValue competitor {user {id}}}
+                    }
+                  } } }
+                }`,{id:match.id,after});
+                const page=next.match?.statistics?.gameSessionStatistics?.competitorStatistics;
+                nodes.push(...(page?.nodes||[]));partial=!!page?.pageInfo?.hasNextPage;
+                if(!partial||!page?.pageInfo?.endCursor)break;
+                after=page.pageInfo.endCursor;
+              }
+            }catch{partial=true;}
+            match.statistics={gameSessionStatistics:{competitorStatistics:{nodes,pageInfo:{hasNextPage:partial}}}};
+          }));
+          const row=seriesHistory(data.matchSeries,team,champions);if(row)rows.push(row);else failed++;
+        }catch(err){failed++;console.warn("Rivals history read failed",clean((err as Error)?.message,220));}
+      }));
+    }
+    rows.sort((a,b)=>Date.parse(b.playedAt||0)-Date.parse(a.playedAt||0));
+    return {series:rows,partial:failed>0,fetchedAt:new Date().toISOString()};
+  })();
+  if(rivalsCache.size>=50)rivalsCache.delete(rivalsCache.keys().next().value!);
+  rivalsCache.set(cacheKey,{until:Date.now()+10*60*1000,promise});
+  return promise;
+}
+
 Deno.serve(async(req:Request)=>{
   if(req.method==="OPTIONS")return new Response("ok",{headers:corsHeaders});
   try{
@@ -803,10 +860,16 @@ Deno.serve(async(req:Request)=>{
 
     if(req.method==="GET"){
       const id=url.searchParams.get("id");
+      const history=url.searchParams.get("rivals")==="1";
+      if(history&&!id)return json({error:"Plan ID required"},400);
       let query=db.from("team_plans").select("id,opponent,scheduled_at,status,payload,updated_at").eq("team_slug",TEAM_SLUG);
       if(id)query=query.eq("id",id);
       const {data,error}=await query.order("scheduled_at",{ascending:true}).limit(50);
       if(error)return json({error:error.message},500);
+      if(history){
+        const row=data?.[0];if(!row)return json({error:"Plan not found"},404);
+        return json(await rivalsHistory({...row.payload,opponent:row.opponent}));
+      }
       return json({
         plans:data||[],
         capabilities:{
@@ -895,3 +958,4 @@ Deno.serve(async(req:Request)=>{
     return json({error:"Method not allowed"},405);
   }catch(err){console.error(err);return json({error:"Unexpected server error"},500)}
 });
+

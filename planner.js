@@ -176,7 +176,6 @@
     const subPlayers=Array.isArray(cm.substitutePlayers)&&cm.substitutePlayers.length
       ?cm.substitutePlayers
       :(Array.isArray(cm.substitutes)?cm.substitutes.map(username=>({username,riotId:""})):[]);
-    const recent=(cm.series||[]).slice(-4).reverse();
     const person=row=>'<div class="planner-cm-person"><strong>'+esc(row.username||"Okänd")+'</strong>'+
       '<span>'+(row.riotId?'Playing as '+esc(row.riotId):'Riot ID saknas')+'</span></div>';
     return '<section class="planner-section planner-cm-section">'+
@@ -192,7 +191,7 @@
         '<div><span>AKTIV LINEUP</span><div class="planner-cm-people">'+(activePlayers.length?activePlayers.map(person).join(""):'<em>Ingen spelad lineup ännu</em>')+'</div></div>'+
         '<div><span>SUBS / ÖVRIG ROSTER</span><div class="planner-cm-people">'+(subPlayers.length?subPlayers.map(person).join(""):(registeredPlayers.length?'<em>Inga subs identifierade ännu</em>':'<em>Ingen rosterdata</em>'))+'</div></div>'+
       '</div>'+
-      (recent.length?'<div class="planner-cm-history">'+recent.map(series=>'<div><strong>Serie '+esc(series.ordinal||"—")+'</strong><span>'+esc(series.state||"")+(series.score!=null?' · score '+esc(series.score):'')+'</span><small>'+esc((series.matches||[]).map(m=>m.state||"").filter(Boolean).join(" / "))+'</small></div>').join("")+'</div>':'')+
+      '<div id="plannerRivalsHistory"></div>'+
     '</section>';
   }
   function toLocalInput(iso){
@@ -734,6 +733,7 @@
       return;
     }
     reviewing?renderReview(normalize(p)):editing?renderEdit(normalize(p)):renderRead(normalize(p));
+    if(!editing&&!reviewing)window.RiftRivals?.mount($("plannerRivalsHistory"),p);
   }
   function show(){
     updateDbBadge();
@@ -792,3 +792,4 @@
 
   window.RiftBanPlanner={show,load,render,deleteCurrent,scoutPlan,syncChallengermodePlan,getPlans,selectPlan,roleLineup:scoutLineup};
 })();
+

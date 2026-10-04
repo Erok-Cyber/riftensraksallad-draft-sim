@@ -142,6 +142,7 @@
     if(!active()&&!loading)selected='';
     select.value=selected;select.disabled=replay;
     const plan=active();
+    window.RiftRivals?.mount(document.getElementById('brainRivalsHistory'),plan);
     hint.textContent=replay?'Historisk övning använder ingen aktuell motståndarscouting.':plan
       ?(offline?'Cachad scouting · ':'')+summary()
       :(loading?'Laddar lag… ':offline?'Kunde inte uppdatera lagen. ':'')+(plans.length?'Välj ett lag för anpassade bans och picks.':'Lägg till en match i Ban Planner för att välja motståndare.');
@@ -164,3 +165,4 @@
   // Wait for the core and scoring scripts to initialize before reading draft state.
   document.addEventListener('DOMContentLoaded',load,{once:true});
 })();
+
