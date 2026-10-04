@@ -933,6 +933,21 @@ function shortLoadingPlan(gp){
   return {comp,plan,jungle,objective,fight:engage,watch,protect,behind,call};
 }
 
+function briefJunglePath(){
+  const map=ownRoleMap();
+  if(!map.jungle)return 'Pathing låses när er jungler är vald.';
+  const path=buildPath();
+  if(/^(Top → bot|Bot → top)\./.test(path))return path+' Justera efter waves och var enemy jungle visas.';
+  const lanes=laneRead();
+  const top=lanes.top.score+laneSetupScore(map.top)*.7;
+  const bot=lanes.bot.score+(laneSetupScore(map.adc)+laneSetupScore(map.support))*.55;
+  const towardsBot=bot>=top;
+  return (towardsBot?'Top → bot':'Bot → top')+' som första plan. '+
+    (Math.abs(bot-top)<.5?'Jämna sidor: låt första waves och jungle-info avgöra om ni byter.':
+      (towardsBot?'Bot':'Top')+' bedöms ha bättre prio/setup. Ändra om waves eller jungle-info talar emot.')+
+    ' Fullcleara om inget säkert läge finns; forcea inte gank eller river.';
+}
+
 function renderMatchBrief(gp){
   const local=shortLoadingPlan(gp),ai=window.RiftGroq?.snapshot?.(),advice=ai?.final?ai.advice:null;
   const put=(id,value)=>{const el=$(id);if(el)el.textContent=value||'—';};
@@ -940,6 +955,7 @@ function renderMatchBrief(gp){
   put('briefSource',advice?'AI-plan · bedömning utifrån draften':'Grundplan · regelbaserad');
   put('briefCall',advice?.call||(early?'Skapa tempo tidigt → gör varje vunnen fight till ett objective.':'Spela stabilt → samla laget kring era spikes och nästa objective.'));
   put('briefEarly',advice?.early||(early?'Skapa prio och ta 2v2/3v3 när lanes kan följa. Saknas prio: ta camps och säkra waves.':'Säkra farm och undvik fights utan prio. Ta fria fördelar; ge ett osäkert objective och byt resurser på andra sidan.'));
+  put('briefPath',briefJunglePath());
   put('briefMid',advice?.midgame||gp.mid);
   put('briefLate',advice?.late||(gp.lateDiff<-.55?'Sök en ensam motståndare med vision före objective. Undvik raka 5v5 utan en tydlig fördel.':'Håll ihop kring vision och carries. Slå på säkra mål med era viktiga ults; gå inte blint in i river.'));
   const starter=ours().filter(e=>(window.RiftProfiles?.get(e.champ)?.engage||0)>=2).sort((a,b)=>(window.RiftProfiles.get(b.champ).engage||0)-(window.RiftProfiles.get(a.champ).engage||0))[0];
