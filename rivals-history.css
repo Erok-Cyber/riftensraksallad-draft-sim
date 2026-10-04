@@ -15,6 +15,6 @@
 .rivals-game h4{display:flex;justify-content:space-between;gap:8px;margin:0 0 8px;font:600 13px/1.5 Oxanium,sans-serif;color:#f0d28b}
 .rivals-result{color:#c7d3e4;font:500 12px/1.5 Inter,sans-serif}
 .rivals-result.win{color:#91d9ba}.rivals-result.loss{color:#ffaaaa}
-.rivals-picks{display:grid;grid-template-columns:repeat(auto-fit,minmax(125px,1fr));gap:7px;list-style:none;padding:0;margin:0}
+.rivals-picks{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:7px;list-style:none;padding:0;margin:0}
 .rivals-picks li{display:flex;flex-direction:column;gap:4px;background:#0a1626;border-radius:6px;padding:9px;min-width:0;overflow-wrap:anywhere}
 .rivals-picks strong{font:600 13px/1.4 Inter,sans-serif;color:#f2f5fa}.rivals-picks span{font:400 12px/1.4 Inter,sans-serif;color:#bcc9da}
