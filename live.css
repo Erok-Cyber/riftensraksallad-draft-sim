@@ -393,3 +393,5 @@ body.live-os .live-playbook-card .secondary{
 .live-os .brief-details{border-top:1px solid #36475f;margin-top:16px;padding-top:12px}
 .live-os .brief-details>summary{cursor:pointer;color:#d4deed;font:600 14px/1.5 Inter,sans-serif;padding:8px 0}
 @media(max-width:850px){.live-os .brief-phases,.live-os .brief-jobs{grid-template-columns:1fr}.live-os .brief-call{font-size:19px}}
+
+.live-os #finalGameplanCard{scroll-margin-top:130px}
