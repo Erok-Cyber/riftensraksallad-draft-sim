@@ -22,7 +22,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css?v=20261002-integrity1" />
-  <link rel="stylesheet" href="live.css?v=20261002-integrity1" />
+  <link rel="stylesheet" href="live.css?v=20261004-gameplan1" />
   <link rel="stylesheet" href="team-roster.css?v=20261002-product-audit1" />
   <link rel="stylesheet" href="groq-coach.css?v=20261002-integrity1" />
   <link rel="stylesheet" href="postmatch.css?v=20261002-integrity1" />
@@ -288,12 +288,29 @@
       </div></details>
 
       <section id="finalGameplanCard" class="card final-gameplan loading-call hidden">
+        <header class="brief-heading"><div><p class="eyebrow">DRAFT KLAR · LÄS UPP FÖR LAGET</p><h2>Vår plan: 1 → 2 → 3</h2></div><span id="briefSource" class="badge">Grundplan</span></header>
+        <p id="briefCall" class="brief-call">—</p>
+        <p class="brief-hint">Tiderna är riktmärken. Items, levels, prio och cooldowns avgör om vi tar fighten.</p>
+        <div class="brief-phases">
+          <article><span class="mini-label">1 · EARLY · 0–10 MIN</span><p id="briefEarly">—</p></article>
+          <article><span class="mini-label">2 · MID · 10–25 MIN</span><p id="briefMid">—</p></article>
+          <article><span class="mini-label">3 · LATE · 25+ MIN</span><p id="briefLate">—</p></article>
+        </div>
+        <div class="brief-jobs">
+          <article><h3>Vem startar & vem följer?</h3><p id="briefFight">—</p></article>
+          <article><h3>Carryn & skyddet</h3><p id="briefProtect">—</p></article>
+          <article><h3>Om planen går fel</h3><p id="briefBehind">—</p></article>
+        </div>
+        <p id="briefLessons" class="brief-hint">—</p>
+        <details class="brief-details"><summary>Roller, jungle och AI-underlag</summary>
         <section id="groqFinalAdvice" class="groq-final" hidden aria-label="AI-gameplan">
           <p class="eyebrow">AI-GAMEPLAN · KONTROLLERA MOT MATCHLÄGET</p>
           <h2>Er plan mot deras färdiga comp</h2>
           <div class="groq-final-grid">
             <div><strong>Snabb call</strong><p id="groqFinal-call"></p></div>
-            <div><strong>Första 8 minuterna</strong><p id="groqFinal-early"></p></div>
+            <div><strong>Early · 0–10 min</strong><p id="groqFinal-early"></p></div>
+            <div><strong>Midgame</strong><p id="groqFinal-midgame"></p></div>
+            <div><strong>Late</strong><p id="groqFinal-late"></p></div>
             <div><strong>Jungle & pathing</strong><p id="groqFinal-jungle"></p></div>
             <div><strong>Objectives</strong><p id="groqFinal-objectives"></p></div>
             <div><strong>Så tar vi fighten</strong><p id="groqFinal-teamfight"></p></div>
@@ -305,6 +322,8 @@
             <div><strong>Osäkerheter</strong><p id="groqFinal-uncertainty"></p></div>
           </div>
         </section>
+        </details>
+        <details class="brief-details"><summary>Regelmotorns fördjupning & companalys</summary>
         <div class="analysis-head">
           <div>
             <p class="eyebrow">DRAFT KLAR · LOADING SCREEN</p>
@@ -364,6 +383,7 @@
           <span class="mini-label">GOLDEN RULE</span>
           <strong id="gpRule">—</strong>
         </div>
+        </details>
       </section>
 
       <section id="matchSaveCard" class="card match-save-card hidden">
@@ -440,12 +460,13 @@
   <script src="champion-profiles.js?v=20261002-product-audit3"></script>
   <script src="roster-model.js?v=20261002-product-audit1"></script>
   <script src="roster-sync.js?v=20261002-integrity1"></script>
-  <script src="live.js?v=20261002-product-audit1"></script>
+  <script src="live.js?v=20261004-gameplan1"></script>
   <script src="advanced-engine.js?v=20261002-product-audit1"></script>
   <script src="draft-ai.js?v=20261002-ai-grounding1"></script>
   <script src="team-roster.js?v=20261002-product-audit1"></script>
-  <script src="groq-coach.js?v=20261002-ai-grounding1"></script>
+  <script src="groq-coach.js?v=20261004-gameplan1"></script>
   <script src="ui-shell.js?v=20261002-integrity1"></script>
   <div id="workspaceReady" hidden></div>
 </body>
 </html>
+

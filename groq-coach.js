@@ -9,10 +9,21 @@
   const teamKey=()=>byId('groqTeamCode').value.trim()||read('rs_groq_team_key')||read('rs_team_access_key');
   const errors={TEAM_KEY_REQUIRED:'Ange lagkoden under AI-inställningar.',INVALID_TEAM_KEY:'Fel lagkod. Kontrollera koden under AI-inställningar.',GROQ_NOT_CONFIGURED:'GROQ_API_KEY saknas på servern.',RATE_LIMITED:'AI pausad kort för att begränsa anrop. Försök igen om en minut.',PROVIDER_RATE_LIMIT:'Groqs anropsgräns är nådd. Försök igen om en minut.',PROVIDER_UNAVAILABLE:'Groq svarar inte eller modellen är inte tillgänglig.',AI_TIMEOUT:'AI tog för lång tid.',INVALID_AI_RESPONSE:'AI-svaret klarade inte kontrollen.',AUTH_UNAVAILABLE:'Lagkoden kunde inte verifieras just nu.'};
   function candidates(){const t=current();if(!t||t.side!==userSide)return [];return t.type==='ban'?(window.RiftOpponent?.active()?window.RiftOpponent.banCandidates():banRecommendations()).map(ch=>({ch})):aiDecision(selectedRole||null).slice(0,20);}
+  // Reviews are context, never verified matchup facts or direct score changes.
+  function lessons(){
+    if(new URLSearchParams(location.search).has('replay'))return [];
+    const parse=key=>{try{const value=JSON.parse(localStorage.getItem(key)||'[]');return Array.isArray(value)?value:[];}catch{return [];}};
+    const recent=date=>{const age=Date.now()-Date.parse(date);return Number.isFinite(age)&&age>=0&&age<=90*86400000;};
+    const fields=raw=>Object.fromEntries(['worked','difficult','next'].map(k=>[k,String(raw?.[k]||'').trim().slice(0,220)]));
+    const active=window.RiftRoster?.snapshot?.()?.active||{},seen=new Set();
+    const games=parse('rs_match_history').filter(m=>m&&m.id&&!m.deletedAt&&!m.testMode&&!m.walkover&&m.type!=='walkover'&&['win','loss'].includes(m.result)&&recent(m.savedAt)).sort((a,b)=>Date.parse(b.savedAt)-Date.parse(a.savedAt)).filter(m=>{if(seen.has(m.id))return false;seen.add(m.id);return true;}).map(m=>({source:'match-review',date:m.savedAt,opponent:String(m.series?.opponent||'').slice(0,80),sameLineup:roles.every(r=>m.draftContext?.roster?.players?.some(p=>p.role===r&&p.id===active[r])),...fields(m.postReview)})).filter(m=>m.worked||m.difficult||m.next).slice(0,3);
+    const series=parse('rs_ban_plans_cache').filter(p=>p?.status==='completed'&&recent(p.scheduledAt)&&p.seriesReview).sort((a,b)=>Date.parse(b.scheduledAt)-Date.parse(a.scheduledAt)).map(p=>({source:'series-review',date:p.scheduledAt,opponent:String(p.opponent||'').slice(0,80),sameLineup:false,...fields(p.seriesReview)})).filter(p=>p.worked||p.difficult||p.next).slice(0,2);
+    return [...games,...series];
+  }
   function snapshot(){
     const t=current(),final=events.length===20;if(!userSide||(!final&&(!t||t.side!==userSide)))return null;
     const list=final?[]:candidates();if(!final&&!list.length)return null;
-    const payload={side:userSide,events:events.map(({side,type,champ,role})=>({side,type,champ,role})),pools:JSON.parse(JSON.stringify(teamPool)),forcedRole:selectedRole||null,
+    const payload={teamLessons:lessons(),side:userSide,events:events.map(({side,type,champ,role})=>({side,type,champ,role})),pools:JSON.parse(JSON.stringify(teamPool)),forcedRole:selectedRole||null,
       candidates:list.map(c=>({ch:c.ch,role:c.role,score:t.type==='ban'?window.RiftOpponent?.banScore?.(c.ch)||0:c.total||c.score||0,reasons:c.reasons||[],evidence:t.type==='ban'?window.RiftOpponent?.banReason(c.ch)||'':''})),
       comfort:roles.flatMap(role=>teamPool[role].map(ch=>({role,ch,value:comfort[role]?.[ch]||5}))),
       compOptions:window.RiftRoster?.compOptions?.()||{},
@@ -25,10 +36,11 @@
   function adviceUI(){
     byId('groqAdvice').hidden=!answer||answer.final;
     byId('groqFinalAdvice').hidden=!answer?.final;
-    for(const field of ['call','early','jungle','objectives','teamfight','behind','top','mid','adc','support','uncertainty'])byId('groqFinal-'+field).textContent=answer?.final?answer.advice[field]||'':'';
+    for(const field of ['call','early','midgame','late','jungle','objectives','teamfight','behind','top','mid','adc','support','uncertainty'])byId('groqFinal-'+field).textContent=answer?.final?answer.advice[field]||'':'';
     byId('groqPlan').textContent=answer?.advice.plan||'';
     byId('groqNext').textContent=answer?.advice.nextStep?'Nästa steg: '+answer.advice.nextStep:'';
     byId('groqUncertainty').textContent=answer?.advice.uncertainty?'Osäkerhet: '+answer.advice.uncertainty:'';
+    if(typeof renderMatchBrief==='function'&&events.length===20)renderMatchBrief(getFinalAnalysis());
     if(answer?.final&&typeof captureFinalAI==='function')captureFinalAI();
   }
   function controls(){byId('groqPause').hidden=!enabled;byId('groqAnalyze').disabled=busy;byId('groqAnalyze').textContent=busy?'Analyserar…':enabled?(events.length===20?'Uppdatera gameplan':'Analysera igen'):'Aktivera AI';}
@@ -44,7 +56,7 @@
   }
   function accept(data,s){
     if(s.payload.mode==='gameplan'){
-      const fields=['call','early','jungle','objectives','teamfight','behind','top','mid','adc','support','uncertainty'];
+      const fields=['call','early','midgame','late','jungle','objectives','teamfight','behind','top','mid','adc','support','uncertainty'];
       if(fields.some(k=>typeof data?.advice?.[k]!=='string'||!data.advice[k].trim()))throw Error('INVALID_AI_RESPONSE');
       return {key:s.key,final:true,advice:Object.fromEntries(fields.map(k=>[k,data.advice[k].slice(0,k==='call'?220:360)]))};
     }
@@ -95,6 +107,7 @@
     if(!enabled||!answer||snapshot()?.key!==answer.key)return null;
     return JSON.parse(JSON.stringify({final:!!answer.final,advice:answer.advice,model:'openai/gpt-oss-120b',capturedAt:new Date().toISOString()}));
   }
-  window.RiftGroq={recommendations,refresh,snapshot:savedAdvice};
+  window.RiftGroq={recommendations,refresh,snapshot:savedAdvice,lessons};
   refresh();controls();
 })();
+

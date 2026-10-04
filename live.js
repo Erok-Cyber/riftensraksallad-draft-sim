@@ -933,13 +933,32 @@ function shortLoadingPlan(gp){
   return {comp,plan,jungle,objective,fight:engage,watch,protect,behind,call};
 }
 
+function renderMatchBrief(gp){
+  const local=shortLoadingPlan(gp),ai=window.RiftGroq?.snapshot?.(),advice=ai?.final?ai.advice:null;
+  const put=(id,value)=>{const el=$(id);if(el)el.textContent=value||'—';};
+  const early=gp.comp==='EARLY SKIRMISH'&&gp.earlyDiff>=0;
+  put('briefSource',advice?'AI-plan · bedömning utifrån draften':'Grundplan · regelbaserad');
+  put('briefCall',advice?.call||(early?'Skapa tempo tidigt → gör varje vunnen fight till ett objective.':'Spela stabilt → samla laget kring era spikes och nästa objective.'));
+  put('briefEarly',advice?.early||(early?'Skapa prio och ta 2v2/3v3 när lanes kan följa. Saknas prio: ta camps och säkra waves.':'Säkra farm och undvik fights utan prio. Ta fria fördelar; ge ett osäkert objective och byt resurser på andra sidan.'));
+  put('briefMid',advice?.midgame||gp.mid);
+  put('briefLate',advice?.late||gp.p25||'Håll ihop kring vision och carries. Ta fight med era viktiga cooldowns; gå inte blint in i river.');
+  put('briefFight',advice?.teamfight||local.fight);
+  put('briefProtect',advice?.adc||local.protect);
+  put('briefBehind',advice?.behind||local.behind);
+  const n=window.RiftGroq?.lessons?.()?.length||0;
+  put('briefLessons',advice?(n?n+' tidigare reviews med i AI-underlaget · observationer, inte bevis.':'Inga tidigare fritextreviews med i AI-underlaget.'):'Grundplanen använder inte fritext. Aktivera AI för analys med lagets reviews.');
+}
+
 function renderFinalGameplan(){
   const card=$("finalGameplanCard");
   if(step<draftOrder.length){card.classList.add("hidden");return}
 
   const gp=getFinalAnalysis();
   const call=shortLoadingPlan(gp);
+  renderMatchBrief(gp);
   card.classList.remove("hidden");
+  const briefKey=finalAnalysisKey();
+  if(card.dataset.briefKey!==briefKey){card.dataset.briefKey=briefKey;card.scrollIntoView?.({behavior:'smooth',block:'start'});}
 
   $("finalCompBadge").textContent=call.comp;
   $("gpLoadingCall").textContent=call.call;
@@ -2142,3 +2161,4 @@ window.RiftChampionPicker?.attach({inputId:"championInput",roster:()=>championRo
     $("lockBtn").textContent="Lås "+champ;
     if(current()?.type==="pick"&&role){selectedRole=role;renderTurn();renderRecommendation();}
   }});
+

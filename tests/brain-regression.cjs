@@ -233,12 +233,21 @@ console.log('PASS: go-to/fallback priorities, comfort-backed strongest-player pr
  assert.equal(remote.run('window.RiftGroq.recommendations(banRecommendations().map(ch=>({ch})))[0].ch'),remote.run('banRecommendations()[0]'));
  remote.run('events=draftOrder.map((t,i)=>({...t,champ:"Champion"+i,role:"unknown"}));step=20;window.RiftGroq.refresh();');
  const finalRequest=remote.fire('groqAnalyze','click');for(let i=0;i<8;i++)await Promise.resolve();
- const finalPlan=Object.fromEntries(['call','early','jungle','objectives','teamfight','behind','top','mid','adc','support','uncertainty'].map(k=>[k,'Plan '+k]));
+ const finalPlan=Object.fromEntries(['call','early','midgame','late','jungle','objectives','teamfight','behind','top','mid','adc','support','uncertainty'].map(k=>[k,'Plan '+k]));
  pendingResolve({ok:true,json:async()=>({advice:finalPlan})});await finalRequest;
  assert.equal(remote.elements.get('groqFinalAdvice').hidden,false);
  assert.equal(remote.elements.get('groqFinal-jungle').textContent,'Plan jungle');
+ assert.equal(remote.elements.get('briefMid').textContent,'Plan midgame');assert.equal(remote.elements.get('briefLate').textContent,'Plan late');
  remote.run('events=events.slice(0,19);step=19;window.RiftGroq.refresh();');
  assert.equal(remote.elements.get('groqFinalAdvice').hidden,true,'undo invalidates final gameplan');
+ remote.storage.set('rs_match_history',JSON.stringify([
+  {id:'recent',savedAt:new Date().toISOString(),result:'loss',postReview:{next:'Reset tillsammans'}},
+  {id:'wo',savedAt:new Date().toISOString(),result:'loss',walkover:true,postReview:{next:'IRL'}},
+  {id:'old',savedAt:'2020-01-01',result:'loss',postReview:{next:'Old'}}
+ ]));
+ remote.storage.set('rs_ban_plans_cache',JSON.stringify([{id:'s',status:'completed',scheduledAt:new Date().toISOString(),seriesReview:{worked:'En tydlig engage-call'}}]));
+ const lessons=remote.run('window.RiftGroq.lessons()');assert.equal(lessons.length,2);assert.equal(lessons[0].next,'Reset tillsammans');assert.equal(lessons[0].sameLineup,false);
+ remote.run('location.search="?replay=1"');assert.equal(remote.run('window.RiftGroq.lessons().length'),0);remote.run('location.search=""');
  remote.fire('groqPause','click');assert.equal(remote.elements.get('groqBadge').textContent,'AV');
  console.log('PASS: remote AI opt-in, reordering without locking, stale response rejection, invalid-output fallback, pause.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
@@ -291,3 +300,4 @@ feasibility.run('userSide="blue";events=[];teamPool.top=["Shen"];teamPool.suppor
 assert.equal(feasibility.run('aiCompPreference({},"EARLY SKIRMISH")'),0,'one flex champion cannot fill two open roles');
 assert(feasibility.run('aiCompPreference({},"PRESS R")')>0);
 console.log('PASS: paused picks excluded, comfort explained, duplicate flex completion rejected.');
+

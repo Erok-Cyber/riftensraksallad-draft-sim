@@ -377,3 +377,19 @@ body.live-os .live-playbook-card .secondary{
 .opponent-context label{display:block;margin-bottom:7px;font-size:13px}
 .opponent-context select{width:100%;min-width:0;min-height:42px;padding:10px 12px;border:1px solid var(--border);border-radius:9px;background:var(--panel2);color:var(--text);font:14px Inter,sans-serif}
 .opponent-context small{display:block;margin-top:7px;color:var(--muted);font-size:12px;line-height:1.5;overflow-wrap:anywhere}
+
+
+/* One match brief; detailed models stay available below. */
+.live-os .brief-heading{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap}
+.live-os .brief-heading h2{margin:4px 0 12px}
+.live-os .brief-call{font-size:22px;font-weight:700;line-height:1.5;color:#f4df9f;margin:10px 0}
+.live-os .brief-hint{color:#b9c7db;font-size:13px;line-height:1.5}
+.live-os .brief-phases,.live-os .brief-jobs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;margin:18px 0}
+.live-os .brief-phases article,.live-os .brief-jobs article{min-width:0;padding:20px;background:#111e30;border:1px solid #3d5069;border-radius:12px;overflow-wrap:anywhere}
+.live-os .brief-phases article{border-top:3px solid #c8ab66}
+.live-os .brief-phases .mini-label{color:#ebd394;font-size:13px;letter-spacing:.06em}
+.live-os .brief-phases p,.live-os .brief-jobs p{font:500 16px/1.65 Inter,sans-serif;color:#edf3fc;margin:10px 0 0}
+.live-os .brief-jobs h3{font-size:15px;color:#aecdff;margin:0}
+.live-os .brief-details{border-top:1px solid #36475f;margin-top:16px;padding-top:12px}
+.live-os .brief-details>summary{cursor:pointer;color:#d4deed;font:600 14px/1.5 Inter,sans-serif;padding:8px 0}
+@media(max-width:850px){.live-os .brief-phases,.live-os .brief-jobs{grid-template-columns:1fr}.live-os .brief-call{font-size:19px}}

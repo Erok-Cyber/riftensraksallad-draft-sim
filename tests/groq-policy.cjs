@@ -9,6 +9,8 @@ const fs=require('node:fs'),vm=require('node:vm'),{stripTypeScriptTypes}=require
  assert.throws(()=>policy.validateAnswer({choices:[{id:'ban:Nocturne',reason:'invented'}]},draft));
  assert.throws(()=>policy.validateAnswer({choices:[{id:'ban:Zoe',reason:'yes'},{id:'ban:Zoe',reason:'twice'}]},draft));
  assert.equal(policy.validateAnswer({choices:[{id:'ban:Zoe',reason:'CM/OP.GG'}]},draft).choices.length,1);
+ const reviewed=policy.sanitizeDraft({...raw,teamLessons:Array.from({length:8},()=>({source:'series-review',sameLineup:true,next:'x'.repeat(1000),secret:'must drop'}))});
+ assert.equal(reviewed.teamLessons.length,5);assert.equal(reviewed.teamLessons[0].next.length,220);assert.equal(reviewed.teamLessons[0].sameLineup,false);assert.equal(reviewed.teamLessons[0].secret,undefined);
  const roleIndex={blue:0,red:0};
  const full=policy.ORDER.map(([type,side],i)=>({type,side,champ:'Champion'+i,role:type==='pick'?policy.ROLES[roleIndex[side]++]:'unknown'}));
  for(const side of ['blue','red']){
@@ -68,3 +70,4 @@ const fs=require('node:fs'),vm=require('node:vm'),{stripTypeScriptTypes}=require
  assert.equal((await handler(req({x:'a'.repeat(25000)},'valid'))).status,413);
  console.log('PASS: AI input legality, target-ban evidence, schema validation, auth, missing key, cache, safe provider errors, body limit.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
+

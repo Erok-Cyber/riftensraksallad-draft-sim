@@ -5,7 +5,7 @@
   const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const questions={worked:'Vad fungerade?',difficult:'Vad blev svårt?',next:'Vad ändrar vi nästa gång?'};
   const draftIssues={'':'Inte bedömt / inget tydligt draftproblem',engage:'Svårt att starta fights',peel:'Svårt att skydda carryn',wave:'Svårt att försvara waves'};
-  const planLabels={call:'Snabb call',early:'Early',jungle:'Jungle',objectives:'Objectives',teamfight:'Teamfight',behind:'I underläge',top:'Top',mid:'Mid',adc:'ADC',support:'Support',uncertainty:'Osäkerhet'};
+  const planLabels={call:'Snabb call',early:'Early',midgame:'Midgame',late:'Late',jungle:'Jungle',objectives:'Objectives',teamfight:'Teamfight',behind:'I underläge',top:'Top',mid:'Mid',adc:'ADC',support:'Support',uncertainty:'Osäkerhet'};
   let selected=null,dirty=false,saving=false;
   function plans(){
     const loaded=window.RiftBanPlanner?.getPlans?.();if(loaded?.length)return loaded;
@@ -22,7 +22,7 @@
     const options=plans().filter(p=>p.status!=='cancelled'||String(p.id)===String(linked?.id));
     if(linked&&!options.some(p=>String(p.id)===String(linked.id)))options.push(linked);
     const writable=!window.RiftSharedData?.configured?.()||window.RiftSharedData?.hasTeamKey?.();
-    host.innerHTML='<h3>Efter matchen</h3><p class="analysis-note">Fritext ändrar inte draftpoängen. Samma markerade draftproblem i minst tre matcher med samma femma kan ge en liten justering.</p>'+
+    host.innerHTML='<h3>Efter matchen</h3><p class="analysis-note">Fritext kan användas som observationsunderlag av AI-coachen; den ändrar inte regelmotorns poäng direkt. Samma markerade draftproblem i minst tre matcher med samma femma kan ge en liten justering.</p>'+
       '<label class="postmatch-field">Serie<select id="postmatchSeries" '+(!writable?'disabled':'')+'><option value="">Fristående / inte kopplad</option>'+options.map(p=>'<option value="'+esc(p.id)+'" '+(String(p.id)===String(linked?.id)?'selected':'')+'>'+esc(p.opponent)+(p.scheduledAt?' · '+esc(new Date(p.scheduledAt).toLocaleDateString('sv-SE')):'')+'</option>').join('')+'</select></label>'+
       '<div class="postmatch-grid">'+Object.entries(questions).map(([k,label])=>'<label class="postmatch-field">'+label+'<textarea id="postmatch-'+k+'" maxlength="600" rows="3" '+(!writable?'readonly':'')+' placeholder="En konkret observation räcker">'+esc(review[k])+'</textarea></label>').join('')+'</div>'+
       '<label class="postmatch-field">Hade draften ett tydligt problem? (frivilligt)<select id="postmatchDraftIssue" '+(!writable?'disabled':'')+'>'+Object.entries(draftIssues).map(([key,label])=>'<option value="'+key+'" '+(key===(match.postReview?.draftIssue||'')?'selected':'')+'>'+label+'</option>').join('')+'</select></label>'+
@@ -67,3 +67,4 @@
   window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
   window.RiftPostmatch={render,mayClose,reset:()=>{dirty=false;selected=null;},seriesHTML,seriesGames,cleanReview};
 })();
+
