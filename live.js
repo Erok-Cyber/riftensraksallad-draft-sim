@@ -941,8 +941,11 @@ function renderMatchBrief(gp){
   put('briefCall',advice?.call||(early?'Skapa tempo tidigt → gör varje vunnen fight till ett objective.':'Spela stabilt → samla laget kring era spikes och nästa objective.'));
   put('briefEarly',advice?.early||(early?'Skapa prio och ta 2v2/3v3 när lanes kan följa. Saknas prio: ta camps och säkra waves.':'Säkra farm och undvik fights utan prio. Ta fria fördelar; ge ett osäkert objective och byt resurser på andra sidan.'));
   put('briefMid',advice?.midgame||gp.mid);
-  put('briefLate',advice?.late||gp.p25||'Håll ihop kring vision och carries. Ta fight med era viktiga cooldowns; gå inte blint in i river.');
-  put('briefFight',advice?.teamfight||local.fight);
+  put('briefLate',advice?.late||(gp.lateDiff<-.55?'Sök en ensam motståndare med vision före objective. Undvik raka 5v5 utan en tydlig fördel.':'Håll ihop kring vision och carries. Slå på säkra mål med era viktiga ults; gå inte blint in i river.'));
+  const starter=ours().filter(e=>(window.RiftProfiles?.get(e.champ)?.engage||0)>=2).sort((a,b)=>(window.RiftProfiles.get(b.champ).engage||0)-(window.RiftProfiles.get(a.champ).engage||0))[0];
+  const followers=ours().filter(e=>e.champ!==starter?.champ&&e.role!=='support').map(e=>e.champ).slice(0,2);
+  const fight=starter?starter.champ+' startar när '+followers.join(' + ')+' kan följa på samma mål. Saknas räckvidd eller viktiga ults: avbryt och håll ihop.':'Ingen säker hård engage. Håll ihop, låt dem gå in i er och följ upp en träffad CC.';
+  put('briefFight',advice?.teamfight||fight);
   put('briefProtect',advice?.adc||local.protect);
   put('briefBehind',advice?.behind||local.behind);
   const n=window.RiftGroq?.lessons?.()?.length||0;
