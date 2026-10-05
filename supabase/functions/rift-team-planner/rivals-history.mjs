@@ -34,7 +34,24 @@ export function seriesHistory(series,teamName,champions=new Map()){
     const own=results.find(r=>r.lineupNumber===lineup?.number),other=results.find(r=>r.lineupNumber!==lineup?.number);
     const valid=lineup&&own?.score!=null&&other?.score!=null;
     const placed=lineup&&own?.placement!=null&&other?.placement!=null;
-    const result=placed?(own.placement<other.placement?'win':own.placement>other.placement?'loss':'draw'):valid?(own.score>other.score?'win':own.score<other.score?'loss':'draw'):'';
+    const recorded=placed?(own.placement<other.placement?'win':own.placement>other.placement?'loss':'draw'):valid?(own.score>other.score?'win':own.score<other.score?'loss':'draw'):'';
+    // LoL game results often have null scores/placements. The game's team-level
+    // Win statistic carries the actual outcome; side numbers can swap each game.
+    const winStats=m.statistics?.gameSessionStatistics?.lineupStatistics?.nodes||[];
+    const flag=team=>{
+      const memberIds=new Set((team.members||[]).map(m=>m.user?.id).filter(Boolean));
+      const values=winStats.filter(s=>s.name==='Win'&&(s.lineup?.members?.length
+        ?s.lineup.members.some(m=>memberIds.has(m.user?.id))
+        :s.lineup?.number===team.number))
+        .map(s=>key(s.serializedValue??s.formattedValue)).filter(v=>v==='true'||v==='false');
+      return values.length&&new Set(values).size===1?values[0]:null;
+    };
+    const ownWin=lineup?flag(lineup):null;
+    const opponentLineup=(m.lineups||[]).find(l=>l.number!==lineup?.number);
+    const enemyWin=opponentLineup?flag(opponentLineup):null;
+    const statResult=ownWin&&(!enemyWin||enemyWin!==ownWin)?(ownWin==='true'?'win':'loss'):'';
+    const conflict=(ownWin&&enemyWin&&ownWin===enemyWin)||(statResult&&recorded&&statResult!==recorded);
+    const result=m.results?.final===false||conflict?'':statResult||recorded;
     return {id:clean(m.id),number:index+1,picks,result,partial:!!stats?.pageInfo?.hasNextPage};
   });
   return {id:clean(series.id),team:clean(target.name),opponent:rivals.join(' / '),title:clean(series.title),playedAt:series.startedAt||'',games};

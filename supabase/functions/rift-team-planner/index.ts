@@ -812,30 +812,33 @@ async function rivalsHistory(plan:any){
             matchSeries(matchSeriesId: $id) {
               id title startedAt lineups { name members { user { id username } } }
               matches(includeFailed: false) {
-                id state results { lineupResults { lineupNumber score placement } }
+                id state results { final draw lineupResults { lineupNumber score placement formattedScore } }
                 lineups { number members { user {id username} } }
               }
             }
           }`,{id:s.id});
           await Promise.all((data.matchSeries?.matches||[]).filter((m:any)=>m.state==="COMPLETED").slice(0,5).map(async(match:any)=>{
-            let after:string|null=null,nodes:any[]=[],partial=false;
+            let after:string|null=null,nodes:any[]=[],lineupStats:any[]=[],partial=false;
             try{
               for(let n=0;n<10;n++){
                 const next=await cmGraphql(`query RivalsStats($id: UUID!, $after: String) {
                   match(matchId: $id) { statistics { gameSessionStatistics {
+                    lineupStatistics(first: 100) { nodes {name formattedValue serializedValue lineup {number members {user {id}}}} }
                     competitorStatistics(first: 100, after: $after) {
                       pageInfo {hasNextPage endCursor}
                       nodes {name formattedValue serializedValue competitor {user {id}}}
                     }
                   } } }
                 }`,{id:match.id,after});
-                const page=next.match?.statistics?.gameSessionStatistics?.competitorStatistics;
+                const info=next.match?.statistics?.gameSessionStatistics;
+                if(info?.lineupStatistics?.nodes)lineupStats=info.lineupStatistics.nodes;
+                const page=info?.competitorStatistics;
                 nodes.push(...(page?.nodes||[]));partial=!!page?.pageInfo?.hasNextPage;
                 if(!partial||!page?.pageInfo?.endCursor)break;
                 after=page.pageInfo.endCursor;
               }
             }catch{partial=true;}
-            match.statistics={gameSessionStatistics:{competitorStatistics:{nodes,pageInfo:{hasNextPage:partial}}}};
+            match.statistics={gameSessionStatistics:{lineupStatistics:{nodes:lineupStats},competitorStatistics:{nodes,pageInfo:{hasNextPage:partial}}}};
           }));
           const row=seriesHistory(data.matchSeries,team,champions);if(row)rows.push(row);else failed++;
         }catch(err){failed++;console.warn("Rivals history read failed",clean((err as Error)?.message,220));}
@@ -958,4 +961,5 @@ Deno.serve(async(req:Request)=>{
     return json({error:"Method not allowed"},405);
   }catch(err){console.error(err);return json({error:"Unexpected server error"},500)}
 });
+
 

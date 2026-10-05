@@ -554,7 +554,9 @@ function renderRecommendation(){
   const localList=t.type==="ban"?banRecommendations().slice(0,3).map(ch=>({ch})):aiDecision(selectedRole||null);
   const displayKey=JSON.stringify([userSide,step,events,selectedRole,window.RiftRoster.key(),window.RiftOpponent?.key?.()]);
   const stable=t.type==='pick'?aiStableChoices(localList,displayKey,aiDisplayChoice):localList;
-  const list=(window.RiftGroq?.recommendations(stable)||stable).slice(0,3);
+  const ranked=window.RiftGroq?.recommendations(stable)||stable;
+  const allowedBans=t.type==='ban'&&window.RiftOpponent?.active()?new Set(window.RiftOpponent.banCandidates()):null;
+  const list=ranked.filter(c=>t.type!=='ban'||(allowedBans?allowedBans.has(c.ch):banIsRelevant(c.ch))).slice(0,3);
   if(t.type==='pick'&&list[0])aiDisplayChoice={key:displayKey,ch:list[0].ch,role:list[0].role};
   else aiDisplayChoice=null;
   for(const id of ['recommendTiming','recommendResponses'])if($(id))$(id).textContent='';
@@ -579,7 +581,7 @@ function renderRecommendation(){
     b.textContent=item.ch;parent.appendChild(b);
   };
   addButton(top,$("recommendPicks"));
-  $("recommendReason").textContent=top.reasons?.slice(0,2).join(" · ")||window.RiftOpponent?.banReason(top.ch)||"Baserat på comp och visade hot.";
+  $("recommendReason").textContent=top.reasons?.slice(0,2).join(" · ")||window.RiftOpponent?.banReason(top.ch)||(t.type==='ban'?generalBanReason(top.ch):"Baserat på comp och visade hot.");
   const stats=window.RiftStats?.getStatus?.();
   $("brainDataStatus").textContent=window.RiftOpponent?.active()?window.RiftOpponent.summary():stats?.hasData?stats.source+" · data "+(stats.metaPatch||"?")+(stats.fallback?" · äldre underlag":""):"Metadata saknas · regler och lagpool används";
   const alternatives=$("recommendAlternatives");alternatives.replaceChildren();

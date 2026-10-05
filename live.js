@@ -533,6 +533,18 @@ function banScore(champ){
   return s;
 }
 
+function banOpenRoles(champ){
+  return enemyRoleCandidates(champ).filter(role=>roles.includes(role)&&!enemyRoleShown(role));
+}
+function banIsRelevant(champ){
+  return !unavailable().has(champ.toLowerCase())&&banOpenRoles(champ).length>0;
+}
+function generalBanReason(champ){
+  const open=banOpenRoles(champ);
+  const filled=enemyRoleCandidates(champ).filter(role=>enemyRoleShown(role));
+  return 'Ban mot deras öppna '+open.map(r=>roleNames[r]).join('/')+'-roll'+(open.length>1?'er':'')+'.'+
+    (filled.length?' Flexpick: '+filled.map(r=>roleNames[r]).join('/')+' är redan fylld, men '+open.map(r=>roleNames[r]).join('/')+' återstår.':'');
+}
 function banRecommendations(){
   const used=unavailable();
   const candidates=[
@@ -540,7 +552,7 @@ function banRecommendations(){
     "Aatrox","Aurora","Syndra","Gwen","Fiora","Trundle","Kog'Maw","Jinx","Aphelios"
   ];
   if(window.RiftOpponent?.active())return window.RiftOpponent.bans(candidates);
-  return candidates.filter(c=>!used.has(c.toLowerCase()))
+  return candidates.filter(banIsRelevant)
     .map(ch=>({ch,s:banScore(ch)})).sort((a,b)=>b.s-a.s).slice(0,3).map(x=>x.ch);
 }
 
@@ -1673,9 +1685,8 @@ function banScore(champ){
   if(p.enchanter>=1&&["Kog'Maw","Jinx","Aphelios"].includes(champ))s+=9;
   if(p.poke>=2&&traits.disengage.has(champ))s+=6;
 
-  // Do not waste a phase-2 ban on a role the opponent has already clearly filled.
-  const candidates=enemyRoleCandidates(champ).filter(r=>r!=="unknown");
-  if(candidates.length===1&&enemyMap[candidates[0]])s-=18;
+  // Relevance is a hard gate, not a score penalty that strong candidates can overcome.
+  if(!banIsRelevant(champ))return -Infinity;
   return s;
 }
 

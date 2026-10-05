@@ -20,7 +20,7 @@
     const series=Array.isArray(data.series)?data.series:[];
     return (data.partial?'<p class="rivals-note">Vissa matcher kunde inte hämtas. Försök igen senare.</p>':'')+
       (series.length?series.map(s=>'<details class="rivals-series"><summary><span><strong>'+esc(s.team)+' <span class="rivals-vs">vs</span> '+esc(s.opponent||'Motståndare saknas')+'</strong><small>'+esc(date(s.playedAt))+' · '+(s.games||[]).length+' registrerade games</small></span></summary>'+
-        '<div class="rivals-games">'+((s.games||[]).length?(s.games||[]).map(g=>'<section class="rivals-game"><h4>Game '+esc(g.number)+'<span class="rivals-result '+(g.result==='win'?'win':g.result==='loss'?'loss':'')+'">'+(g.result==='win'?'Vinst':g.result==='loss'?'Förlust':g.result==='draw'?'Oavgjort':'Resultat saknas')+'</span></h4>'+
+        '<div class="rivals-games">'+((s.games||[]).length?(s.games||[]).map(g=>'<section class="rivals-game"><h4>Game '+esc(g.number)+'<span class="rivals-result '+(g.result==='win'?'win':g.result==='loss'?'loss':'')+'">'+(g.result==='win'?'W · Vinst':g.result==='loss'?'L · Förlust':g.result==='draw'?'Oavgjort':'Resultat saknas')+'</span></h4>'+
           ((g.picks||[]).length?'<ul class="rivals-picks">'+orderedPicks(g.picks,plan).map(p=>'<li><span>'+esc(p.role?p.role.toUpperCase()+(p.inferred?' ≈':''):'ROLL OKÄND')+'</span><strong>'+esc(p.champ)+'</strong><span>'+esc(p.player)+'</span></li>').join('')+'</ul>'+
             (orderedPicks(g.picks,plan).some(p=>p.inferred)?'<p class="rivals-note">≈ Rollordning uppskattad från aktuell scouting; historisk roll är inte bekräftad.</p>':''):'')+
           ((g.picks||[]).length<5?'<p class="rivals-note">'+((g.picks||[]).length?'Vissa championval saknas.':'Championdata saknas för detta game.')+'</p>':'')+'</section>').join(''):'<p class="rivals-note">Inga spelade games registrerade. Serien kan vara administrativt avgjord.</p>')+'</div></details>').join(''):'<p class="rivals-note">Inga spelade Rivals-serier tillgängliga ännu.</p>');
@@ -65,3 +65,4 @@
   }
   window.RiftRivals={mount};
 })();
+
