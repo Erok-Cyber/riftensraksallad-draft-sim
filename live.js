@@ -1674,6 +1674,17 @@ function recommendedNextRole(){
   return scored.sort((a,b)=>b.score-a.score)[0].role;
 }
 
+function ownBanCost(champ){
+  const map=ownRoleMap(),used=unavailable();
+  const affected=roles.filter(r=>!map[r]&&(teamPool[r]||[]).includes(champ)&&(comfort[r]?.[champ]??5)>=7);
+  let penalty=0;
+  for(const role of affected){
+    const alternatives=(teamPool[role]||[]).filter(ch=>ch!==champ&&!used.has(ch.toLowerCase())&&(comfort[role]?.[ch]??5)>=7);
+    penalty=Math.max(penalty,alternatives.length===0?24:alternatives.length===1?10:0);
+  }
+  return {penalty,reason:penalty?'Eget pickskydd: '+champ+' är ett av få trygga val i '+affected.map(r=>roleNames[r]).join('/')+'.':''};
+}
+
 function banScore(champ){
   let s=banBase[champ]||0;
   const map=ownRoleMap(), enemyMap=enemyRoleMap(), p=enemyProfile();
@@ -1685,7 +1696,7 @@ function banScore(champ){
 
   // Relevance is a hard gate, not a score penalty that strong candidates can overcome.
   if(!banIsRelevant(champ))return -Infinity;
-  return s;
+  return s-ownBanCost(champ).penalty;
 }
 
 function renderRecommendation(){

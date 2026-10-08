@@ -17,11 +17,11 @@ const AI_CONFIG = {
 };
 
 let aiContextKey="";
-const aiRoleCache=new Map(),aiStateCache=new Map();
+const aiRoleCache=new Map(),aiStateCache=new Map(),aiPoolCache=new Map();
 function aiEnsureContext(){
   const key=JSON.stringify([userSide,events.map(e=>[e.side,e.type,e.role,e.champ]),
     window.RiftStats?.getStatus?.(),window.RiftOpponent?.key(),window.RiftRoster?.key(),localStorage.getItem("rs_draft_archive"),localStorage.getItem("rs_match_history"),Object.keys(championMeta).length]);
-  if(key!==aiContextKey){aiContextKey=key;aiRoleCache.clear();aiStateCache.clear();}
+  if(key!==aiContextKey){aiContextKey=key;aiRoleCache.clear();aiStateCache.clear();aiPoolCache.clear();}
 }
 let aiHistoryCacheRaw=null;
 let aiHistoryCache=[];
@@ -259,7 +259,9 @@ function aiStateScore(map){
 }
 
 function aiCandidatePoolForMap(role,map,used){
-  return (teamPool[role]||[])
+  const key=JSON.stringify([role,map,[...used].sort(),teamPool[role],comfort[role]]);
+  if(aiPoolCache.has(key))return aiPoolCache.get(key);
+  const result= (teamPool[role]||[])
     .filter(ch=>!used.has(ch.toLowerCase()))
     .map(ch=>{
       // Evaluate the hypothetical map itself, not the live draft's old needs.
@@ -269,6 +271,7 @@ function aiCandidatePoolForMap(role,map,used){
     })
     .sort((a,b)=>b.score-a.score)
     .slice(0,AI_CONFIG.beamChoicesPerRole);
+  aiPoolCache.set(key,result);return result;
 }
 
 // Exact feasibility check across all remaining roles; a shared flex cannot fill two slots.
@@ -481,6 +484,28 @@ function aiRoleTimingBonus(role){
   return s;
 }
 
+function aiDenialRisk(candidate){
+  const nextOwn=draftOrder.findIndex((t,i)=>i>step&&t.side===userSide&&t.type==='pick');
+  const turns=nextOwn<0?[]:draftOrder.slice(step+1,nextOwn).filter(t=>t.side!==userSide);
+  if(!turns.length)return {penalty:0,champ:''};
+  const map={...ownRoleMap(),[candidate.role]:candidate.ch},used=new Set(unavailable());used.add(candidate.ch.toLowerCase());
+  const baseline=aiCompletion(map,used).penalty;
+  const observed=window.RiftOpponent?.scouting?.()||[];
+  const vulnerable=[...new Set(roles.filter(r=>!map[r]).flatMap(r=>teamPool[r]||[]))].filter(ch=>!used.has(ch.toLowerCase())&&
+    (turns.some(t=>t.type==='ban')||observed.some(p=>p.champ===ch&&(p.cm>0||p.recent>=3))));
+  let worst={penalty:0,champ:''};
+  vulnerable.forEach(ch=>{const blocked=new Set(used);blocked.add(ch.toLowerCase());const penalty=Math.min(8,Math.max(0,aiCompletion(map,blocked).penalty-baseline)*.5);if(penalty>worst.penalty)worst={penalty,champ:ch};});
+  return worst;
+}
+function aiAlternativeReason(top,alternative){
+  if(alternative.completion?.penalty>top.completion?.penalty)return 'svårare att färdigställa med comfort';
+  if(alternative.denial?.penalty>top.denial?.penalty)return 'mer beroende av ett sårbart följdpick';
+  if(alternative.comfort<top.comfort)return 'lägre comfort';
+  if(alternative.risk?.value>top.risk?.value)return 'högre bedömd risk';
+  if(alternative.state<top.state-3)return 'svagare bedömd compstruktur';
+  return Math.abs(top.total-alternative.total)<3?'nära likvärdigt enligt motorn':'lägre sammanvägd bedömning';
+}
+
 function aiDecision(forcedRole=null){
   const map=ownRoleMap();
   const open=forcedRole?[forcedRole]:roles.filter(r=>!map[r]);
@@ -492,8 +517,8 @@ function aiDecision(forcedRole=null){
       [...ranked].sort((a,b)=>(comfort[role]?.[b.ch]||5)-(comfort[role]?.[a.ch]||5))[0],
       [...ranked].sort((a,b)=>b.state-a.state||b.score-a.score)[0]];
     [...new Map(diverse.filter(Boolean).map(x=>[x.ch,x])).values()].forEach(x=>{
-      const timing=aiPickUrgency(x,ranked);
-      options.push({...x,urgency:timing,comfort:comfort[role]?.[x.ch]||5,total:x.score+aiRoleTimingBonus(role)+timing.points});
+      const timing=aiPickUrgency(x,ranked),denial=aiDenialRisk(x);
+      options.push({...x,urgency:timing,denial,comfort:comfort[role]?.[x.ch]||5,total:x.score+aiRoleTimingBonus(role)+timing.points-denial.penalty});
     });
   });
 
@@ -614,6 +639,7 @@ function renderRecommendation(){
     b.dataset.suggestChamp=encodeURIComponent(item.ch);
     if(item.role)b.dataset.suggestRole=item.role;
     b.textContent=item.ch;parent.appendChild(b);
+    if(t.type==='pick'&&item!==top){const note=document.createElement('small');note.textContent=' · '+aiAlternativeReason(top,item);parent.appendChild(note);}
   };
   addButton(top,$("recommendPicks"));
   $("recommendReason").textContent=top.reasons?.slice(0,2).join(" · ")||window.RiftOpponent?.banReason(top.ch)||(t.type==='ban'?generalBanReason(top.ch):"Baserat på comp och visade hot.");
@@ -629,6 +655,7 @@ function renderRecommendation(){
   let timing=document.getElementById('recommendTiming');
   const overall=t.type==='pick'?[...localList].sort((a,b)=>b.score-a.score)[0]:null;
   if(timing)timing.textContent=t.type==='pick'?(top.urgency.points?'Välj nu: ':'Pickordning: ')+top.urgency.reason+(overall&&overall.ch!==top.ch?' Högst grundbedömning utan pickordning: '+overall.ch+'.':''):'';
+  if(timing&&top.denial?.penalty)timing.textContent+=' Fortsättningen är känslig om '+top.denial.ch+' försvinner före nästa pick.';
   const responses=document.getElementById('recommendResponses');
   if(responses)responses.textContent=t.type==='pick'&&top.responses?.length?'Möjliga svar ur deras pool: '+top.responses.map(x=>x.champ+' ('+x.source+')').join(' · ')+'. Prognos, inte låsta picks.':'';
   const change=$("recommendChange");

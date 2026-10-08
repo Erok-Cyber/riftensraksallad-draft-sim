@@ -1,0 +1,17 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const src=fs.readFileSync(__dirname+'/brain-regression.cjs','utf8');
+const harness=vm.runInNewContext(src.slice(0,src.indexOf('const brain=harness'))+'\nharness',{require,__dirname,console,URLSearchParams,AbortController,AbortSignal});
+const h=harness(['live.js','advanced-engine.js','draft-ai.js']);
+h.run('userSide="blue";events=[];step=0;teamPool.support=["Nautilus","Leona"];comfort.support.Nautilus=9;comfort.support.Leona=3');
+assert.equal(h.run('ownBanCost("Nautilus").penalty'),24);
+h.run('comfort.support.Leona=8');assert.equal(h.run('ownBanCost("Nautilus").penalty'),10);
+h.run('events=[{side:"blue",type:"pick",role:"support",champ:"Leona"}]');assert.equal(h.run('ownBanCost("Nautilus").penalty'),0);
+h.run('events=[];teamPool.support=["Nautilus"];draftOrder.splice(0,draftOrder.length,{side:"blue",type:"pick"},{side:"red",type:"ban"},{side:"blue",type:"pick"});step=0');
+assert(h.run('aiDenialRisk({ch:"Ahri",role:"mid"}).penalty')>0);
+assert.equal(h.run('aiDenialRisk({ch:"Nautilus",role:"support"}).penalty'),0);
+h.run('draftOrder[1]={side:"blue",type:"pick"}');assert.equal(h.run('aiDenialRisk({ch:"Ahri",role:"mid"}).penalty'),0);
+h.run('draftOrder[1]={side:"red",type:"pick"}');assert.equal(h.run('aiDenialRisk({ch:"Ahri",role:"mid"}).penalty'),0,'no invented contested picks');
+h.run('window.RiftOpponent={scouting:()=>[{champ:"Nautilus",cm:2}]}');assert(h.run('aiDenialRisk({ch:"Ahri",role:"mid"}).penalty')>0);
+assert.equal(h.run('aiAlternativeReason({comfort:9,total:90},{comfort:5,total:88})'),'lägre comfort');
+const before=h.run('JSON.stringify(events)');h.run('aiDenialRisk({ch:"Ahri",role:"mid"})');assert.equal(h.run('JSON.stringify(events)'),before);
+console.log('PASS: own comfort protection, filled roles, enemy ban/pick windows, consecutive picks, source-only denial and truthful comparison.');
