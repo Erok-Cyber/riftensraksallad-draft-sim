@@ -1,0 +1,26 @@
+// Decision quality invariants, not claims of optimal picks or measured win probability.
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const original=fs.readFileSync(__dirname+'/brain-regression.cjs','utf8');
+const harness=vm.runInNewContext(original.slice(0,original.indexOf('const brain=harness'))+'\nharness',{require,__dirname,console,URLSearchParams,AbortController,AbortSignal});
+const h=harness(['live.js','advanced-engine.js','draft-ai.js']);
+h.run('userSide="blue";step=6;events=[]');
+h.run('teamPool.top=["Shen"];teamPool.support=["Shen"];comfort.top.Shen=9;comfort.support.Shen=9');
+const check=()=>h.run('aiCompletion({jungle:"Xin Zhao",mid:"Ahri",adc:"Ashe"},new Set(["xin zhao","ahri","ashe"]))');
+assert.equal(check().penalty,30,'a flex cannot complete both remaining roles');
+h.run('teamPool.support.push("Nautilus");comfort.support.Nautilus=3');
+assert.equal(check().penalty,10,'only low comfort completion');
+h.run('comfort.support.Nautilus=6');assert.equal(check().penalty,4);
+h.run('comfort.support.Nautilus=8');assert.equal(check().penalty,0);
+assert.equal(h.run('aiCompletion({jungle:"Xin Zhao",mid:"Ahri",adc:"Ashe"},new Set(["nautilus"]))').penalty,30,'banned alternative cannot rescue completion');
+assert.equal(h.run('aiConfidenceLabel(null)'),'Enda tillgängliga alternativet');
+assert.equal(h.run('aiConfidenceLabel(1)'),'Jämna alternativ');
+const fresh=harness(['live.js','advanced-engine.js','draft-ai.js']);
+fresh.run('userSide="blue";step=6;events=[];window.RiftOpponent={prospects:()=>[{champ:"Vi",role:"jungle",weight:.8},{champ:"Ivern",role:"jungle",weight:.2}],key:()=>"fixture"}');
+const before=fresh.run('JSON.stringify(events)');
+const exposed=fresh.run('aiContinuationScore({top:"Renekton",jungle:"Graves",mid:"Ahri",adc:"Jinx"})');
+fresh.run('window.RiftOpponent=null');
+assert(fresh.run('aiContinuationScore({top:"Renekton",jungle:"Graves",mid:"Ahri",adc:"Jinx"})')>exposed,'observed enemy replies affect hypothetical continuation');
+const start=performance.now();const choices=fresh.run('aiDecision()');
+assert(choices.every(c=>Number.isFinite(c.total)&&c.completion));
+assert.equal(fresh.run('JSON.stringify(events)'),before);
+console.log('PASS: unique full completion, comfort thresholds, banned alternatives, honest confidence, reply-aware continuations and draft isolation. Opening evaluation: '+Math.round(performance.now()-start)+'ms.');

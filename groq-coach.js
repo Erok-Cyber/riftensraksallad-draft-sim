@@ -27,7 +27,7 @@
       candidates:list.map(c=>({ch:c.ch,role:c.role,score:t.type==='ban'?window.RiftOpponent?.banScore?.(c.ch)||0:c.total||c.score||0,reasons:c.reasons||[],evidence:t.type==='ban'?window.RiftOpponent?.banReason(c.ch)||'':''})),
       comfort:roles.flatMap(role=>teamPool[role].map(ch=>({role,ch,value:comfort[role]?.[ch]||5}))),
       compOptions:window.RiftRoster?.compOptions?.()||{},
-      decisionContext:list.map(c=>({id:id(c),urgency:c.urgency?.reason||'',alternatives:c.urgency?.alternatives||[],risk:[c.risk?.reasons?.join(' · '),c.execution?.label,c.learning?.label,c.responses?.length?'Möjliga svar, inte låsta picks: '+c.responses.map(x=>x.champ+' ('+x.source+')').join(', '):''].filter(Boolean).join(' · ')})),
+      decisionContext:list.map(c=>({id:id(c),urgency:c.urgency?.reason||'',alternatives:c.urgency?.alternatives||[],risk:[c.completion?.label,c.risk?.reasons?.join(' · '),c.execution?.label,c.learning?.label,c.responses?.length?'Möjliga svar, inte låsta picks: '+c.responses.map(x=>x.champ+' ('+x.source+')').join(', '):''].filter(Boolean).join(' · ')})),
       targeted:!!window.RiftOpponent?.active(),scouting:window.RiftOpponent?.scouting?.(final)||[],scoutingNote:window.RiftOpponent?.active()?window.RiftOpponent.summary():'Ingen motståndarscouting vald.',patch:window.RiftStats?.getStatus?.()?.patch||''};
     payload.mode=final?'gameplan':'draft';
     return {payload,key:JSON.stringify([payload,window.RiftRoster?.key(),window.RiftOpponent?.key()])};
@@ -110,4 +110,5 @@
   window.RiftGroq={recommendations,refresh,snapshot:savedAdvice,lessons};
   refresh();controls();
 })();
+
 

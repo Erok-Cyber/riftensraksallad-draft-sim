@@ -13,7 +13,7 @@ const AI_CONFIG = {
   temperature: 11,
   beamWidth: 12,
   beamChoicesPerRole: 2,
-  beamDepth: 2
+  beamDepth: 4
 };
 
 let aiContextKey="";
@@ -271,9 +271,31 @@ function aiCandidatePoolForMap(role,map,used){
     .slice(0,AI_CONFIG.beamChoicesPerRole);
 }
 
+// Exact feasibility check across all remaining roles; a shared flex cannot fill two slots.
+function aiCompletion(map,used){
+  const open=roles.filter(r=>!map[r]);
+  const feasible=minimum=>{
+    const pools=open.map(role=>({role,choices:(teamPool[role]||[]).filter(ch=>!used.has(ch.toLowerCase())&&(comfort[role]?.[ch]??5)>=minimum)})).sort((a,b)=>a.choices.length-b.choices.length);
+    const walk=(i,taken)=>i===pools.length||pools[i].choices.some(ch=>{
+      if(taken.has(ch.toLowerCase()))return false;
+      const next=new Set(taken);next.add(ch.toLowerCase());return walk(i+1,next);
+    });
+    return walk(0,new Set(used));
+  };
+  if(feasible(7))return {penalty:0,label:'Kan färdigställas med comfort 7+ i återstående roller.'};
+  if(feasible(5))return {penalty:4,label:'Färdig comp kräver minst ett mindre tryggt följdpick.'};
+  if(feasible(0))return {penalty:10,label:'Färdig comp kräver låg comfort i en återstående roll.'};
+  return {penalty:30,label:'Ingen komplett femma kvar i den aktiva championpoolen.'};
+}
+function aiContinuationScore(map,scouted){
+  const unfamiliar=roles.reduce((sum,r)=>sum+(map[r]?Math.max(0,7-(comfort[r]?.[map[r]]??5)):0),0);
+  return aiStateScore(map)-Math.min(18,unfamiliar*2)-aiResponseRisk(map,scouted);
+}
+
 function aiLookaheadScore(startMap,startUsed){
+  const scouted=window.RiftOpponent?.prospects?.()||[];
   const remaining=roles.filter(r=>!startMap[r]);
-  if(!remaining.length)return aiStateScore(startMap);
+  if(!remaining.length)return aiContinuationScore(startMap,scouted);
 
   let beam=[{map:startMap,used:startUsed,score:aiStateScore(startMap)}];
   const depth=Math.min(AI_CONFIG.beamDepth,remaining.length);
@@ -286,7 +308,7 @@ function aiLookaheadScore(startMap,startUsed){
         aiCandidatePoolForMap(role,node.map,node.used).forEach(opt=>{
           const map={...node.map,[role]:opt.ch};
           const used=new Set(node.used);used.add(opt.ch.toLowerCase());
-          const state=aiStateScore(map);
+          const state=aiContinuationScore(map,scouted);
           expanded.push({map,used,score:state+opt.score*0.08});
         });
       });
@@ -300,7 +322,7 @@ function aiLookaheadScore(startMap,startUsed){
     });
     beam=[...unique.values()].sort((a,b)=>b.score-a.score).slice(0,AI_CONFIG.beamWidth);
   }
-  return beam.length?Math.max(...beam.map(x=>aiStateScore(x.map))):aiStateScore(startMap);
+  return beam.length?Math.max(...beam.map(x=>aiContinuationScore(x.map,scouted))):aiContinuationScore(startMap,scouted);
 }
 
 function aiFlexibility(map,used){
@@ -359,6 +381,7 @@ function aiCandidate(champ,role){
   }
   const map={...ownRoleMap(),[role]:champ};
   const used=new Set([...unavailable()].map(x=>x.toLowerCase()));used.add(champ.toLowerCase());
+  const completion=aiCompletion(map,used);
   const state=aiStateScore(map);
   const lookahead=aiLookaheadScore(map,used);
   const flex=aiFlexibility(map,used);
@@ -382,7 +405,7 @@ function aiCandidate(champ,role){
   const scouting=window.RiftOpponent?.pickSignal(champ,role);
   score+=scouting?.points||0;
   const responseRisk=aiResponseRisk(map);
-  score-=responseRisk;
+  score-=responseRisk+completion.penalty;
 
   // Preserve the current core direction, but reward a useful second pivot.
   if(compRanks[1]&&compRanks[1].score>=9)score+=2;
@@ -393,6 +416,7 @@ function aiCandidate(champ,role){
     if(!hasSetup)score-=12;
     reasons.unshift(hasSetup?"follow-up på lagets engage":"behöver engage/setup från annan roll");
   }
+  if(completion.penalty)reasons.unshift(completion.label);
   if(responseRisk>=2)reasons.push('kvarvarande sårbarhet mot deras observerade pool');
   if(scouting?.points>=1&&scouting.reason)reasons.unshift(scouting.reason);
   if(history.n>=3&&history.bonus>=.35)reasons.unshift("teamdata "+history.w+"W/"+history.l+"L · "+history.label);
@@ -405,20 +429,30 @@ function aiCandidate(champ,role){
   reasons.unshift('comfort '+rating+'/10'+(rating<=4?' · ovan champion':''));
 
   return {
-    ch:champ,role,score,state,lookahead,flex,risk,history,execution,learning,responses:scouting?.responses||[],
+    ch:champ,role,score,state,lookahead,flex,risk,history,execution,learning,completion,responses:scouting?.responses||[],
     reasons:[...new Set(reasons)].slice(0,4),
     anchors:compRanks.slice(0,2)
   };
 }
 
-function aiResponseRisk(map){
+function aiResponseRisk(map,scouted){
   const used=new Set(Object.values(map));
-  const predicted=(window.RiftOpponent?.prospects?.()||[]).filter(p=>!used.has(p.champ));
+  const predicted=(scouted??window.RiftOpponent?.prospects?.()??[]).filter(p=>!used.has(p.champ));
   const n=aiNeeds(map);
   if(n.count<3||!predicted.length)return 0;
-  const mass=set=>Math.min(2,predicted.reduce((sum,p)=>sum+(set.has(p.champ)?p.weight:0),0));
-  // Bounded structural risk, not a win probability or a fabricated enemy pick.
-  return Math.min(6,(n.peel===0?mass(traits.dive)*2:0)+(n.antiTank===0?mass(traits.tanks)*1.5:0)+(n.engage===0?mass(traits.poke)*2:0));
+  // Compare observed replies role by role, combining typical exposure with a bounded
+  // adverse reply. Weights are evidence strength, never claimed pick probabilities.
+  const danger=p=>(n.peel===0&&traits.dive.has(p.champ)?2:0)+(n.antiTank===0&&traits.tanks.has(p.champ)?1.5:0)+(n.engage===0&&traits.poke.has(p.champ)?2:0);
+  let risk=0;
+  for(const role of roles){
+    const replies=predicted.filter(p=>p.role===role&&p.weight>0);
+    if(!replies.length)continue;
+    const mass=replies.reduce((sum,p)=>sum+p.weight,0);
+    const typical=replies.reduce((sum,p)=>sum+danger(p)*p.weight,0);
+    const adverse=Math.max(...replies.map(danger))*Math.min(1,mass);
+    risk+=typical*.7+adverse*.3;
+  }
+  return Math.min(6,risk);
 }
 
 function aiRoleCandidates(role){
@@ -501,6 +535,7 @@ function recommendedNextRole(){
 }
 
 function aiConfidenceLabel(gap){
+  if(gap==null)return "Enda tillgängliga alternativet";
   return gap>=8?"Tydligt förstaval":gap>=3?"Litet försprång":"Jämna alternativ";
 }
 
@@ -519,7 +554,7 @@ function renderAIInsight(){
 
   const shown=aiPreviousCall?.side===userSide&&aiPreviousCall?.step===step?list.find(x=>x.ch===aiPreviousCall.ch&&x.role===aiPreviousCall.pickRole):null;
   const best=shown||list[0],second=list.find(x=>x!==best);
-  const gap=second?best.total-second.total:20;
+  const gap=second?best.total-second.total:null;
   const confidence=aiConfidenceLabel(gap);
   const anchor=best.anchors[0]?.name||desiredComp();
   const pivot=best.anchors[1]?.name||"—";
@@ -531,7 +566,7 @@ function renderAIInsight(){
   document.getElementById("aiLookahead").textContent=Math.round(best.lookahead)+"/100 · struktur, inte vinstchans";
   document.getElementById("aiRisk").textContent=best.risk.label+(best.risk.reasons.length?" · "+best.risk.reasons.join(", "):"");
   document.getElementById("aiWhy").textContent=(best.reasons.join(" · ")||"Bäst total balans mellan comfort, comp och enemy draft.")+
-    '. '+(best.execution?.label||'')+' Lookahead testar egna följdpicks; scoutade svar bedöms separat.';
+    '. '+(best.execution?.label||'')+' '+(best.completion?.label||'')+' Begränsad sökning till färdig femma; observerade motsvar bedöms utan att låsas.';
 
   const alternatives=list.filter(x=>x.ch!==best.ch||x.role!==best.role).slice(0,2).map(x=>roleNames[x.role]+" "+x.ch).join(" · ");
   document.getElementById("aiAlternatives").textContent=alternatives||"—";
@@ -586,7 +621,7 @@ function renderRecommendation(){
   $("brainDataStatus").textContent=window.RiftOpponent?.active()?window.RiftOpponent.summary():stats?.hasData?stats.source+" · data "+(stats.metaPatch||"?")+(stats.fallback?" · äldre underlag":""):"Metadata saknas · regler och lagpool används";
   const alternatives=$("recommendAlternatives");alternatives.replaceChildren();
   list.slice(1).forEach(x=>addButton(x,alternatives));
-  $("recommendStrength").textContent=t.type==="pick"?aiConfidenceLabel(list[1]?top.total-list[1].total:20)+" · regelbaserat stöd":window.RiftOpponent?.active()?"Endast styrkta motståndarpicks":"Alternativ om banplanen ändras";
+  $("recommendStrength").textContent=t.type==="pick"?aiConfidenceLabel(list[1]?top.total-list[1].total:null)+" · poängskillnad, inte vinstsäkerhet":window.RiftOpponent?.active()?"Endast styrkta motståndarpicks":"Alternativ om banplanen ändras";
   if(top.groqReason){
     $("recommendReason").textContent=top.groqReason+(top.groqComparison?' · Jämförelse: '+top.groqComparison:'')+(top.groqRisk?' · Risk: '+top.groqRisk:'');
     $("recommendStrength").textContent='AI-bedömning · förslag inom aktuell championpool';
@@ -629,3 +664,4 @@ render = function(){
 };
 
 if(userSide)render();
+
