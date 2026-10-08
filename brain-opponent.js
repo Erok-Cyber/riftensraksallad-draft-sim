@@ -2,6 +2,7 @@
 (()=>{
   const select=document.getElementById('brainOpponent'),hint=document.getElementById('brainOpponentHint');
   let plans=[],selected='',revision=0,offline=false,loading=true;
+  const rivals=new Map();
   const replay=new URLSearchParams(location.search).has('replay');
   try{selected=replay?'':sessionStorage.getItem('rs_brain_opponent')||'';}catch{}
   const active=()=>replay?null:plans.find(p=>String(p.id)===selected&&p.status!=='cancelled')||null;
@@ -12,15 +13,26 @@
   function evidence(){
     const plan=active();if(!plan)return [];
     const lineup=window.RiftScouting.lineup(plan),out=[];
-    const games=(plan.competitiveEvidence?.games||[]).slice(-10);
+    // Merge read-only live history with stored/manual evidence; never mutate the plan.
+    const stored=plan.competitiveEvidence?.games||[];
+    const fetched=rivals.get(String(plan.id))?.games||[];
+    const unique=new Map();
+    [...stored,...fetched].forEach((game,index)=>{
+      const key=game.id||game.matchId||'stored:'+index;
+      const previous=unique.get(key);
+      unique.set(key,previous?{...game,...previous,picks:[...(previous.picks||[]),...(game.picks||[])]}:game);
+    });
+    const games=[...unique.values()].sort((a,b)=>(Date.parse(a.playedAt)||0)-(Date.parse(b.playedAt)||0)).slice(-10);
     const keys=entry=>[entry.cmUsername,entry.player?.riotId].map(identity).filter(Boolean);
     const matches=(pick,entry)=>[pick.player,pick.riotId].map(identity).filter(Boolean).some(k=>keys(entry).includes(k));
     lineup.forEach(entry=>{
       const played=[];
-      games.forEach(game=>(game.picks||[]).forEach(pick=>{
+      games.forEach(game=>{const seen=new Set();(game.picks||[]).forEach(pick=>{
         // Exact identity only. Old roster members and ambiguous names cannot become current starters.
-        if(matches(pick,entry)&&lineup.filter(e=>matches(pick,e)).length===1)played.push({...pick,manual:game.source==='manual-screenshot'});
-      }));
+        if(matches(pick,entry)&&lineup.filter(e=>matches(pick,e)).length===1&&!seen.has(canonical(pick.champ))){
+          seen.add(canonical(pick.champ));played.push({...pick,manual:game.source==='manual-screenshot'});
+        }
+      });});
       const recentRole=[...played].reverse().find(p=>roles.includes(p.role))?.role;
       const lockedRoles=lineup.filter(e=>e.source==='challengermode').map(e=>e.role);
       const role=entry.source==='challengermode'?entry.role:
@@ -116,13 +128,28 @@
     });
     return [...merged.values()].sort((a,b)=>b.score-a.score||a.ch.localeCompare(b.ch));
   }
+  async function loadRivals(plan){
+    const id=String(plan?.id||'');
+    if(replay||!id||rivals.has(id)||!window.RiftRivals?.load||(!plan.challengermode&&!plan.challengermodeUrl))return;
+    rivals.set(id,{status:'loading',games:[]});
+    try{
+      const data=await window.RiftRivals.load(plan);
+      const games=data.series.flatMap(series=>(series.games||[]).filter(g=>g.id&&g.picks?.length).map(g=>({...g,playedAt:series.playedAt,source:'challengermode'})));
+      rivals.set(id,{status:data.partial?'partial':'ready',games});
+    }catch{rivals.set(id,{status:'error',games:[]});}
+    // A late response for another opponent must not replace active advice.
+    if(String(active()?.id)!==id)return;
+    revision++;update();if(userSide)render();
+  }
   function summary(){
     const rows=evidence();
-    if(!rows.length)return 'Scouting saknas för aktuella starters. Inga generiska target bans fylls på.';
+    const history=rivals.get(String(active()?.id));
+    const historyNote=history?.status==='loading'?' · hämtar Rivals-picks':history?.status==='error'?' · Rivals kunde inte hämtas; sparad scouting används':history?.status==='partial'?' · Rivals-underlaget är delvis hämtat':history?.games.length?' · '+history.games.length+' Rivals-games inlästa':'';
+    if(!rows.length)return 'Scouting saknas för aktuella starters. Inga generiska target bans fylls på.'+historyNote;
     const date=active()?.challengermode?.lastSyncedAt;
     const freshness=date?' · CM synkad '+new Date(date).toLocaleDateString('sv-SE'):' · synktid saknas';
     return (rows.some(r=>r.manual)?'CM + bilder + OP.GG · ':'CM + OP.GG · ')+new Set(rows.map(r=>r.player)).size+' starters med data'+freshness+
-      (rows.some(r=>r.recent)?' · senaste matcher vägs in':' · OP.GG bygger på säsongsdata');
+      (rows.some(r=>r.recent)?' · senaste matcher vägs in':' · OP.GG bygger på säsongsdata')+historyNote;
   }
   window.RiftOpponent={active,prospects,key:()=>selected+':'+revision,pickSignal,summary,
     plans:()=>plans.filter(p=>p.status!=='cancelled').map(p=>({id:String(p.id),opponent:p.opponent,scheduledAt:p.scheduledAt,bestOf:p.bestOf||3,status:p.status})),
@@ -142,6 +169,7 @@
     if(!active()&&!loading)selected='';
     select.value=selected;select.disabled=replay;
     const plan=active();
+    if(!loading&&!offline)void loadRivals(plan);
     window.RiftRivals?.mount(document.getElementById('brainRivalsHistory'),plan);
     hint.textContent=replay?'Historisk övning använder ingen aktuell motståndarscouting.':plan
       ?(offline?'Cachad scouting · ':'')+summary()
@@ -165,4 +193,5 @@
   // Wait for the core and scoring scripts to initialize before reading draft state.
   document.addEventListener('DOMContentLoaded',load,{once:true});
 })();
+
 

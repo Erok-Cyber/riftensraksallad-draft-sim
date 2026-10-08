@@ -1,6 +1,4 @@
-const fallbackChampions = [
-"Aatrox","Ahri","Akali","Alistar","Ambessa","Amumu","Anivia","Annie","Aphelios","Ashe","Aurora","Azir","Braum","Caitlyn","Camille","Cassiopeia","Darius","Ezreal","Fiora","Galio","Garen","Gnar","Gragas","Graves","Heimerdinger","Hwei","Ivern","Jarvan IV","Jax","Jayce","Jinx","Kai'Sa","Kalista","Kayn","Kennen","Kindred","Kog'Maw","K'Sante","Lee Sin","Leona","Lillia","Lucian","Lulu","Malphite","Maokai","Milio","Miss Fortune","Mordekaiser","Nami","Nautilus","Nocturne","Olaf","Orianna","Ornn","Poppy","Rakan","Rell","Renekton","Rumble","Ryze","Sejuani","Senna","Shen","Sion","Skarner","Smolder","Sylas","Syndra","Tahm Kench","Taliyah","Tristana","Trundle","Tryndamere","Twisted Fate","Udyr","Varus","Vex","Vi","Viego","Viktor","Volibear","Wukong","Xayah","Xin Zhao","Yone","Yunara","Zac","Zeri"
-].sort();
+const fallbackChampions = [...window.RiftTeamData.champions].sort();
 
 let championRoster = [...fallbackChampions];
 let championMeta = {};
@@ -2191,4 +2189,5 @@ window.RiftChampionPicker?.attach({inputId:"championInput",roster:()=>championRo
     $("lockBtn").textContent="Lås "+champ;
     if(current()?.type==="pick"&&role){selectedRole=role;renderTurn();renderRecommendation();}
   }});
+
 

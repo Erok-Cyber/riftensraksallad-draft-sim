@@ -11,7 +11,7 @@ assert(live.includes("put('briefPath',briefJunglePath())"),'AI and local briefs 
 assert(fs.readFileSync(path.join(root,'live.html'),'utf8').includes('id="briefPath"'));
 const roles=['top','jungle','mid','adc','support'];
 const ui={window:{RiftScouting:{lineup:()=>roles.map((role,i)=>({role,cmUsername:'Player'+i,roleConfidence:75}))}},Map,Set,Date};
-vm.createContext(ui);vm.runInContext(fs.readFileSync(path.join(root,'rivals-history.js'),'utf8').replace('window.RiftRivals={mount};','window.RiftRivals={mount,orderedPicks,rows};'),ui);
+vm.createContext(ui);vm.runInContext(fs.readFileSync(path.join(root,'rivals-history.js'),'utf8').replace('window.RiftRivals={mount,load};','window.RiftRivals={mount,orderedPicks,rows};'),ui);
 const picks=[3,1,4,0,2].map(i=>({player:'Player'+i,champ:'Champ'+i}));
 const sorted=ui.window.RiftRivals.orderedPicks(picks,{});
 assert.equal(sorted.map(p=>p.role).join(','),roles.join(','));assert(sorted.every(p=>p.inferred));
@@ -21,3 +21,4 @@ assert.equal(ui.window.RiftRivals.orderedPicks([{player:'Unknown',champ:'X'}],{}
 const html=ui.window.RiftRivals.rows({series:[{team:'<script>',games:[{number:1,picks}]}]},{});
 assert(html.includes('TOP ≈'));assert(html.includes('historisk roll är inte bekräftad'));assert(!html.includes('<script>'));
 console.log('PASS: early-brief path directions, no-jungle fallback, AI-safe display, top-to-support order, historical role precedence, unknown players and escaping.');
+

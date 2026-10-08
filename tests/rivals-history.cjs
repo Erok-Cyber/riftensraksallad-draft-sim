@@ -13,8 +13,9 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('nod
  assert.equal(seriesHistory(raw,'Crimson',new Map()).games[0].picks.length,0,'unknown champions are not invented');
  raw.matches[0].lineups[1].members=[member('c','Starter')];assert.equal(seriesHistory(raw,'Crimson',new Map([[111,'Nautilus']])).games[0].picks.length,0,'same username is not a matching user ID');
  const ctx={window:{},Map,Set,Date};vm.createContext(ctx);
- vm.runInContext(fs.readFileSync('rivals-history.js','utf8').replace('window.RiftRivals={mount};','window.RiftRivals={mount,rows};'),ctx);
+ vm.runInContext(fs.readFileSync('rivals-history.js','utf8').replace('window.RiftRivals={mount,load};','window.RiftRivals={mount,rows};'),ctx);
  const html=ctx.window.RiftRivals.rows({series:[{team:'<img>',opponent:'Other',games:[{number:1,result:'win',picks:[{champ:'Nautilus',player:'<script>'}]}]}]});
  assert(!html.includes('<img>'));assert(!html.includes('<script>'));assert(html.includes('&lt;script&gt;'));assert(html.includes('Vissa championval saknas'));assert(!html.includes('Förlust'));
  console.log('PASS: exact tournament identity, side swaps, observed champions only, unknown-team safety, escaped history and honest missing picks.');
 })().catch(e=>{console.error(e);process.exitCode=1;});
+

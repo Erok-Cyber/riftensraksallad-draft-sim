@@ -63,6 +63,7 @@
     details.addEventListener('toggle',()=>{details.open?expanded.add(id):expanded.delete(id);show();});
     if(expanded.has(id)){details.open=true;show();}
   }
-  window.RiftRivals={mount};
+  window.RiftRivals={mount,load};
 })();
+
 
