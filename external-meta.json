@@ -7,7 +7,7 @@
   "liveSourcePatch": "16.20",
   "previousPatch": "26.19",
   "previousSourcePatch": "16.19",
-  "generatedAt": "2026-10-09T13:18:07Z",
+  "generatedAt": "2026-10-09T22:38:56Z",
   "notes": "Current patch is primary. Previous patch is blended as fallback when the live patch is fresh, incomplete, or unavailable. Invalid fetches never replace last-known-good data.",
   "patches": [
     {
@@ -18,22 +18,22 @@
       "bracket": "Gold+",
       "region": "GLOBAL",
       "updated": "2026-10-09",
-      "coverage": 31,
-      "coverageRatio": 0.816,
-      "sampleCount": 53429390,
+      "coverage": 30,
+      "coverageRatio": 0.789,
+      "sampleCount": 65805095,
       "roleSamples": {
-        "top": 10685878,
-        "jungle": 10685878,
-        "mid": 10685878,
-        "adc": 10685878,
-        "support": 10685878
+        "top": 13161019,
+        "jungle": 13161019,
+        "mid": 13161019,
+        "adc": 13161019,
+        "support": 13161019
       },
       "confidence": "medium",
       "roles": {
         "top": {
           "Renekton": {
             "tier": "B",
-            "winrate": 50.57,
+            "winrate": 50.77,
             "strong": [
               "Gragas",
               "Zaahen",
@@ -46,32 +46,32 @@
             ]
           },
           "Malphite": {
-            "tier": "B+",
-            "winrate": 52.67,
+            "tier": "A-",
+            "winrate": 52.71,
             "strong": [],
             "weak": []
           },
           "Shen": {
-            "tier": "A+",
-            "winrate": 51.69,
+            "tier": "A",
+            "winrate": 51.54,
             "strong": [],
             "weak": []
           },
           "Mordekaiser": {
             "tier": "A",
-            "winrate": 52.62,
+            "winrate": 52.57,
             "strong": [],
             "weak": []
           },
           "Garen": {
-            "tier": "A-",
-            "winrate": 51.98,
+            "tier": "B+",
+            "winrate": 52.0,
             "strong": [],
             "weak": []
           },
           "Olaf": {
-            "tier": "S-",
-            "winrate": 51.52,
+            "tier": "A",
+            "winrate": 51.26,
             "strong": [
               "Kennen",
               "Jayce",
@@ -84,22 +84,22 @@
             ]
           },
           "Heimerdinger": {
-            "tier": "B",
-            "winrate": 51.21,
+            "tier": "B+",
+            "winrate": 51.44,
             "strong": [],
             "weak": []
           }
         },
         "jungle": {
           "Jarvan IV": {
-            "tier": "A-",
-            "winrate": 50.33,
+            "tier": "B+",
+            "winrate": 50.26,
             "strong": [],
             "weak": []
           },
           "Viego": {
-            "tier": "A",
-            "winrate": 50.56,
+            "tier": "A+",
+            "winrate": 50.55,
             "strong": [
               "Diana",
               "Vi",
@@ -113,7 +113,7 @@
           },
           "Volibear": {
             "tier": "C+",
-            "winrate": 50.72,
+            "winrate": 50.76,
             "strong": [],
             "weak": [
               "Udyr",
@@ -123,13 +123,13 @@
           },
           "Udyr": {
             "tier": "B-",
-            "winrate": 50.94,
+            "winrate": 50.93,
             "strong": [],
             "weak": []
           },
           "Lillia": {
             "tier": "A",
-            "winrate": 52.41,
+            "winrate": 52.45,
             "strong": [
               "Jax",
               "Zed",
@@ -142,14 +142,14 @@
             ]
           },
           "Vi": {
-            "tier": "A",
-            "winrate": 50.56,
+            "tier": "A+",
+            "winrate": 50.55,
             "strong": [],
             "weak": []
           },
           "Wukong": {
             "tier": "S+",
-            "winrate": 53.31,
+            "winrate": 53.28,
             "strong": [
               "Quinn",
               "Zed",
@@ -163,7 +163,7 @@
           },
           "Graves": {
             "tier": "B+",
-            "winrate": 49.97,
+            "winrate": 49.99,
             "strong": [
               "Rengar",
               "Diana",
@@ -176,7 +176,7 @@
             ]
           },
           "Kindred": {
-            "tier": "B-",
+            "tier": "C+",
             "winrate": 49.34,
             "strong": [],
             "weak": []
@@ -184,8 +184,8 @@
         },
         "mid": {
           "Ahri": {
-            "tier": "A+",
-            "winrate": 51.82,
+            "tier": "S-",
+            "winrate": 51.84,
             "strong": [
               "Pantheon",
               "Anivia",
@@ -198,14 +198,14 @@
             ]
           },
           "Annie": {
-            "tier": "B",
-            "winrate": 50.91,
+            "tier": "B+",
+            "winrate": 51.03,
             "strong": [],
             "weak": []
           },
           "Vex": {
             "tier": "A-",
-            "winrate": 52.71,
+            "winrate": 52.78,
             "strong": [
               "Lissandra",
               "Ekko"
@@ -218,13 +218,13 @@
           },
           "Hwei": {
             "tier": "S-",
-            "winrate": 51.44,
+            "winrate": 51.39,
             "strong": [],
             "weak": []
           },
           "Viktor": {
-            "tier": "S",
-            "winrate": 51.25,
+            "tier": "S-",
+            "winrate": 51.22,
             "strong": [],
             "weak": [
               "Talon",
@@ -232,15 +232,9 @@
               "Hwei"
             ]
           },
-          "Sylas": {
-            "tier": "B-",
-            "winrate": 49.03,
-            "strong": [],
-            "weak": []
-          },
           "Anivia": {
-            "tier": "B",
-            "winrate": 50.31,
+            "tier": "B+",
+            "winrate": 50.54,
             "strong": [],
             "weak": []
           }
@@ -248,7 +242,7 @@
         "adc": {
           "Ashe": {
             "tier": "C-",
-            "winrate": 49.37,
+            "winrate": 49.56,
             "strong": [
               "Samira",
               "Smolder",
@@ -262,13 +256,13 @@
           },
           "Varus": {
             "tier": "D-",
-            "winrate": 47.92,
+            "winrate": 47.81,
             "strong": [],
             "weak": []
           },
           "Xayah": {
-            "tier": "A-",
-            "winrate": 52.03,
+            "tier": "A+",
+            "winrate": 52.18,
             "strong": [
               "Kai'Sa",
               "Ezreal",
@@ -281,8 +275,8 @@
             ]
           },
           "Jinx": {
-            "tier": "S",
-            "winrate": 52.94,
+            "tier": "S+",
+            "winrate": 53.06,
             "strong": [],
             "weak": [
               "Xayah",
@@ -291,7 +285,7 @@
           },
           "Senna": {
             "tier": "C+",
-            "winrate": 50.9,
+            "winrate": 50.94,
             "strong": [],
             "weak": []
           }
@@ -299,7 +293,7 @@
         "support": {
           "Nautilus": {
             "tier": "A+",
-            "winrate": 50.48,
+            "winrate": 50.41,
             "strong": [
               "Camille",
               "Shaco",
@@ -313,7 +307,7 @@
           },
           "Leona": {
             "tier": "A+",
-            "winrate": 52.94,
+            "winrate": 52.79,
             "strong": [
               "Sona",
               "Tahm Kench",
@@ -326,8 +320,8 @@
             ]
           },
           "Maokai": {
-            "tier": "A-",
-            "winrate": 51.58,
+            "tier": "B+",
+            "winrate": 51.64,
             "strong": [
               "Brand",
               "Camille",
