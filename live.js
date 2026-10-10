@@ -811,6 +811,12 @@ function buildFinalGameplan(){
     fight="Starta på isolerad target; undvik lång front-to-back.";
     objective="Kom först, få vision och tvinga fight med prio.";
     rule="VINN TEMPO → KONVERTERA. Chasa inte efter extra kill.";
+  }else if(comp==="TEAMFIGHT CONTROL"){
+    early="Säkra farm och waves. Jarvan tar säkra ganks; ingen riverfight utan lane-prio.";
+    mid="Reset tillsammans före objective. Jarvan skapar läget när Viktor/Hwei och ADC kan följa.";
+    fight="Jarvan eller top startar. Mage och ADC följer på säkra mål; support sparar peel.";
+    objective="Kom först med vision. Håll ihop runt två carries och engage-cooldowns.";
+    rule="INGEN ENSAM DIVE. Följ tillsammans eller avbryt.";
   }else if(comp==="PRESS R"){
     early="Spela stabilt tills våra engage-tools är online.";
     mid="Gruppera 4–5 och leta tydliga engage-fönster.";
@@ -904,6 +910,9 @@ function shortLoadingPlan(gp){
   if(comp==="EARLY SKIRMISH"){
     plan="Prio först. Fighta bara 2v2/3v3 när lanes kan flytta.";
     fight="Pick → kill → direkt tower/objective. Jaga inte.";
+  }else if(comp==="TEAMFIGHT CONTROL"){
+    plan="Säkra farm → reset tillsammans → fighta när mage och ADC kan följa.";
+    fight="Jarvan/top startar; support skyddar våra två carries. Ingen ensam dive.";
   }else if(comp==="PRESS R"){
     plan="Spela stabilt tills engage-ults. Gruppera när knapparna är uppe.";
     fight="En person startar. Alla följer samma target direkt.";
@@ -2200,5 +2209,6 @@ window.RiftChampionPicker?.attach({inputId:"championInput",roster:()=>championRo
     $("lockBtn").textContent="Lås "+champ;
     if(current()?.type==="pick"&&role){selectedRole=role;renderTurn();renderRecommendation();}
   }});
+
 
 

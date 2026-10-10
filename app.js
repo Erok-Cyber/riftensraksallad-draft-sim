@@ -26,6 +26,7 @@ const order = [
 ];
 
 const comps = {
+  "TEAMFIGHT CONTROL":{"core": ["Malphite", "Jarvan IV", "Viktor", "Jinx", "Nautilus"], "alts": ["Shen", "Renekton", "Mordekaiser", "Garen", "Wukong", "Hwei", "Xayah", "Ashe", "Varus", "Maokai", "Leona", "Amumu", "Braum", "Poppy", "Galio", "Shen"], "why": "Huvudcomp med Jarvan + Viktor/Hwei. Frontline köper tid för två carries.", "focus": "Jarvan går in först när mid och ADC kan följa. Support sparar skydd.", "call": "RESET → SAMLA → JARVAN SKAPAR LÄGET → MAGE + ADC FÖLJER."},
   "EARLY SKIRMISH":{
     core:["Renekton","Xin Zhao","Ahri","Ashe","Nautilus"],
     alts:["Darius","Mordekaiser","Olaf","Trundle","Viego","Wukong","Volibear","Taliyah","Vex","Sylas","Varus","Xayah","Leona","Maokai"],
@@ -58,6 +59,7 @@ const comps = {
 };
 
 const compGuides = {
+  "TEAMFIGHT CONTROL":{"title": "Teamfight Control", "identity": "Vårt huvudspår tillsammans med Early Skirmish. Jarvan + Viktor/Hwei, två carries och tydlig front-to-back. Press R är fallback när huvudspåren blockeras.", "roles": {"top": ["Malphite", "Shen", "Renekton", "Mordekaiser", "Garen"], "jungle": ["Jarvan IV", "Wukong"], "mid": ["Viktor", "Hwei"], "adc": ["Jinx", "Xayah", "Ashe", "Varus"], "support": ["Nautilus", "Maokai", "Leona", "Amumu", "Braum", "Poppy", "Galio", "Shen"]}, "variants": [{"name": "Standard · två carries", "tag": "HUVUDCOMP", "picks": ["Malphite", "Jarvan IV", "Viktor", "Jinx", "Nautilus"], "why": "Malphite är vår trygga standard. Jarvan startar när Viktor/Jinx kan följa; Nautilus behöver inte alltid dyka utan kan skydda carries."}, {"name": "Mot mycket dive", "tag": "ANTI-DIVE", "picks": ["Shen", "Jarvan IV", "Hwei", "Xayah", "Maokai"], "why": "Xayah prioriteras när de går in på oss. Shen och Maokai köper tid; Hwei håller zonen. Med Jacob support kan Braum/Poppy väljas ur hans aktiva pool."}, {"name": "Mer tidig närvaro", "tag": "TEMPO", "picks": ["Renekton", "Jarvan IV", "Hwei", "Ashe", "Nautilus"], "why": "Renekton ger tidigare tryck och Ashe setup. Välj när lanes faktiskt kan flytta; det är inte automatisk prio i alla matchups."}], "goodInto": ["Malphite: standard/frontline, särskilt relevant mot fysisk damage och autoattacks; inte en automatisk blindcounter.", "Shen: skydda Viktor/Jinx och följ Jarvan globalt. Renekton: mer lane-tryck och tidig skirmish.", "Mordekaiser: alternativ mot melee/frontline om vi behöver mer damage; planera vem han ultar. Garen: comfort/side pressure när Jarvan + support redan säkrar engage.", "Jinx: scaling och resets när vi kan skydda henne. Xayah: självskydd mot dive. Ashe: setup; Varus: range och objective-kontroll.", "Viktor: trygg långvarig damage och zon. Hwei: waveclear, zon och flexibel uppföljning. Välj comfort och faktisk matchup.", "Nautilus: standard/setup. Maokai: peel och kontroll. Leona/Amumu: mer commit; lämna inte carries utan skydd."], "watch": ["Jarvan är standard; Wukong är reserv om compen fortfarande fungerar. Viktor och Hwei är de två midvalen i detta huvudspår.", "Ingen Sion i standard eller rekommenderade topbyten för denna comp.", "Vänta in mid/ADC innan engage. Riv Jarvans vägg om den hindrar laget eller fångar fel target.", "Jinx + Viktor betyder inte att vi vinner automatiskt sent. Bedöm enemy range, dive och faktisk scaling.", "Om båda magevalen försvinner: välj Early Skirmish om möjligt, annars Press R. Byt inte bort redan låsta picks."], "plan": {"early": "Säkra farm och waves. Jarvan tar säkra ganks med setup; ingen riverfight utan prio.", "mid": "Reset tillsammans före objective. Jarvan/Malphite startar när mage + ADC är inom räckvidd. Support sparar peel.", "late": "Spela runt vision och två carries. Slå säkra mål; avbryt en engage som laget inte kan följa."}, "rule": "Behåll engage, Viktor/Hwei och en ADC med damage. Byten styrs av aktiv roster, comfort och motståndarnas hot."},
   "EARLY SKIRMISH":{
     title:"Early Skirmish",
     identity:"Vinn prio, ta första move och använd stark 2v2/3v3 för att konvertera till objectives.",
@@ -282,6 +284,7 @@ function opponentIdealFromPicks(enemyChamps){
   const earlyJungle=new Set(["Xin Zhao","Volibear","Jarvan IV","Lee Sin","Vi","Wukong","Poppy"]);
   const count=set=>[...enemy].filter(ch=>set.has(ch)).length;
   const scores={
+    "TEAMFIGHT CONTROL":count(melee)*1.5+count(immobile),
     "EARLY SKIRMISH":count(scalingJungle)*3+(count(earlyJungle)===0?2:0),
     "PRESS R":count(poke)*2.2+count(immobile)*2.3,
     "OBJECTIVE CONTROL":count(melee)*1.8+count(tanks)*2.2,
@@ -1154,8 +1157,8 @@ function updateCoach(){
   const enemies=picks.filter(p=>p.side!==userSide).map(p=>p.champ);
   if(!ours.length){
     $("compName").textContent="Comp: Öppen";$("confidence").textContent="Öppen draft";
-    const openers=window.RiftRoster?.compPlan("EARLY SKIRMISH");
-    $("compWhy").textContent="Utgå från aktiva poolen: "+(openers?Object.values(openers).filter(Boolean).join(", "):"välj era trygga champions")+". Kontrollera matchup innan ni låser.";
+    const openers=window.RiftRoster?.compPlan("TEAMFIGHT CONTROL");
+    $("compWhy").textContent="Huvudspår: Teamfight Control eller Early Skirmish. Aktiv teamfight-femma: "+(openers?Object.values(openers).filter(Boolean).join(", "):"välj era trygga champions")+". Kontrollera matchup innan ni låser.";
     $("nextFocus").textContent="Se enemy 2–3 picks innan ni låser identiteten.";
     $("watch").textContent="Spara niche/counters till senare.";
     $("coachCall").textContent="SAFE PICK FÖRST. Håll 2 comps öppna.";return;
@@ -1251,9 +1254,10 @@ window.RiftChampionPicker?.attach({inputId:"championSearch",roster:()=>champions
    const picks=window.RiftRoster.compPlan(name),ordered=compGuideRoles.map(r=>picks[r]);
    comps[name].core=ordered.filter(Boolean);comps[name].alts=[...new Set(Object.values(options[name]).flat())].filter(ch=>!comps[name].core.includes(ch));
    compGuides[name].roles=options[name];
-   compGuides[name].variants=[{name:'Aktiv roster & comfort',tag:name==='EARLY SKIRMISH'?'FÖRSTAVAL':name==='PRESS R'?'FALLBACK':'AKTUELL',picks:ordered.map(ch=>ch||'Saknar alternativ'),why:'Anpassad efter era aktiva spelare. Kontrollera engage, damage och matchup innan ni låser.'},...originalVariants[name].filter(v=>v.picks.every((ch,i)=>options[name][compGuideRoles[i]].includes(ch))&&!v.picks.every((ch,i)=>ch===ordered[i]))];
+   compGuides[name].variants=[{name:'Aktiv roster & comfort',tag:['TEAMFIGHT CONTROL','EARLY SKIRMISH'].includes(name)?'HUVUDCOMP':name==='PRESS R'?'FALLBACK':'AKTUELL',picks:ordered.map(ch=>ch||'Saknar alternativ'),why:'Anpassad efter era aktiva spelare. Kontrollera engage, damage och matchup innan ni låser.'},...originalVariants[name].filter(v=>v.picks.every((ch,i)=>options[name][compGuideRoles[i]].includes(ch))&&!v.picks.every((ch,i)=>ch===ordered[i]))];
    document.querySelectorAll('[data-comp-guide="'+name+'"]').forEach(card=>{const p=card.querySelector('p');if(p)p.textContent=ordered.map(ch=>ch||'Saknar alternativ').join(' · ');});
   });
  }
  apply();window.RiftRoster.subscribe(apply);
 })();
+

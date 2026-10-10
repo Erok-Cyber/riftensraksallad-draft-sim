@@ -122,7 +122,11 @@ function aiCompFitForMap(map,name){
   s+=window.RiftRoster.compFit(name,map);
 
   const n=aiNeeds(map);
-  if(name==="EARLY SKIRMISH"){
+  if(name==="TEAMFIGHT CONTROL"){
+    s+=Math.min(8,n.zone*1.5+n.peel+n.damage);
+    if(map.jungle==="Jarvan IV")s+=5;
+    if(["Viktor","Hwei"].includes(map.mid))s+=8;
+  }else if(name==="EARLY SKIRMISH"){
     s+=n.early*1.7;
     if(p.scalingJungle)s+=6;
     if(p.poke>=2)s-=2;
@@ -143,18 +147,18 @@ function aiCompFitForMap(map,name){
   return s;
 }
 
-function aiCompPreference(map,name){
-  const core=comps['EARLY SKIRMISH'],used=unavailable();
-  const open=roles.filter(role=>!map[role]);
+function aiPrimaryViable(map,name){
+  const core=comps[name],used=unavailable(),open=roles.filter(r=>!map[r]);
+  if(!core)return false;
   const options=Object.fromEntries(open.map(role=>[role,[core.core[role],...(core.alts[role]||[])].filter(ch=>teamPool[role]?.includes(ch)&&!used.has(ch.toLowerCase())&&!Object.values(map).includes(ch)&&(comfort[role]?.[ch]??5)>=5)]));
   open.sort((a,b)=>options[a].length-options[b].length);
-  // A flex champion cannot fill two remaining slots. Do not promise a viable
-  // go-to comp when its only completion needs duplicate or very low-comfort picks.
   function complete(i,taken){if(i===open.length)return true;return options[open[i]].some(ch=>{if(taken.has(ch))return false;taken.add(ch);const ok=complete(i+1,taken);taken.delete(ch);return ok;});}
-  const viable=roles.every(role=>!map[role]||map[role]===core.core[role]||(core.alts[role]||[]).includes(map[role]))&&complete(0,new Set());
-  // Team identity is a prior, not a demand to abandon already locked picks.
-  if(name==='EARLY SKIRMISH')return viable?12:0;
-  if(name==='PRESS R')return viable?0:8;
+  return roles.every(role=>!map[role]||map[role]===core.core[role]||(core.alts[role]||[]).includes(map[role]))&&complete(0,new Set());
+}
+function aiCompPreference(map,name){
+  const primary=['TEAMFIGHT CONTROL','EARLY SKIRMISH'];
+  if(primary.includes(name))return aiPrimaryViable(map,name)?12:0;
+  if(name==='PRESS R')return primary.some(n=>aiPrimaryViable(map,n))?0:8;
   return 0;
 }
 
@@ -393,7 +397,7 @@ function aiCandidate(champ,role){
   const history=aiTeamHistorySignal(champ,role);
 
   let score=base.score*AI_CONFIG.baseWeight;
-  const preferred=aiCompPreference(ownRoleMap(),'EARLY SKIRMISH')>0?'EARLY SKIRMISH':'PRESS R';
+  const preferred=aiCompRankForMap(ownRoleMap()).find(c=>['TEAMFIGHT CONTROL','EARLY SKIRMISH'].includes(c.name)&&aiPrimaryViable(ownRoleMap(),c.name))?.name||'PRESS R';
   const anchorAlready=base.reasons.filter(r=>r.label?.startsWith('core i ')||r.label?.startsWith('passar ')).reduce((sum,r)=>sum+Math.max(0,r.pts),0);
   const identity=comps[preferred].core[role]===champ?8*(window.RiftRoster?.compWeight(role,champ)??1):(comps[preferred].alts[role]||[]).includes(champ)?4*(window.RiftRoster.affinity(preferred,role,champ)?.weight??1):0;
   score+=Math.max(0,identity-anchorAlready);
@@ -691,4 +695,5 @@ render = function(){
 };
 
 if(userSide)render();
+
 

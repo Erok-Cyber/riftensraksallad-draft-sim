@@ -88,6 +88,8 @@
  function affinity(ch,role,identity){
   const p=get(ch);if(!p?.roles?.includes(role))return '';
   const tag=t=>p.tags.includes(t),carry=p.damage!=='UTIL',dps=tag('sustained');
+  if(identity==='TEAMFIGHT CONTROL'&&
+    (role==='top'?ch!=='Sion'&&p.front>=2:role==='support'?p.peel>=2||p.engage>=2:false))return 'frontline eller skydd för två carries';
   if(identity==='EARLY SKIRMISH'&&tag('early')&&
     (role==='support'?p.engage>=2||p.peel>=2:role==='adc'?dps:carry))return 'tidig styrka och skirmish';
   if(identity==='PRESS R'&&
@@ -100,3 +102,4 @@
  }
  window.RiftProfiles={get,all:()=>profiles,assess,affinity};
 })();
+
