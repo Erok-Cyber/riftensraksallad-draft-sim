@@ -797,6 +797,26 @@ function buildPowerCurvePlan(){
   };
 }
 
+// Shared by the detailed review and the compact loading-screen plan.
+function teamfightControlPlan(map){
+  const mid=map.mid||"Mid", adc=map.adc||"ADC";
+  const follow=map.mid==="Annie"?"Annie sparar färdig stun till vår GO-call.":
+    map.mid==="Taliyah"?"Taliyah håller zonen där de måste gå in; följ CC med W.":
+    mid+" följer från säker range och håller zonen.";
+  const setup=["top","support"].filter(role=>map[role]&&!(role==="support"&&map[role]==="Galio")&&(window.RiftProfiles?.get(map[role])?.engage||0)>=2).map(role=>map[role]);
+  let start="Säkra gemensam setup innan ni går in.", early="Säkra farm och waves; ingen riverfight utan lane-prio.";
+  if(map.jungle==="Jarvan IV")start="Jarvan startar bara när mid och ADC kan följa; riv väggen om den hindrar laget.";
+  else if(map.jungle==="Wukong")start="Wukong går in från en säker flank eller följer vår CC; inga ensamma dyk genom deras range.";
+  else if(map.jungle==="Maokai")start="Maokai använder R för att stänga vägen, sedan gemensam CC; spara Q/W för peel vid dive.";
+  else if(map.jungle==="Xin Zhao"){
+    start=setup.length?setup.join("/")+" skapar läget; Xin följer och håller fiender borta från våra carries.":"Xin söker counter-engage eller ett isolerat mål; vi saknar säker start från top/support.";
+    early="Xin spelar tidiga 2v2/3v3 bara med lane-prio och setup; behåll farm om lanes inte kan följa.";
+  }
+  return {early,mid:"Reset tillsammans före objective. "+start+" "+follow,
+    fight:start+" "+follow+" "+adc+" slår säkra mål; support sparar skydd.",
+    objective:"Kom först med vision och håll ihop. "+(map.jungle==="Maokai"?"Skydda vår ADC: tank-Maokai ersätter inte carry-damage.":"Invänta engage-cooldowns och att våra carries är på plats."),
+    rule:"FÖLJ TILLSAMMANS ELLER AVBRYT. Ingen ensam dive."};
+}
 function buildFinalGameplan(){
   const comp=desiredComp(), enemy=enemies(), map=ownRoleMap(), enemyMap=enemyRoleMap();
   const dive=countTrait(enemy,traits.dive), melee=countTrait(enemy,traits.melee), poke=countTrait(enemy,traits.poke);
@@ -812,11 +832,7 @@ function buildFinalGameplan(){
     objective="Kom först, få vision och tvinga fight med prio.";
     rule="VINN TEMPO → KONVERTERA. Chasa inte efter extra kill.";
   }else if(comp==="TEAMFIGHT CONTROL"){
-    early="Säkra farm och waves. Jarvan tar säkra ganks; ingen riverfight utan lane-prio.";
-    mid="Reset tillsammans före objective. Jarvan skapar läget när Viktor/Hwei och ADC kan följa.";
-    fight="Jarvan eller top startar. Mage och ADC följer på säkra mål; support sparar peel.";
-    objective="Kom först med vision. Håll ihop runt två carries och engage-cooldowns.";
-    rule="INGEN ENSAM DIVE. Följ tillsammans eller avbryt.";
+    ({early,mid,fight,objective,rule}=teamfightControlPlan(map));
   }else if(comp==="PRESS R"){
     early="Spela stabilt tills våra engage-tools är online.";
     mid="Gruppera 4–5 och leta tydliga engage-fönster.";
@@ -911,8 +927,9 @@ function shortLoadingPlan(gp){
     plan="Prio först. Fighta bara 2v2/3v3 när lanes kan flytta.";
     fight="Pick → kill → direkt tower/objective. Jaga inte.";
   }else if(comp==="TEAMFIGHT CONTROL"){
-    plan="Säkra farm → reset tillsammans → fighta när mage och ADC kan följa.";
-    fight="Jarvan/top startar; support skyddar våra två carries. Ingen ensam dive.";
+    const control=teamfightControlPlan(map);
+    plan=control.early+" Reset tillsammans före objective.";
+    fight=control.fight;
   }else if(comp==="PRESS R"){
     plan="Spela stabilt tills engage-ults. Gruppera när knapparna är uppe.";
     fight="En person startar. Alla följer samma target direkt.";
@@ -946,7 +963,7 @@ function shortLoadingPlan(gp){
   const starter=ours().find(e=>(window.RiftProfiles?.get(e.champ)?.engage||0)>=2);
   const carry=comp==='JUNGLE CARRY'?map.jungle:map.adc||map.mid;
   const protect=carry?'Skydda '+carry+'. Spara peel tills deras engage används.':'Skydda den carry som kan göra damage utan att gå först.';
-  const engage=starter?starter.champ+' startar när laget kan följa. '+fight:'Ingen säker hård engage: spela på deras misstag och er setup.';
+  const engage=comp==='TEAMFIGHT CONTROL'?fight:starter?starter.champ+' startar när laget kan följa. '+fight:'Ingen säker hård engage: spela på deras misstag och er setup.';
   const behind=gp.behindDetail||gp.behind||'Ta säkra waves, håll ihop och tradea objectives utan vision.';
   const call=plan+' '+engage+' '+protect+' Hot: '+watch+' Vid underläge: '+behind;
   return {comp,plan,jungle,objective,fight:engage,watch,protect,behind,call};

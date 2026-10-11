@@ -126,6 +126,13 @@ function aiCompFitForMap(map,name){
     s+=Math.min(8,n.zone*1.5+n.peel+n.damage);
     if(map.jungle==="Jarvan IV")s+=5;
     if(["Viktor","Hwei"].includes(map.mid))s+=8;
+    else if(["Annie","Taliyah"].includes(map.mid))s+=4;
+    if(["Wukong","Maokai"].includes(map.jungle))s+=3;
+    if(map.jungle==="Xin Zhao"){
+      const setup=["top","support"].some(role=>map[role]&&!(role==="support"&&map[role]==="Galio")&&(window.RiftProfiles?.get(map[role])?.engage||0)>=2);
+      if(setup)s+=3;
+      else if(map.top&&map.support)s-=4;
+    }
   }else if(name==="EARLY SKIRMISH"){
     s+=n.early*1.7;
     if(p.scalingJungle)s+=6;
