@@ -2,6 +2,8 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const src=fs.readFileSync(__dirname+'/brain-regression.cjs','utf8');
 const harness=vm.runInNewContext(src.slice(0,src.indexOf('const brain=harness'))+'\nharness',{require,__dirname,console,URLSearchParams,AbortController,AbortSignal});
 const h=harness(['live.js','advanced-engine.js','draft-ai.js','team-roster.js']);
+assert.equal(h.run('JSON.stringify(["Viktor","Hwei","Annie","Taliyah"].map(aiTeamfightMidPriority))'),JSON.stringify([8,6,2,0]));
+assert.equal(h.run('aiTeamfightMidPriority("Ahri")'),0);
 h.run('userSide="blue";events=[];step=6');
 assert.equal(h.run('aiCompPreference({},"TEAMFIGHT CONTROL")'),12);
 assert.equal(h.run('aiCompPreference({},"EARLY SKIRMISH")'),12);
@@ -47,3 +49,6 @@ const comfortable=options.run('aiCandidate("Maokai","jungle").score');
 options.run('window.RiftRoster.setComfort("jungle","Maokai",3);aiEnsureContext()');
 assert(options.run('aiCandidate("Maokai","jungle").score')<comfortable,'saved comfort must affect the new jungle alternative');
 console.log('PASS: all 16 mid/jungle combinations, actual-pick plans, Xin setup warning, Maokai pause and comfort.');
+const priority=harness(['live.js','advanced-engine.js','draft-ai.js']);
+priority.run('userSide="blue";step=9;events=[{type:"pick",side:"blue",role:"jungle",champ:"Jarvan IV"}];for(const ch of ["Viktor","Hwei","Annie","Taliyah"])comfort.mid[ch]=8;aiEnsureContext()');
+assert.equal(priority.run('JSON.stringify(aiRoleCandidates("mid").filter(c=>["Viktor","Hwei","Annie","Taliyah"].includes(c.ch)).map(c=>c.ch))'),JSON.stringify(['Viktor','Hwei','Annie','Taliyah']),'neutral Jarvan draft with equal comfort respects team mid priority');

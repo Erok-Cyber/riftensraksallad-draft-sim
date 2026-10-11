@@ -115,6 +115,10 @@ function aiNeeds(map){
   };
 }
 
+// Team preference only; never edits saved player comfort or forces a pick.
+function aiTeamfightMidPriority(champ){
+  return ({Viktor:8,Hwei:6,Annie:2,Taliyah:0})[champ]||0;
+}
 function aiCompFitForMap(map,name){
   const c=comps[name];
   const p=enemyProfile();
@@ -125,8 +129,7 @@ function aiCompFitForMap(map,name){
   if(name==="TEAMFIGHT CONTROL"){
     s+=Math.min(8,n.zone*1.5+n.peel+n.damage);
     if(map.jungle==="Jarvan IV")s+=5;
-    if(["Viktor","Hwei"].includes(map.mid))s+=8;
-    else if(["Annie","Taliyah"].includes(map.mid))s+=4;
+    s+=aiTeamfightMidPriority(map.mid);
     if(["Wukong","Maokai"].includes(map.jungle))s+=3;
     if(map.jungle==="Xin Zhao"){
       const setup=["top","support"].some(role=>map[role]&&!(role==="support"&&map[role]==="Galio")&&(window.RiftProfiles?.get(map[role])?.engage||0)>=2);
@@ -408,6 +411,9 @@ function aiCandidate(champ,role){
   const anchorAlready=base.reasons.filter(r=>r.label?.startsWith('core i ')||r.label?.startsWith('passar ')).reduce((sum,r)=>sum+Math.max(0,r.pts),0);
   const identity=comps[preferred].core[role]===champ?8*(window.RiftRoster?.compWeight(role,champ)??1):(comps[preferred].alts[role]||[]).includes(champ)?4*(window.RiftRoster.affinity(preferred,role,champ)?.weight??1):0;
   score+=Math.max(0,identity-anchorAlready);
+  if(preferred==="TEAMFIGHT CONTROL"&&role==="mid"){
+    score+=({Viktor:6,Hwei:4,Annie:0,Taliyah:-10})[champ]||0;
+  }
   score+=(state-50)*AI_CONFIG.stateWeight;
   score+=Math.max(-8,Math.min(8,(lookahead-state)*AI_CONFIG.lookaheadWeight));
   score+=flex*AI_CONFIG.flexibilityWeight;
