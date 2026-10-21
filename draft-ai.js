@@ -117,7 +117,7 @@ function aiNeeds(map){
 
 // Team preference only; never edits saved player comfort or forces a pick.
 function aiTeamfightMidPriority(champ){
-  return ({Viktor:8,Hwei:6,Annie:2,Taliyah:0})[champ]||0;
+  return window.RiftTeamData.preferences?.['TEAMFIGHT CONTROL']?.mid?.[champ]||0;
 }
 function aiCompFitForMap(map,name){
   const c=comps[name];
@@ -129,7 +129,6 @@ function aiCompFitForMap(map,name){
   if(name==="TEAMFIGHT CONTROL"){
     s+=Math.min(8,n.zone*1.5+n.peel+n.damage);
     if(map.jungle==="Jarvan IV")s+=5;
-    s+=aiTeamfightMidPriority(map.mid);
     if(["Wukong","Maokai"].includes(map.jungle))s+=3;
     if(map.jungle==="Xin Zhao"){
       const setup=["top","support"].some(role=>map[role]&&!(role==="support"&&map[role]==="Galio")&&(window.RiftProfiles?.get(map[role])?.engage||0)>=2);
@@ -412,7 +411,7 @@ function aiCandidate(champ,role){
   const identity=comps[preferred].core[role]===champ?8*(window.RiftRoster?.compWeight(role,champ)??1):(comps[preferred].alts[role]||[]).includes(champ)?4*(window.RiftRoster.affinity(preferred,role,champ)?.weight??1):0;
   score+=Math.max(0,identity-anchorAlready);
   if(preferred==="TEAMFIGHT CONTROL"&&role==="mid"){
-    score+=({Viktor:6,Hwei:4,Annie:0,Taliyah:-10})[champ]||0;
+    score+=aiTeamfightMidPriority(champ);
   }
   score+=(state-50)*AI_CONFIG.stateWeight;
   score+=Math.max(-8,Math.min(8,(lookahead-state)*AI_CONFIG.lookaheadWeight));
@@ -447,9 +446,19 @@ function aiCandidate(champ,role){
   if(Object.keys(map).filter(r=>map[r]).length>=3)reasons.push(execution.label);
   const rating=comfort[role]?.[champ]??5;
   reasons.unshift('comfort '+rating+'/10'+(rating<=4?' · ovan champion':''));
+  // Additive audit ledger: these are engine layers, not independent probabilities.
+  const scoreBreakdown={
+    base:base.score*AI_CONFIG.baseWeight,identity:Math.max(0,identity-anchorAlready),
+    teamPreference:preferred==='TEAMFIGHT CONTROL'&&role==='mid'?aiTeamfightMidPriority(champ):0,
+    structure:(state-50)*AI_CONFIG.stateWeight,lookahead:Math.max(-8,Math.min(8,(lookahead-state)*AI_CONFIG.lookaheadWeight)),
+    flexibility:flex*AI_CONFIG.flexibilityWeight,risk:-Math.max(0,risk.value-dependencyRisk)*2.4,
+    learning:Math.max(-3,Math.min(3,history.bonus+learning.points)),scouting:scouting?.points||0,
+    responseRisk:-responseRisk,completion:-completion.penalty,pivot:compRanks[1]?.score>=9?2:0
+  };
+  scoreBreakdown.execution=score-Object.values(scoreBreakdown).reduce((sum,n)=>sum+n,0);
 
   return {
-    ch:champ,role,score,state,lookahead,flex,risk,history,execution,learning,completion,responses:scouting?.responses||[],
+    ch:champ,role,score,scoreBreakdown,state,lookahead,flex,risk,history,execution,learning,completion,responses:scouting?.responses||[],
     reasons:[...new Set(reasons)].slice(0,4),
     anchors:compRanks.slice(0,2)
   };
@@ -511,7 +520,15 @@ function aiDenialRisk(candidate){
   const vulnerable=[...new Set(roles.filter(r=>!map[r]).flatMap(r=>teamPool[r]||[]))].filter(ch=>!used.has(ch.toLowerCase())&&
     (turns.some(t=>t.type==='ban')||observed.some(p=>p.champ===ch&&(p.cm>0||p.recent>=3))));
   let worst={penalty:0,champ:''};
-  vulnerable.forEach(ch=>{const blocked=new Set(used);blocked.add(ch.toLowerCase());const penalty=Math.min(8,Math.max(0,aiCompletion(map,blocked).penalty-baseline)*.5);if(penalty>worst.penalty)worst={penalty,champ:ch};});
+  vulnerable.forEach(ch=>{
+    const blocked=new Set(used);blocked.add(ch.toLowerCase());
+    // bansAgainst describes bans AGAINST the opponent, not their own ban habits.
+    // Unknown ban behaviour is a reduced stress test; observed pick contest is stronger evidence.
+    const contested=turns.some(t=>t.type==='pick')&&observed.some(p=>p.champ===ch&&(p.cm>0||p.recent>=3));
+    const weight=contested?1:.35;
+    const penalty=Math.min(8,Math.max(0,aiCompletion(map,blocked).penalty-baseline)*.5)*weight;
+    if(penalty>worst.penalty)worst={penalty,champ:ch,evidence:contested?'observerad pickpool':'stresstest, banbeteende saknas'};
+  });
   return worst;
 }
 function aiAlternativeReason(top,alternative){
@@ -607,8 +624,10 @@ function renderAIInsight(){
   document.getElementById("aiPivot").textContent=pivot;
   document.getElementById("aiLookahead").textContent=Math.round(best.lookahead)+"/100 · struktur, inte vinstchans";
   document.getElementById("aiRisk").textContent=best.risk.label+(best.risk.reasons.length?" · "+best.risk.reasons.join(", "):"");
-  document.getElementById("aiWhy").textContent=(best.reasons.join(" · ")||"Bäst total balans mellan comfort, comp och enemy draft.")+
-    '. '+(best.execution?.label||'')+' '+(best.completion?.label||'')+' Begränsad sökning till färdig femma; observerade motsvar bedöms utan att låsas.';
+  const mainReason=best.reasons.find(r=>!r.startsWith('comfort '))||best.reasons[0]||"Balans mellan comfort, comp och visade hot.";
+  document.getElementById("aiWhy").textContent=mainReason;
+  const details=document.getElementById('aiWhyDetails');
+  if(details)details.textContent=[...best.reasons.filter(r=>r!==mainReason),best.execution?.label,best.completion?.label,'Begränsad sökning till färdig femma; observerade motsvar är prognoser, inte låsta picks.'].filter(Boolean).join(' · ');
 
   const alternatives=list.filter(x=>x.ch!==best.ch||x.role!==best.role).slice(0,2).map(x=>roleNames[x.role]+" "+x.ch).join(" · ");
   document.getElementById("aiAlternatives").textContent=alternatives||"—";
@@ -628,12 +647,19 @@ function renderRecommendation(){
   if(!t||t.side!==userSide){box.classList.add("hidden");return;}
   box.classList.remove("hidden");
   $("scoreBreakdown").replaceChildren();
-  const localList=t.type==="ban"?banRecommendations().slice(0,3).map(ch=>({ch})):aiDecision(selectedRole||null);
+  const more=$("moreBanSuggestions"),moreChoices=$("moreBanChoices");
+  if(more)more.hidden=true;
+  if(moreChoices)moreChoices.replaceChildren();
+  const localList=t.type==="ban"?banRecommendations().slice(0,10).map(ch=>({ch})):aiDecision(selectedRole||null);
   const displayKey=JSON.stringify([userSide,step,events,selectedRole,window.RiftRoster.key(),window.RiftOpponent?.key?.()]);
   const stable=t.type==='pick'?aiStableChoices(localList,displayKey,aiDisplayChoice):localList;
   const ranked=window.RiftGroq?.recommendations(stable)||stable;
   const allowedBans=t.type==='ban'&&window.RiftOpponent?.active()?new Set(window.RiftOpponent.banCandidates()):null;
-  const list=ranked.filter(c=>t.type!=='ban'||(allowedBans?allowedBans.has(c.ch):banIsRelevant(c.ch))).slice(0,3);
+  const planned=t.type==='ban'?(window.RiftOpponent?.openingBans?.()||[]):[];
+  const candidates=t.type==='ban'?[...ranked,...localList.filter(c=>!ranked.some(r=>r.ch===c.ch))]:ranked;
+  const valid=candidates.filter(c=>t.type!=='ban'||(allowedBans?allowedBans.has(c.ch):banIsRelevant(c.ch)));
+  if(planned.length)valid.sort((a,b)=>{const pos=ch=>planned.includes(ch)?planned.indexOf(ch):99;return pos(a.ch)-pos(b.ch);});
+  const list=valid.slice(0,3);
   if(t.type==='pick'&&list[0])aiDisplayChoice={key:displayKey,ch:list[0].ch,role:list[0].role};
   else aiDisplayChoice=null;
   for(const id of ['recommendTiming','recommendResponses'])if($(id))$(id).textContent='';
@@ -664,6 +690,10 @@ function renderRecommendation(){
   $("brainDataStatus").textContent=window.RiftOpponent?.active()?window.RiftOpponent.summary():stats?.hasData?stats.source+" · data "+(stats.metaPatch||"?")+(stats.fallback?" · äldre underlag":""):"Metadata saknas · regler och lagpool används";
   const alternatives=$("recommendAlternatives");alternatives.replaceChildren();
   list.slice(1).forEach(x=>addButton(x,alternatives));
+  if(t.type==='ban'&&valid.length>3&&more&&moreChoices){
+    more.hidden=false;
+    valid.slice(3,10).forEach(x=>{addButton(x,moreChoices);const note=document.createElement('small');note.textContent=window.RiftOpponent?.banReason(x.ch)||generalBanReason(x.ch);moreChoices.appendChild(note);});
+  }
   $("recommendStrength").textContent=t.type==="pick"?aiConfidenceLabel(list[1]?top.total-list[1].total:null)+" · poängskillnad, inte vinstsäkerhet":window.RiftOpponent?.active()?"Endast styrkta motståndarpicks":"Alternativ om banplanen ändras";
   if(top.groqReason){
     $("recommendReason").textContent=top.groqReason+(top.groqComparison?' · Jämförelse: '+top.groqComparison:'')+(top.groqRisk?' · Risk: '+top.groqRisk:'');

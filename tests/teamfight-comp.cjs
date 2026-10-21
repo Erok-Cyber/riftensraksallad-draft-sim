@@ -2,7 +2,7 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const src=fs.readFileSync(__dirname+'/brain-regression.cjs','utf8');
 const harness=vm.runInNewContext(src.slice(0,src.indexOf('const brain=harness'))+'\nharness',{require,__dirname,console,URLSearchParams,AbortController,AbortSignal});
 const h=harness(['live.js','advanced-engine.js','draft-ai.js','team-roster.js']);
-assert.equal(h.run('JSON.stringify(["Viktor","Hwei","Annie","Taliyah"].map(aiTeamfightMidPriority))'),JSON.stringify([8,6,2,0]));
+assert.equal(h.run('JSON.stringify(["Viktor","Hwei","Annie","Taliyah"].map(aiTeamfightMidPriority))'),JSON.stringify([8,6,2,-10]));
 assert.equal(h.run('aiTeamfightMidPriority("Ahri")'),0);
 h.run('userSide="blue";events=[];step=6');
 assert.equal(h.run('aiCompPreference({},"TEAMFIGHT CONTROL")'),12);

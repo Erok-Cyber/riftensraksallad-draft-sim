@@ -7,6 +7,7 @@ const dir=path.join(__dirname,'../tests');
 const source=fs.readFileSync(path.join(dir,'brain-regression.cjs'),'utf8');
 const harness=vm.runInNewContext(source.slice(0,source.indexOf('const brain=harness'))+'\nharness',{require,__dirname:dir,console,URLSearchParams,AbortController,AbortSignal});
 const input=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));let checked=0,skipped=0,positions=0,maxMs=0;
+const evaluations=[];let labeled=0,top1=0,top3=0;
 for(const row of input.matches||input){
  const match=row.payload||row;let recorded;
  try{recorded=JSON.parse(match.draftContext?.key||'null');}catch{}
@@ -20,10 +21,15 @@ for(const row of input.matches||input){
   h.context.prefix=events.slice(0,i);h.context.position=i;h.run('events=prefix;step=position');
   const before=h.run('JSON.stringify(events)'),start=performance.now();
   const choices=h.run('aiDecision()');maxMs=Math.max(maxMs,performance.now()-start);
+  // Optional human-reviewed labels keyed by zero-based draft step. Never infer the best pick from a win.
+  const expected=match.expectedPicks?.[i];
+  if(expected){labeled++;if(choices[0]?.ch===expected)top1++;if(choices.slice(0,3).some(c=>c.ch===expected))top3++;}
+  evaluations.push({id:match.id,step:i,expected:expected||null,choices:choices.slice(0,3).map(c=>({champ:c.ch,role:c.role,total:c.total,layers:c.scoreBreakdown}))});
   if(choices.some(c=>!Number.isFinite(c.total)||events.slice(0,i).some(e=>e.champ===c.ch)))throw Error('Invalid candidate at '+match.id+':'+i);
   if(h.run('JSON.stringify(events)')!==before)throw Error('Simulation mutated draft');
   positions++;
  }
  checked++;
 }
-console.log(JSON.stringify({checked,skipped,positions,maxMs:Math.round(maxMs),scope:'Recorded order, current default pools; no current opponent scouting or match results supplied. Not a win-rate validation.'},null,2));
+console.log(JSON.stringify({checked,skipped,positions,labeled,top1,top3,evaluations,maxMs:Math.round(maxMs),scope:'Recorded order, current default pools; no current opponent scouting or match results supplied. Labels must be human-reviewed. Not a win-rate validation.'},null,2));
+

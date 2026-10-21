@@ -26,7 +26,8 @@ const harness=vm.runInNewContext(src.slice(0,src.indexOf('const brain=harness'))
  const backend=require('node:module').stripTypeScriptTypes(fs.readFileSync(__dirname+'/../supabase/functions/rift-team-planner/index.ts','utf8')).replace(/^import .*$/mg,'');
  let reply={champions:['B','A','C']},calls=0;
  const ctx={console,URL,Map,Set,Date,AbortSignal,Deno:{env:{get:()=> 'test-only'},serve(){}},fetch:async()=>{calls++;return {ok:true,json:async()=>({choices:[{finish_reason:'stop',message:{content:JSON.stringify(reply)}}]})}}};
- vm.createContext(ctx);vm.runInContext(backend,ctx);
+ vm.createContext(ctx);vm.runInContext(fs.readFileSync(__dirname+'/../supabase/functions/rift-team-planner/ban-policy.js','utf8'),ctx);vm.runInContext(backend,ctx);
+ assert.equal(vm.runInContext('defaultConditionals().find(r=>r.ruleId==="jungle-carry").bans.includes("Nocturne")',ctx),true);
  assert.equal((await vm.runInContext('aiBanPlan([{champ:"A"},{champ:"B"},{champ:"C"}])',ctx)).bans[0].champ,'B');
  reply={champions:['Invented','A','C']};assert.equal(await vm.runInContext('aiBanPlan([{champ:"A"},{champ:"B"},{champ:"C"}])',ctx),null);
  reply={champions:['A','A','C']};assert.equal(await vm.runInContext('aiBanPlan([{champ:"A"},{champ:"B"},{champ:"C"}])',ctx),null);

@@ -17,7 +17,7 @@ function harness(files,fixtures={}){
       querySelectorAll:()=>[],querySelector:()=>element('query'),addEventListener(type,fn){listeners.set("document:"+type,fn);},dispatchEvent(){}},
     window:{addEventListener(type,fn){listeners.set("window:"+type,fn);},scrollTo(){}}};
   vm.createContext(context);
-  files=['team-data.js','champion-profiles.js','roster-model.js',...files.filter(f=>!['team-data.js','champion-profiles.js','roster-model.js'].includes(f))];
+  files=['team-data.js','champion-profiles.js','roster-model.js','supabase/functions/rift-team-planner/ban-policy.js',...files.filter(f=>!['team-data.js','champion-profiles.js','roster-model.js'].includes(f))];
   for(const file of files)vm.runInContext(fs.readFileSync(path.join(root,file),'utf8'),context,{filename:file});
   return {context,run:s=>vm.runInContext(s,context),elements,storage,fire:(id,type)=>listeners.get(id+":"+type)?.()};
 }
@@ -170,7 +170,9 @@ tournamentFixture.competitiveEvidence.games=[{picks:[
 const tournament=harness(['live.js','advanced-engine.js','draft-ai.js','scouting-lineup.js','brain-opponent.js'],
  {'rs_ban_plans_cache':JSON.stringify([tournamentFixture]),'rs_brain_opponent':'opponent'});
 tournament.fire('document','DOMContentLoaded');tournament.run('userSide="blue";events=[];step=0;');
-assert.equal(tournament.run('JSON.stringify(banRecommendations())'),JSON.stringify(['Jarvan IV','Nocturne']));
+assert.equal(tournament.run('JSON.stringify(banRecommendations())'),JSON.stringify(['Nocturne','Jarvan IV']),'supported opening banplan takes priority');
+tournament.run('step=12');
+assert.equal(tournament.run('JSON.stringify(banRecommendations())'),JSON.stringify(['Jarvan IV','Nocturne']),'phase two recomputes rather than following opening plan');
 assert(tournament.run('window.RiftOpponent.banReason("Jarvan IV").includes("CM: 1")'));
 assert(!tournament.run('banRecommendations().includes("Vi")'));
 tournament.run('events=[{side:"red",type:"pick",role:"jungle",champ:"Ivern"}];step=12;');
@@ -300,4 +302,5 @@ feasibility.run('userSide="blue";events=[];teamPool.top=["Shen"];teamPool.suppor
 assert.equal(feasibility.run('aiCompPreference({},"EARLY SKIRMISH")'),0,'one flex champion cannot fill two open roles');
 assert(feasibility.run('aiCompPreference({},"PRESS R")')>0);
 console.log('PASS: paused picks excluded, comfort explained, duplicate flex completion rejected.');
+
 

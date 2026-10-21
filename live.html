@@ -23,7 +23,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Oxanium:wght@500;600;700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="rivals-history.css?v=20261004-rivals2" />
   <link rel="stylesheet" href="styles.css?v=20261002-integrity1" />
-  <link rel="stylesheet" href="live.css?v=20261004-gameplan2" />
+  <link rel="stylesheet" href="live.css?v=20261022-context-bans1" />
   <link rel="stylesheet" href="team-roster.css?v=20261002-product-audit1" />
   <link rel="stylesheet" href="groq-coach.css?v=20261002-integrity1" />
   <link rel="stylesheet" href="postmatch.css?v=20261002-integrity1" />
@@ -48,7 +48,7 @@
     </nav>
     <div class="os-side-footer">
       <div class="os-status-row"><i></i><span>Rivals League · Div 6</span></div>
-      <div class="os-patch-row"><span>PATCH</span><strong>26.19</strong></div>
+      <div class="os-patch-row"><span>PATCH</span><strong data-live-patch>—</strong></div>
     </div>
   </aside>
   <main class="app os-main">
@@ -57,7 +57,7 @@
       <div class="brand-head"><img class="team-logo" alt="Riftens Räksallad" hidden><div>
         <p class="eyebrow">RIFTENSRÄKSALLAD · TEAM DRAFT OS</p>
         <h1>Draft Brain</h1>
-        <p class="sub shell-sub">Live draft coach · Patch 26.19</p>
+        <p class="sub shell-sub">Live draft coach · Patch <span data-live-patch>—</span></p>
         </div></div>
       <div class="header-actions">
         <a href="index.html" class="secondary link-btn">← Hem</a>
@@ -154,6 +154,7 @@
             <p id="recommendStrength" class="recommend-strength"></p>
             <p id="brainDataStatus" class="recommend-strength"></p>
             <div id="recommendAlternatives" class="recommend-alternatives" aria-label="Alternativa val"></div>
+            <details id="moreBanSuggestions" hidden><summary>Fler banförslag</summary><div id="moreBanChoices" class="more-ban-choices"></div></details>
             <p id="recommendChange" class="recommend-change" aria-live="polite"></p>
           <p id="recommendTiming" class="muted"></p><p id="recommendResponses" class="muted"></p>
             <div id="scoreBreakdown" class="score-breakdown"></div>
@@ -200,6 +201,7 @@
         <div class="ai-explain">
           <span class="mini-label">VARFÖR</span>
           <p id="aiWhy">—</p>
+          <details><summary>Visa mer</summary><p id="aiWhyDetails"></p></details>
         </div>
         <div class="ai-explain">
           <span class="mini-label">ALTERNATIV</span>
@@ -454,18 +456,19 @@
   <script src="brand.js?v=20261002-integrity1"></script>
   <script src="db-config.js?v=20261002-integrity1"></script>
   <script src="shared-data.js?v=20261002-product-audit1"></script>
-  <script src="stats-engine.js?v=20261002-integrity1"></script>
+  <script src="stats-engine.js?v=20261022-context-bans1"></script>
   <script src="champion-picker.js?v=20261002-integrity1"></script>
   <script src="rivals-history.js?v=20261022-league-bans1"></script>
   <script src="scouting-lineup.js?v=20261002-integrity1"></script>
-  <script src="brain-opponent.js?v=20261022-league-bans1"></script>
-  <script src="team-data.js?v=20261011-comp-options1"></script>
+  <script src="brain-opponent.js?v=20261022-context-bans1"></script>
+  <script src="team-data.js?v=20261022-context-bans1"></script>
   <script src="champion-profiles.js?v=20261011-comp-options1"></script>
   <script src="roster-model.js?v=20261002-product-audit1"></script>
   <script src="roster-sync.js?v=20261002-integrity1"></script>
-  <script src="live.js?v=20261011-comp-options1"></script>
+  <script src="supabase/functions/rift-team-planner/ban-policy.js?v=20261022-context-bans1"></script>
+  <script src="live.js?v=20261022-context-bans1"></script>
   <script src="advanced-engine.js?v=20261002-product-audit1"></script>
-  <script src="draft-ai.js?v=20261011-mid-priority1"></script>
+  <script src="draft-ai.js?v=20261022-context-bans1"></script>
   <script src="team-roster.js?v=20261002-product-audit1"></script>
   <script src="groq-coach.js?v=20261008-robust1"></script>
   <script src="ui-shell.js?v=20261002-integrity1"></script>

@@ -395,3 +395,10 @@ body.live-os .live-playbook-card .secondary{
 @media(max-width:850px){.live-os .brief-phases,.live-os .brief-jobs{grid-template-columns:1fr}.live-os .brief-call{font-size:19px}}
 
 .live-os #finalGameplanCard{scroll-margin-top:130px}
+
+/* Extra bans remain a compact, optional list. */
+.more-ban-choices{display:grid;grid-template-columns:minmax(100px,max-content) minmax(0,1fr);gap:12px;align-items:start;margin-top:14px}
+.more-ban-choices small{color:#c9d4e6;line-height:1.5;overflow-wrap:anywhere}
+#moreBanSuggestions[hidden]{display:none}
+#moreBanSuggestions summary{cursor:pointer;color:#e8ca7e;padding:10px 0}
+@media(max-width:600px){.more-ban-choices{grid-template-columns:1fr;gap:8px}.more-ban-choices small{margin-bottom:10px}}

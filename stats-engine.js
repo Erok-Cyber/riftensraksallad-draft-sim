@@ -244,6 +244,7 @@
       const res=await fetch("external-meta.json?ts="+Date.now(),{cache:"no-store"});
       if(!res.ok)throw new Error("HTTP "+res.status);
       rawBundle=await res.json();
+      renderPatch();
       await detectLivePatches();
       resolveSnapshots();
       loadState=(currentSnapshot||previousSnapshot)?"ready":"empty";
@@ -254,6 +255,16 @@
     document.dispatchEvent(new CustomEvent("riftstats:change"));
   }
 
-  window.RiftStats={scoreChampion,getStatus,setProfile,load};
+  function banSignal(champ){
+    const points=Math.max(0,...['top','jungle','mid','adc','support'].map(role=>scoreChampion({champ,role,enemies:[]}).points||0));
+    return {points:Math.min(5,points*.6)};
+  }
+  function banCandidates(){
+    return [...new Set([currentSnapshot,previousSnapshot].flatMap(s=>Object.values(s?.roles||{}).flatMap(r=>Object.keys(r))))].filter(ch=>banSignal(ch).points>0);
+  }
+  function renderPatch(){document.querySelectorAll('[data-live-patch]').forEach(el=>{el.textContent=getStatus().patch||'—';});}
+  document.addEventListener('riftstats:change',renderPatch);
+  window.RiftStats={scoreChampion,getStatus,setProfile,load,banSignal,banCandidates};
   load();
 })();
+

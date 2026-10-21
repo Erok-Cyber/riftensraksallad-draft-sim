@@ -2,6 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 
 import { mergeReview, preserveEvidence } from "./plan-policy.mjs";
 import { seriesHistory } from "./rivals-history.mjs";
+import "./ban-policy.js";
 
 const corsHeaders={
   "Access-Control-Allow-Origin":"*",
@@ -736,11 +737,7 @@ function buildBanList(players:ScoutPlayer[],evidence:any,limit=5){
   }));
 }
 function defaultConditionals(){
-  return [
-    {condition:"Vi går JUNGLE CARRY med Kindred/Graves",bans:["Poppy","Vi"],why:"Skydda jungle carry från point-and-click/anti-dash och invaderisk."},
-    {condition:"Vi går PRESS R med Jinx",bans:["Janna","Milio"],why:"Minska disengage som kan neutralisera första engage."},
-    {condition:"Vi går OBJECTIVE CONTROL mot lång range",bans:["Janna","Xerath"],why:"Skydda choke/setup-identiteten från reset/disengage och extrem range."}
-  ];
+  return (globalThis as any).RiftBanPolicy.rules.filter((r:any)=>r.planner).map((r:any)=>({ruleId:r.id,condition:r.condition,bans:r.bans,why:r.why}));
 }
 // Explicit, team-code protected scouting only. Never invoked by public history reads.
 let banAICalls=0,banAIAt=0;
@@ -798,9 +795,10 @@ async function scoutPlan(plan:any,useAI=false){
     ?allSuccessful.filter(p=>activeRoster.some((name:string)=>nameLooksSame(name,p.riotId)))
     :allSuccessful;
   const successful=activeRoster.length?matchedActive:allSuccessful;
-  const candidates=buildBanList(successful,plan?.competitiveEvidence,8);
+  const candidates=buildBanList(successful,plan?.competitiveEvidence,12);
   const ai=useAI?await aiBanPlan(candidates):null;
-  const generated=ai?.bans||candidates.slice(0,5);
+  const primary=ai?.bans||candidates.slice(0,5);
+  const generated=[...primary,...candidates.filter(c=>!primary.some((p:any)=>p.champ===c.champ))].slice(0,10).map((c,i)=>({...c,priority:i+1}));
   const updatedDate=new Date().toISOString().slice(0,10);
   const totalEvidence=successful.reduce((n,p)=>n+p.topChampions.reduce((sum,c)=>sum+c.seasonGames+c.recentGames,0),0);
   const confidence=successful.length>=4&&generated.length>=5&&totalEvidence>=60?"high":successful.length>=3&&generated.length>=3?"medium":"preliminary";
@@ -1043,5 +1041,6 @@ Deno.serve(async(req:Request)=>{
     return json({error:"Method not allowed"},405);
   }catch(err){console.error(err);return json({error:"Unexpected server error"},500)}
 });
+
 
 

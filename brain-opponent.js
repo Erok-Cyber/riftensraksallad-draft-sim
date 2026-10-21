@@ -134,10 +134,17 @@
       const championImpact=row.impactGames>=3?8*(row.impactTotal/row.impactGames)*row.impactGames/(row.impactGames+5):0;
       const replacement=replacementValue(row,available);
       const protection=ownBanCost(row.champ);
-      const score=evidenceScore(row)*(.65+.35*reliability(row))+rankBonus*reliability(row)+replacement.bonus+impactBonus+championImpact-protection.penalty,existing=merged.get(row.champ);
-      if(!existing||score>existing.score)merged.set(row.champ,{ch:row.champ,score,reason:sourceText(row)+' · '+replacement.reason+(protection.reason?' · '+protection.reason:'')});
+      const threat=banThreat(row.champ),answer=ours().length?banAnswerDiscount(row.champ):{points:0,reason:''};
+      const meta=window.RiftStats?.banSignal?.(row.champ)?.points||0;
+      const score=evidenceScore(row)*(.65+.35*reliability(row))+rankBonus*reliability(row)+replacement.bonus+impactBonus+championImpact+Math.min(10,threat.points*.4)+meta-answer.points-protection.penalty,existing=merged.get(row.champ);
+      const context=[...threat.reasons,answer.reason,protection.reason,meta?'Meta: liten bonus, inte huvudskäl':''].filter(Boolean).join(' · ');
+      if(!existing||score>existing.score)merged.set(row.champ,{ch:row.champ,score,reason:sourceText(row)+' · '+replacement.reason+(context?' · '+context:'')});
     });
-    return [...merged.values()].sort((a,b)=>b.score-a.score||a.ch.localeCompare(b.ch));
+    const plan=active()?.phase1Plan;
+    const explicit=[plan?.b1,plan?.b2,plan?.b3].filter(Boolean);
+    const opening=step<6?(explicit.length?explicit:(active()?.banPriority||[]).slice(0,3).map(b=>b.champ).filter(Boolean)):[];
+    const priority=ch=>{const i=opening.indexOf(ch);return i<0?99:i;};
+    return [...merged.values()].map(row=>({...row,reason:(opening.includes(row.ch)?'Banplan: ':'')+row.reason})).sort((a,b)=>priority(a.ch)-priority(b.ch)||b.score-a.score||a.ch.localeCompare(b.ch));
   }
   async function loadRivals(plan){
     const id=String(plan?.id||'');
@@ -165,8 +172,9 @@
   window.RiftOpponent={active,prospects,key:()=>selected+':'+revision,pickSignal,summary,
     plans:()=>plans.filter(p=>p.status!=='cancelled').map(p=>({id:String(p.id),opponent:p.opponent,scheduledAt:p.scheduledAt,bestOf:p.bestOf||3,status:p.status})),
     scouting:(final=false)=>(final?evidence():availableEvidence()).map(({champ,role,player,cm,season,recent,roleCertain,cmWins,cmResults,playerImpact,playerImpactGames,impactTotal,impactGames})=>({champ,role,player,cm,season,recent,roleCertain,cmWins,cmResults,playerImpact,playerImpactGames,championImpact:impactGames?impactTotal/impactGames:null,impactGames})),
-    bans:()=>banRows().slice(0,3).map(r=>r.ch),
-    banCandidates:()=>banRows().slice(0,8).map(r=>r.ch),
+    bans:()=>banRows().slice(0,10).map(r=>r.ch),
+    banCandidates:()=>banRows().slice(0,12).map(r=>r.ch),
+    openingBans:()=>step<6?banRows().filter(r=>r.reason.startsWith('Banplan: ')).map(r=>r.ch):[],
     banScore:champ=>banRows().find(r=>r.ch===champ)?.score||0,
     banReason:champ=>active()?banRows().find(r=>r.ch===champ)?.reason:''};
   function update(){
@@ -204,5 +212,6 @@
   // Wait for the core and scoring scripts to initialize before reading draft state.
   document.addEventListener('DOMContentLoaded',load,{once:true});
 })();
+
 
 

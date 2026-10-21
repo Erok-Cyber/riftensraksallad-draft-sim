@@ -314,39 +314,6 @@ function championOpenRoles(champ){
   return roles.filter(role=>!map[role]&&(teamPool[role]||[]).includes(champ));
 }
 
-function recommendedNextRole(){
-  const map=ownRoleMap();
-  const open=roles.filter(role=>!map[role]);
-  if(!open.length)return null;
-
-  const enemyMap=enemyRoleMap();
-  const comp=desiredComp();
-  const need=currentNeeds();
-  const ownCount=ours().length;
-  const base={top:4,jungle:8,mid:5,adc:6,support:7};
-  const counter={top:18,jungle:10,mid:15,adc:8,support:8};
-
-  return open.map(role=>{
-    const available=(teamPool[role]||[]).filter(ch=>!unavailable().has(ch.toLowerCase()));
-    const bestScore=available.length?Math.max(...available.map(ch=>candidateScore(ch,role,comp))):0;
-    const bestPick=topRecommendations(role)[0];
-    let score=(base[role]||0)+(bestScore*0.35);
-
-    // Om enemy redan har visat motsvarande roll är det mer värdefullt att svara/counterpicka den nu.
-    if(enemyMap[role])score+=counter[role]||0;
-    // Håll gärna solo-lanes öppna när motståndaren ännu inte visat dem.
-    if(!enemyMap[role]&&role==="top")score-=10;
-    if(!enemyMap[role]&&role==="mid")score-=6;
-    // Om compen saknar grundverktyg prioriteras en roll vars bästa pick kan fylla hålet.
-    if(bestPick&&need.front===0&&traits.frontline.has(bestPick))score+=9;
-    if(bestPick&&need.engage===0&&traits.engage.has(bestPick))score+=9;
-    // När draften börjar bli låst ska kvarvarande solo-lanes inte skjutas upp för länge.
-    if(ownCount>=3&&(role==="top"||role==="mid"))score+=5;
-
-    return {role,score};
-  }).sort((a,b)=>b.score-a.score)[0].role;
-}
-
 function render(){
   if(!userSide)return;
   const done=step>=draftOrder.length;
@@ -482,55 +449,6 @@ function ruleBoost(champ,role){
   return score;
 }
 
-function candidateScore(champ,role,compName){
-  const c=comps[compName],enemy=enemies(),need=currentNeeds();let s=(comfort[role]?.[champ]||5)*3;
-  if(c.core[role]===champ)s+=34*(window.RiftRoster?.compWeight(role,champ)??1);
-  if((c.alts[role]||[]).includes(champ))s+=18*(window.RiftRoster?.compWeight(role,champ)??1);
-
-  if(need.front===0&&traits.frontline.has(champ))s+=15;
-  if(need.engage===0&&traits.engage.has(champ))s+=15;
-  if(need.dmg<2&&traits.damage.has(champ))s+=8;
-
-  if(need.ad>=2&&need.ap===0&&damageType[champ]==="AP")s+=18;
-  if(need.ap>=2&&need.ad===0&&damageType[champ]==="AD")s+=12;
-
-  const dive=countTrait(enemy,traits.dive),melee=countTrait(enemy,traits.melee),poke=countTrait(enemy,traits.poke);
-  const tanks=countTrait(enemy,traits.tanks),hyper=countTrait(enemy,traits.hyperCarry),ench=countTrait(enemy,traits.enchanter);
-
-  if(dive>=2&&["Xayah","Vex","Taliyah","Maokai","Malphite","Nautilus","Shen"].includes(champ))s+=18;
-  if(melee>=3&&["Heimerdinger","Taliyah","Maokai","Udyr","Wukong","Mordekaiser","Varus"].includes(champ))s+=16;
-  if(poke>=2&&["Jarvan IV","Vi","Malphite","Annie","Leona","Nautilus","Ashe"].includes(champ))s+=15;
-  if(tanks>=2&&["Trundle","Mordekaiser","Varus","Viego"].includes(champ))s+=18;
-  if(hyper>=1&&ench>=1&&["Vi","Jarvan IV","Malphite","Ashe","Nautilus","Leona"].includes(champ))s+=20;
-
-  s+=ruleBoost(champ,role);
-
-  const recent=recentPicks();
-  const times=recent.filter(x=>x===champ).length;
-  s-=Math.min(12,times*4);
-
-  if(role==="mid"&&champ==="Taliyah"&&recent.slice(-2).includes("Taliyah"))s-=12;
-  return s;
-}
-
-function topRecommendations(role){
-  if(!role||role==="unknown")return[];
-  const used=unavailable(),comp=desiredComp();
-  return teamPool[role].filter(ch=>!used.has(ch.toLowerCase()))
-    .map(ch=>({ch,s:candidateScore(ch,role,comp)}))
-    .sort((a,b)=>b.s-a.s).slice(0,3).map(x=>x.ch);
-}
-
-function banScore(champ){
-  let s=banBase[champ]||0;
-  const map=ownRoleMap(),enemy=enemies();
-  if(map.adc&&["Ashe","Jinx","Varus"].includes(map.adc)&&["Nocturne","Vi","Malphite"].includes(champ))s+=18;
-  if(map.jungle&&["Kindred","Graves","Viego"].includes(map.jungle)&&["Poppy","Vi","Nocturne"].includes(champ))s+=16;
-  if(map.top&&["Malphite","Sion","Shen"].includes(map.top)&&["Gwen","Fiora","Trundle"].includes(champ))s+=12;
-  if(enemy.some(e=>traits.enchanter.has(e.champ))&&["Kog'Maw","Jinx","Aphelios"].includes(champ))s+=8;
-  return s;
-}
-
 function banOpenRoles(champ){
   return enemyRoleCandidates(champ).filter(role=>roles.includes(role)&&!enemyRoleShown(role));
 }
@@ -541,6 +459,7 @@ function generalBanReason(champ){
   const open=banOpenRoles(champ);
   const filled=enemyRoleCandidates(champ).filter(role=>enemyRoleShown(role));
   return 'Ban mot deras öppna '+open.map(r=>roleNames[r]).join('/')+'-roll'+(open.length>1?'er':'')+'.'+
+    (banThreat(champ).reasons.length?' '+banThreat(champ).reasons.join(' · ')+'.':'')+' Grundlista granskad '+(window.RiftBanPolicy?.reviewedAt||'okänt datum')+'. '+
     (filled.length?' Flexpick: '+filled.map(r=>roleNames[r]).join('/')+' är redan fylld, men '+open.map(r=>roleNames[r]).join('/')+' återstår.':'');
 }
 function banRecommendations(){
@@ -550,31 +469,9 @@ function banRecommendations(){
     "Aatrox","Aurora","Syndra","Gwen","Fiora","Trundle","Kog'Maw","Jinx","Aphelios"
   ];
   if(window.RiftOpponent?.active())return window.RiftOpponent.bans(candidates);
-  return candidates.filter(banIsRelevant)
-    .map(ch=>({ch,s:banScore(ch)})).sort((a,b)=>b.s-a.s).slice(0,3).map(x=>x.ch);
-}
-
-function renderRecommendation(){
-  const t=current(),box=$("recommendationBox");
-  if(!t||t.side!==userSide){box.classList.add("hidden");return}
-
-  if(t.type==="ban"){
-    const bans=banRecommendations();box.classList.remove("hidden");
-    $("recommendEyebrow").textContent="BANFÖRSLAG";$("recommendRole").textContent="BAN:";
-    $("recommendPicks").textContent=bans.join(" / ");
-    $("recommendReason").textContent="Prioriterar hot mot er nuvarande comp + generellt svåra draftverktyg.";
-    return;
-  }
-
-  const autoRole=recommendedNextRole();
-  const role=selectedRole||autoRole;
-  if(!role){box.classList.add("hidden");return}
-  const recs=topRecommendations(role);
-  box.classList.remove("hidden");
-  $("recommendEyebrow").textContent=selectedRole?"PICKFÖRSLAG":"REKOMMENDERAD NÄSTA ROLL";
-  $("recommendRole").textContent=roleNames[role]+":";
-  $("recommendPicks").textContent=recs.length?recs.join(" / "):"Inga tillgängliga picks i team-poolen";
-  $("recommendReason").textContent=(selectedRole?"Manuellt vald roll. ":"Draft Brain föreslår denna roll nu. ")+"Riktning: "+desiredComp()+" · bans/picks + comfort + comp-behov + enemy hot + countervärde.";
+  candidates.push(...(window.RiftStats?.banCandidates?.()||[]));
+  return [...new Set(candidates)].filter(banIsRelevant)
+    .map(ch=>({ch,s:banScore(ch)})).sort((a,b)=>b.s-a.s).slice(0,10).map(x=>x.ch);
 }
 
 function renderAllRoleRecommendations(){
@@ -1148,7 +1045,7 @@ function buildMatchRecord(){
     series:context?.series||null,
     draftContext:context?JSON.parse(JSON.stringify(context)):null,
     savedAt:new Date().toISOString(),
-    patch:window.RiftStats?.getStatus?.()?.patch||"26.19",
+    patch:window.RiftStats?.getStatus?.()?.patch||null,
     result:pendingMatchResult,
     matchType:pendingMatchType,
     side:userSide,
@@ -1711,20 +1608,39 @@ function ownBanCost(champ){
   return {penalty,reason:penalty?'Eget pickskydd: '+champ+' är ett av få trygga val i '+affected.map(r=>roleNames[r]).join('/')+'.':''};
 }
 
-function banScore(champ){
-  let s=banBase[champ]||0;
-  const map=ownRoleMap(), enemyMap=enemyRoleMap(), p=enemyProfile();
-  if(map.adc&&traits.immobileCarry.has(map.adc)&&traits.dive.has(champ))s+=16;
-  if(map.jungle&&["Kindred","Graves","Viego"].includes(map.jungle)&&["Poppy","Vi","Nocturne"].includes(champ))s+=17;
-  if(map.top&&["Malphite","Sion","Shen"].includes(map.top)&&["Gwen","Fiora","Trundle"].includes(champ))s+=12;
-  if(p.enchanter>=1&&["Kog'Maw","Jinx","Aphelios"].includes(champ))s+=9;
-  if(p.poke>=2&&traits.disengage.has(champ))s+=6;
-
-  // Relevance is a hard gate, not a score penalty that strong candidates can overcome.
-  if(!banIsRelevant(champ))return -Infinity;
-  return s-ownBanCost(champ).penalty;
+// Shared contextual component: no base prior or own-pool protection here.
+function banThreat(champ){
+  const map=ownRoleMap(),p=enemyProfile(),reasons=[];let points=0;
+  const add=(n,why)=>{points+=n;reasons.push(why);};
+  if(map.adc&&traits.immobileCarry.has(map.adc)&&traits.dive.has(champ))add(16,"dive mot "+map.adc);
+  for(const rule of window.RiftBanPolicy?.rules||[]){
+    if(!rule.bans.includes(champ))continue;
+    const applies=rule.role?rule.own.includes(map[rule.role]):ours().length>=3&&desiredComp()===rule.comp;
+    if(applies)add(rule.points,rule.why);
+  }
+  if(p.enchanter>=1&&["Kog'Maw","Jinx","Aphelios"].includes(champ))add(9,"carry bakom deras enchanter");
+  if(p.poke>=2&&traits.disengage.has(champ))add(6,"disengage skyddar deras poke");
+  return {points,reasons};
 }
-
+function banAnswerDiscount(champ){
+  const map=ownRoleMap(),used=unavailable();let points=0,answer="";
+  for(const rule of specificRules){
+    if(!rule.enemy.includes(champ))continue;
+    for(const [ch,boost]of Object.entries(rule.boost)){
+      const locked=map[rule.role]===ch;
+      const available=!map[rule.role]&&(teamPool[rule.role]||[]).includes(ch)&&!used.has(ch.toLowerCase())&&(comfort[rule.role]?.[ch]??5)>=7;
+      if(!locked&&!available)continue;
+      // An unpicked answer is less reliable than an already locked answer.
+      const value=Math.min(8,Math.max(0,boost)*.25)*(locked?1:.5);
+      if(value>points){points=value;answer=ch;}
+    }
+  }
+  return {points,reason:answer?"Möjligt svar: "+answer+" (kitregel, ingen garanterad counter).":""};
+}
+function banScore(champ){
+  if(!banIsRelevant(champ))return -Infinity;
+  return (banBase[champ]||0)+banThreat(champ).points+(window.RiftStats?.banSignal?.(champ)?.points||0)-banAnswerDiscount(champ).points-ownBanCost(champ).penalty;
+}
 function renderRecommendation(){
   const t=current(),box=$("recommendationBox"),breakdown=$("scoreBreakdown");
   if(!t||t.side!==userSide){box.classList.add("hidden");if(breakdown)breakdown.innerHTML="";return}

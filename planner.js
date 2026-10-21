@@ -304,7 +304,7 @@
   function renderRead(plan){
     const detail=$("plannerDetail");
     detail.classList.toggle("planner-match-view",matchView);
-    const bans=(plan.banPriority||[]).slice(0,5);
+    const bans=(plan.banPriority||[]).slice(0,10);
     const notes=plan.gameNotes||{};
     const stage=matchStage(plan);
     detail.innerHTML=
@@ -371,7 +371,7 @@
     const detail=$("plannerDetail");
     detail.classList.remove("planner-match-view");
     const bans=[...(plan.banPriority||[])];
-    while(bans.length<5)bans.push({champ:"",type:"watch",priority:bans.length+1,why:""});
+    while(bans.length<10)bans.push({champ:"",type:"watch",priority:bans.length+1,why:""});
     const notes=plan.gameNotes||{};
     detail.innerHTML=
       '<div class="planner-detail-head"><div><p class="eyebrow">REDIGERA PLAN</p><h2>'+esc(plan.opponent)+'</h2></div>'+
