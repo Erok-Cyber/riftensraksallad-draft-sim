@@ -38,7 +38,7 @@
   async function request(method,query="",body=null){
     const res=await fetch(endpoint(query),{
       method,
-      signal:globalThis.AbortSignal?.timeout?.(15000),
+      signal:globalThis.AbortSignal?.timeout?.(body?.scout?90000:15000),
       headers:headers(),
       body:body==null?undefined:JSON.stringify(body)
     });
@@ -317,7 +317,7 @@
           (plan.opggUrl?'<a class="planner-link" href="'+esc(plan.opggUrl)+'" target="_blank" rel="noopener">OP.GG ↗</a>':'')+
           (safeCmUrl(plan.challengermodeUrl)?'<a class="planner-link cm" href="'+esc(safeCmUrl(plan.challengermodeUrl))+'" target="_blank" rel="noopener">Challengermode ↗</a>':'')+
           (hasKey()&&plan.challengermodeUrl?'<button type="button" class="planner-cm-sync-btn" data-planner-action="cm-sync" '+(cmSyncingIds.has(plan.id)?'disabled':'')+'>'+(cmSyncingIds.has(plan.id)?'Synkar CM…':'Synka CM')+'</button>':'')+
-          (hasKey()&&plan.opggUrl&&(plan.players||[]).length?'<button type="button" class="planner-scout-btn" data-planner-action="scout" '+(scoutingIds.has(plan.id)?'disabled':'')+'>'+(scoutingIds.has(plan.id)?'Scoutar…':'Scouta om')+'</button>':'')+
+          (hasKey()&&(plan.challengermode?.tournamentId||(plan.opggUrl&&(plan.players||[]).length))?'<button type="button" class="planner-scout-btn" data-planner-action="scout" '+(scoutingIds.has(plan.id)?'disabled':'')+'>'+(scoutingIds.has(plan.id)?'Scoutar…':'Scouta + AI-banplan')+'</button>':'')+
           '<button type="button" class="planner-edit-btn" data-planner-action="edit">Redigera plan</button>'+
           (hasKey()?'<button type="button" class="planner-delete-btn" data-planner-action="delete">Radera match</button>':'')+
         '</div>'+
@@ -332,7 +332,7 @@
         ['b1','b2','b3'].map((k,i)=>'<div class="planner-ban-call"><span>B'+(i+1)+'</span><strong>'+esc(plan.phase1Plan?.[k]||"Öppen")+'</strong></div>').join("")+
       '</div>'+
       '<p class="planner-ban-note">Sparad banplan. Draft Brain omvärderar utifrån aktuell draft och verifierade motståndarpicks.</p>'+
-      '<p class="planner-ban-note">'+esc(plan.phase1Plan?.note||"")+'</p>'+
+      '<p class="planner-ban-note">'+esc(plan.phase1Plan?.note||"")+(plan.scoutingSummary?.leagueCoverage?' · Liga: '+esc(plan.scoutingSummary.leagueCoverage.loadedSeries)+'/'+esc(plan.scoutingSummary.leagueCoverage.totalSeries)+' serier'+(plan.scoutingSummary.leagueCoverage.partial?' · ofullständigt':''):'')+'</p>'+
       '<section class="planner-section planner-preparation">'+
         '<div class="planner-section-head"><h3>Scouting</h3><span class="planner-scout-badge '+esc(plan.scoutingStatus||"")+'">'+esc((plan.scoutingConfidence||"preliminary").toUpperCase())+'</span></div>'+
         '<div class="planner-player-grid">'+(plan.players||[]).map(x=>'<span class="planner-player">'+esc(x)+'</span>').join("")+'</div>'+
@@ -594,14 +594,14 @@
     const plan=plans.find(p=>p.id===id);
     if(!plan||scoutingIds.has(id))return false;
     if(!hasKey()&&!(await ensureWrite()))return false;
-    if(!plan.opggUrl||!(plan.players||[]).length){
+    if(!plan.challengermode?.tournamentId&&(!plan.opggUrl||!(plan.players||[]).length)){
       if(!silent)alert("Lägg till en OP.GG Multisearch-länk med Riot IDs först.");
       return false;
     }
     scoutingIds.add(id);
     render();
     try{
-      const data=await request("POST","",{scout:true,plan});
+      const data=await request("POST","",{scout:true,aiBanPlan:!silent,plan});
       const updated=normalize(data.plan||plan);
       const i=plans.findIndex(p=>p.id===id);
       if(i>=0)plans[i]=updated;
@@ -792,4 +792,5 @@
 
   window.RiftBanPlanner={show,load,render,deleteCurrent,scoutPlan,syncChallengermodePlan,getPlans,selectPlan,roleLineup:scoutLineup};
 })();
+
 

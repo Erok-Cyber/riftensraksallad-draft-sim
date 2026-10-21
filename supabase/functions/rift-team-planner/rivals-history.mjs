@@ -1,6 +1,13 @@
 // Read-only projection: never infer tournament picks from solo queue or lineup order.
 const clean=(v,n=120)=>String(v??'').replace(/[\u0000-\u001f\u007f]/g,' ').trim().slice(0,n);
 const key=v=>clean(v).toLowerCase();
+function statNumber(stats,names){
+  const values=stats.filter(s=>names.includes(key(s.name).replace(/[^a-z]/g,''))).map(s=>{
+    let v=s.serializedValue;try{v=JSON.parse(v);}catch{}
+    return typeof v==='number'&&Number.isFinite(v)&&v>=0?v:null;
+  }).filter(v=>v!==null);
+  return values.length&&new Set(values).size===1?values[0]:null;
+}
 export function seriesHistory(series,teamName,champions=new Map()){
   const target=(series.lineups||[]).find(l=>key(l.name)===key(teamName));
   if(!target)return null;
@@ -25,10 +32,32 @@ export function seriesHistory(series,teamName,champions=new Map()){
     const lineup=ranked[0]?.n>0&&ranked[0].n>(ranked[1]?.n||0)?ranked[0].l:null;
     const members=lineup?.members||[],picks=[];
     const stats=m.statistics?.gameSessionStatistics?.competitorStatistics;
+    const measurements=members.map(member=>{
+      const own=(stats?.nodes||[]).filter(s=>s.competitor?.user?.id===member.user?.id);
+      return {id:member.user?.id,kills:statNumber(own,['kills','championskilled']),
+        deaths:statNumber(own,['deaths','numdeaths']),assists:statNumber(own,['assists']),
+        damage:statNumber(own,['totaldamagedealttochampions','damagedealttochampions']),
+        gold:statNumber(own,['goldearned','totalgoldearned'])};
+    });
+    const total=field=>measurements.length===5&&measurements.every(p=>p[field]!==null)?measurements.reduce((n,p)=>n+p[field],0):null;
     for(const member of members){
       const own=(stats?.nodes||[]).filter(s=>s.competitor?.user?.id===member.user?.id);
       const champ=own.map(champion).find(Boolean);
-      if(champ)picks.push({player:clean(member.user.username),champ});
+      if(champ){
+        const p=measurements.find(p=>p.id===member.user?.id),performance={};
+        for(const field of ['kills','deaths','assists'])if(p[field]!==null)performance[field]=p[field];
+        const damage=total('damage'),gold=total('gold'),kills=total('kills');
+        if(damage>0)performance.damageShare=Math.min(1,p.damage/damage);
+        if(gold>0)performance.goldShare=Math.min(1,p.gold/gold);
+        if(kills>0&&p.kills!==null&&p.assists!==null)performance.killParticipation=Math.min(1,(p.kills+p.assists)/kills);
+        // Bounded within-team contribution signal, NOT a skill or win-probability estimate.
+        const signals=[];
+        if(performance.damageShare!=null)signals.push(Math.min(1,Math.max(0,(performance.damageShare-.2)/.2)));
+        if(performance.goldShare!=null)signals.push(Math.min(1,Math.max(0,(performance.goldShare-.2)/.15)));
+        if(performance.killParticipation!=null)signals.push(Math.min(1,Math.max(0,(performance.killParticipation-.5)/.4)));
+        if(signals.length>=2&&!stats?.pageInfo?.hasNextPage)performance.impact=signals.reduce((n,v)=>n+v,0)/signals.length;
+        picks.push({player:clean(member.user.username),champ,...(Object.keys(performance).length?{performance}:{})});
+      }
     }
     const results=m.results?.lineupResults||[];
     const own=results.find(r=>r.lineupNumber===lineup?.number),other=results.find(r=>r.lineupNumber!==lineup?.number);

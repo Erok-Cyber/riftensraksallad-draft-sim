@@ -20,9 +20,9 @@
     [...stored,...fetched].forEach((game,index)=>{
       const key=game.id||game.matchId||'stored:'+index;
       const previous=unique.get(key);
-      unique.set(key,previous?{...game,...previous,picks:[...(previous.picks||[]),...(game.picks||[])]}:game);
+      unique.set(key,previous?{...game,...previous,picks:[...(game.picks||[]),...(previous.picks||[])]}:game);
     });
-    const games=[...unique.values()].sort((a,b)=>(Date.parse(a.playedAt)||0)-(Date.parse(b.playedAt)||0)).slice(-10);
+    const games=[...unique.values()].sort((a,b)=>(Date.parse(a.playedAt)||0)-(Date.parse(b.playedAt)||0));
     const keys=entry=>[entry.cmUsername,entry.player?.riotId].map(identity).filter(Boolean);
     const matches=(pick,entry)=>[pick.player,pick.riotId].map(identity).filter(Boolean).some(k=>keys(entry).includes(k));
     lineup.forEach(entry=>{
@@ -30,9 +30,11 @@
       games.forEach(game=>{const seen=new Set();(game.picks||[]).forEach(pick=>{
         // Exact identity only. Old roster members and ambiguous names cannot become current starters.
         if(matches(pick,entry)&&lineup.filter(e=>matches(pick,e)).length===1&&!seen.has(canonical(pick.champ))){
-          seen.add(canonical(pick.champ));played.push({...pick,manual:game.source==='manual-screenshot'});
+          seen.add(canonical(pick.champ));played.push({...pick,result:game.result,playedAt:game.playedAt,manual:game.source==='manual-screenshot'});
         }
       });});
+      const impactRows=played.filter(p=>Number.isFinite(p.performance?.impact));
+      const playerImpact=impactRows.length?impactRows.reduce((n,p)=>n+p.performance.impact,0)/impactRows.length:null;
       const recentRole=[...played].reverse().find(p=>roles.includes(p.role))?.role;
       const lockedRoles=lineup.filter(e=>e.source==='challengermode').map(e=>e.role);
       const role=entry.source==='challengermode'?entry.role:
@@ -41,10 +43,12 @@
       const add=(champ)=>{
         const ch=canonical(champ);if(!ch)return null;
         let row=out.find(x=>x.champ===ch&&x.player===entry.player.riotId);
-        if(!row){row={champ:ch,role,player:entry.player.riotId,tier:rankTier(entry.player),cm:0,manual:0,season:0,recent:0,winrate:null,roleCertain};out.push(row);}
+        if(!row){row={champ:ch,role,player:entry.player.riotId,tier:rankTier(entry.player),cm:0,manual:0,season:0,recent:0,winrate:null,cmWins:0,cmResults:0,impactTotal:0,impactGames:0,playerImpact,playerImpactGames:impactRows.length,roleCertain};out.push(row);}
         return row;
       };
-      played.forEach(pick=>{const row=add(pick.champ);if(row){row.cm++;if(pick.manual)row.manual++;}});
+      played.forEach(pick=>{const row=add(pick.champ);if(row){row.cm++;if(pick.manual)row.manual++;
+        if(['win','loss'].includes(pick.result)){row.cmResults++;if(pick.result==='win')row.cmWins++;}
+        if(Number.isFinite(pick.performance?.impact)){row.impactTotal+=pick.performance.impact;row.impactGames++;}}});
       (entry.player?.topChampions||[]).forEach(c=>{
         const ch=canonical(c.champ);if(!ch)return;
         // Only the starter's relevant role pool, unless tournament evidence confirms the pick.
@@ -112,6 +116,9 @@
     else if(row.season)parts.push('OP.GG: '+row.season+' säsongsmatcher');
     if(row.winrate!=null&&row.season>=10)parts.push(row.winrate+'% / '+row.season+' matcher');
     parts.push(row.roleCertain?'Tävlingsroll bekräftad':'Roll uppskattad · lägre vikt');
+    if(row.cmResults)parts.push('Liga: '+row.cmWins+'W/'+(row.cmResults-row.cmWins)+'L');
+    if(row.playerImpactGames>=3)parts.push('Prestationssignal '+Math.round(row.playerImpact*100)+'/100 · '+row.playerImpactGames+' games, inte ett skillmått');
+    else if(row.cm)parts.push('Otillräckligt prestationsunderlag');
     if(row.tier)parts.push(row.tier+' · rankproxy, inte bevis på carry');
     return parts.join(' · ')+' · '+row.player;
   }
@@ -122,10 +129,12 @@
     const available=availableEvidence();
     available.forEach(row=>{
       // Rank is only a bounded strength proxy. No role gets a free jungle/carry bonus.
-      const rankBonus=lowest!=null&&row.tier?Math.min(18,Math.max(0,tiers.indexOf(row.tier)-lowest)*4):0;
+      const rankBonus=lowest!=null&&row.tier?Math.min(row.playerImpactGames>=3?4:10,Math.max(0,tiers.indexOf(row.tier)-lowest)*3):0;
+      const impactBonus=row.cm&&row.playerImpactGames>=3?24*row.playerImpact*row.playerImpactGames/(row.playerImpactGames+5):0;
+      const championImpact=row.impactGames>=3?8*(row.impactTotal/row.impactGames)*row.impactGames/(row.impactGames+5):0;
       const replacement=replacementValue(row,available);
       const protection=ownBanCost(row.champ);
-      const score=evidenceScore(row)*(.65+.35*reliability(row))+rankBonus*reliability(row)+replacement.bonus-protection.penalty,existing=merged.get(row.champ);
+      const score=evidenceScore(row)*(.65+.35*reliability(row))+rankBonus*reliability(row)+replacement.bonus+impactBonus+championImpact-protection.penalty,existing=merged.get(row.champ);
       if(!existing||score>existing.score)merged.set(row.champ,{ch:row.champ,score,reason:sourceText(row)+' · '+replacement.reason+(protection.reason?' · '+protection.reason:'')});
     });
     return [...merged.values()].sort((a,b)=>b.score-a.score||a.ch.localeCompare(b.ch));
@@ -137,7 +146,7 @@
     try{
       const data=await window.RiftRivals.load(plan);
       const games=data.series.flatMap(series=>(series.games||[]).filter(g=>g.id&&g.picks?.length).map(g=>({...g,playedAt:series.playedAt,source:'challengermode'})));
-      rivals.set(id,{status:data.partial?'partial':'ready',games});
+      rivals.set(id,{status:data.partial?'partial':'ready',games,totalSeries:data.totalSeries,loadedSeries:data.series.length});
     }catch{rivals.set(id,{status:'error',games:[]});}
     // A late response for another opponent must not replace active advice.
     if(String(active()?.id)!==id)return;
@@ -146,7 +155,7 @@
   function summary(){
     const rows=evidence();
     const history=rivals.get(String(active()?.id));
-    const historyNote=history?.status==='loading'?' · hämtar Rivals-picks':history?.status==='error'?' · Rivals kunde inte hämtas; sparad scouting används':history?.status==='partial'?' · Rivals-underlaget är delvis hämtat':history?.games.length?' · '+history.games.length+' Rivals-games inlästa':'';
+    const historyNote=history?.status==='loading'?' · hämtar Rivals-picks':history?.status==='error'?' · Rivals kunde inte hämtas; sparad scouting används':history?.status==='partial'?' · Rivals-underlaget är delvis hämtat':history?.games.length?' · '+history.games.length+' Rivals-games / '+history.loadedSeries+' av '+history.totalSeries+' serier inlästa':'';
     if(!rows.length)return 'Scouting saknas för aktuella starters. Inga generiska target bans fylls på.'+historyNote;
     const date=active()?.challengermode?.lastSyncedAt;
     const freshness=date?' · CM synkad '+new Date(date).toLocaleDateString('sv-SE'):' · synktid saknas';
@@ -155,7 +164,7 @@
   }
   window.RiftOpponent={active,prospects,key:()=>selected+':'+revision,pickSignal,summary,
     plans:()=>plans.filter(p=>p.status!=='cancelled').map(p=>({id:String(p.id),opponent:p.opponent,scheduledAt:p.scheduledAt,bestOf:p.bestOf||3,status:p.status})),
-    scouting:(final=false)=>(final?evidence():availableEvidence()).map(({champ,role,cm,season,recent,roleCertain})=>({champ,role,cm,season,recent,roleCertain})),
+    scouting:(final=false)=>(final?evidence():availableEvidence()).map(({champ,role,player,cm,season,recent,roleCertain,cmWins,cmResults,playerImpact,playerImpactGames,impactTotal,impactGames})=>({champ,role,player,cm,season,recent,roleCertain,cmWins,cmResults,playerImpact,playerImpactGames,championImpact:impactGames?impactTotal/impactGames:null,impactGames})),
     bans:()=>banRows().slice(0,3).map(r=>r.ch),
     banCandidates:()=>banRows().slice(0,8).map(r=>r.ch),
     banScore:champ=>banRows().find(r=>r.ch===champ)?.score||0,

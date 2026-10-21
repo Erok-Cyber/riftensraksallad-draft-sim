@@ -19,9 +19,10 @@
   function rows(data,plan){
     const series=Array.isArray(data.series)?data.series:[];
     return (data.partial?'<p class="rivals-note">Vissa matcher kunde inte hämtas. Försök igen senare.</p>':'')+
+      '<p class="rivals-note">'+series.length+' av '+(Number(data.totalSeries)||series.length)+' serier inlästa · prestationsmått är indikatorer, inte bevis på spelarstyrka.</p>'+
       (series.length?series.map(s=>'<details class="rivals-series"><summary><span><strong>'+esc(s.team)+' <span class="rivals-vs">vs</span> '+esc(s.opponent||'Motståndare saknas')+'</strong><small>'+esc(date(s.playedAt))+' · '+(s.games||[]).length+' registrerade games</small></span></summary>'+
         '<div class="rivals-games">'+((s.games||[]).length?(s.games||[]).map(g=>'<section class="rivals-game"><h4>Game '+esc(g.number)+'<span class="rivals-result '+(g.result==='win'?'win':g.result==='loss'?'loss':'')+'">'+(g.result==='win'?'W · Vinst':g.result==='loss'?'L · Förlust':g.result==='draw'?'Oavgjort':'Resultat saknas')+'</span></h4>'+
-          ((g.picks||[]).length?'<ul class="rivals-picks">'+orderedPicks(g.picks,plan).map(p=>'<li><span>'+esc(p.role?p.role.toUpperCase()+(p.inferred?' ≈':''):'ROLL OKÄND')+'</span><strong>'+esc(p.champ)+'</strong><span>'+esc(p.player)+'</span></li>').join('')+'</ul>'+
+          ((g.picks||[]).length?'<ul class="rivals-picks">'+orderedPicks(g.picks,plan).map(p=>'<li><span>'+esc(p.role?p.role.toUpperCase()+(p.inferred?' ≈':''):'ROLL OKÄND')+'</span><strong>'+esc(p.champ)+'</strong><span>'+esc(p.player)+(p.performance?' · '+esc(p.performance.kills!=null&&p.performance.deaths!=null&&p.performance.assists!=null?[p.performance.kills,p.performance.deaths,p.performance.assists].join('/'):'')+(p.performance.damageShare!=null?' · '+Math.round(p.performance.damageShare*100)+'% lagskada':''):'')+'</span></li>').join('')+'</ul>'+
             (orderedPicks(g.picks,plan).some(p=>p.inferred)?'<p class="rivals-note">≈ Rollordning uppskattad från aktuell scouting; historisk roll är inte bekräftad.</p>':''):'')+
           ((g.picks||[]).length<5?'<p class="rivals-note">'+((g.picks||[]).length?'Vissa championval saknas.':'Championdata saknas för detta game.')+'</p>':'')+'</section>').join(''):'<p class="rivals-note">Inga spelade games registrerade. Serien kan vara administrativt avgjord.</p>')+'</div></details>').join(''):'<p class="rivals-note">Inga spelade Rivals-serier tillgängliga ännu.</p>');
   }
@@ -30,12 +31,21 @@
     if(existing&&existing.until>Date.now())return existing.promise;
     const promise=(async()=>{
       const endpoint=window.RIFT_DB_CONFIG?.plannerFunctionUrl;if(!endpoint)throw Error('Saknar anslutning');
-      const url=new URL(endpoint);url.searchParams.set('id',id);url.searchParams.set('rivals','1');
-      const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),45000);
-      try{
-        const res=await fetch(url,{signal:controller.signal,cache:'no-store'});if(!res.ok)throw Error('HTTP '+res.status);
-        const data=await res.json();if(!Array.isArray(data.series))throw Error('Ogiltig matchdata');return data;
-      }finally{clearTimeout(timeout);}
+      const series=new Map();let offset=0,partial=false,totalSeries=0;
+      for(let page=0;page<126;page++){
+        const url=new URL(endpoint);url.searchParams.set('id',id);url.searchParams.set('rivals','1');url.searchParams.set('offset',String(offset));
+        const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),45000);
+        try{
+          const res=await fetch(url,{signal:controller.signal,cache:'no-store'});if(!res.ok)throw Error('HTTP '+res.status);
+          const data=await res.json();if(!Array.isArray(data.series))throw Error('Ogiltig matchdata');
+          data.series.forEach(s=>series.set(s.id,s));partial=partial||!!data.partial;totalSeries=data.totalSeries||series.size;
+          if(data.nextOffset==null)return {series:[...series.values()],partial,totalSeries};
+          if(!Number.isInteger(data.nextOffset)||data.nextOffset<=offset||data.nextOffset>500)break;
+          offset=data.nextOffset;
+        }catch(e){if(!series.size)throw e;return {series:[...series.values()],partial:true,totalSeries};}
+        finally{clearTimeout(timeout);}
+      }
+      return {series:[...series.values()],partial:true,totalSeries};
     })();
     cache.set(id,{until:Date.now()+10*60*1000,promise});
     try{return await promise;}catch(e){cache.delete(id);throw e;}
@@ -53,7 +63,7 @@
       busy=true;body.innerHTML='<p class="rivals-note">Hämtar matcher från Challengermode…</p>';
       try{
         const data=await load(plan);if(host.dataset.rivalsPlan!==id||!host.contains(body))return;
-        body.innerHTML='<p class="rivals-note">'+esc(plan.opponent)+'s faktiska tävlingspicks · senaste åtta serierna.</p>'+rows(data,plan);loaded=true;
+        body.innerHTML='<p class="rivals-note">'+esc(plan.opponent)+'s faktiska tävlingspicks · hämtade ligaserier.</p>'+rows(data,plan);loaded=true;
       }catch{
         if(host.dataset.rivalsPlan!==id||!host.contains(body))return;
         body.innerHTML='<p class="rivals-note">Kunde inte hämta Rivals-matcher.</p><button type="button" class="secondary">Försök igen</button>';
