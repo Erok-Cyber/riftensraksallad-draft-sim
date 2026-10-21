@@ -393,6 +393,7 @@ function aiCandidate(champ,role){
   if(role==="support"){
     const misleading=base.reasons.filter(r=>r.label==="fixar AD/AP-split"||r.label==="höjer damage"||(champ==="Galio"&&r.label==="ger engage"));
     base.score-=misleading.reduce((sum,r)=>sum+r.pts,0);
+    for(const row of misleading)base.scoreLedger.push({category:'structure',points:-row.pts,label:'supportkorrigering: '+row.label,layer:'role correction'});
     base.reasons=base.reasons.filter(r=>!misleading.includes(r));
   }
   const map={...ownRoleMap(),[role]:champ};

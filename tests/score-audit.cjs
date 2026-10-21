@@ -15,4 +15,6 @@ assert(h.run('aiDecision().every(c=>aiScoreAudit(c).valid)'),'metadata annotatio
 h.run('testMode=false;renderScoreAudit(aiDecision().slice(0,3))');assert.equal(h.elements.get('scoreBreakdown').hidden,true);
 h.run('testMode=true;renderScoreAudit(aiDecision().slice(0,3))');assert.equal(h.elements.get('scoreBreakdown').hidden,false);
 h.run('renderScoreAudit([])');assert.equal(h.elements.get('scoreBreakdown').hidden,true);
+h.run('window.RiftRoster.select("support","jacob-support");events=[{side:"blue",type:"pick",role:"adc",champ:"Ashe"},{side:"blue",type:"pick",role:"jungle",champ:"Xin Zhao"}];aiContextKey="";aiEnsureContext()');
+assert(h.run('aiRoleCandidates("support").every(c=>aiScoreAudit(c).valid)'),'support role corrections must be included for the substitute pool');
 console.log('PASS: full score ledger, metadata annotations, exact displayed sums, pick timing and Test Mode isolation.');
