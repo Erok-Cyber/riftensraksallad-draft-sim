@@ -1455,16 +1455,19 @@ function compConfidence(){
 
 function scoreCandidateDetails(champ,role,compName){
   const c=comps[compName], need=currentNeeds(), p=enemyProfile(), enemyMap=enemyRoleMap();
-  const reasons=[];
+  const reasons=[],scoreLedger=[];
+  let category='comfort';
   let s=0;
-  const add=(pts,label)=>{s+=pts;if(pts!==0&&label)reasons.push({pts,label})};
+  const add=(pts,label,group=category)=>{s+=pts;scoreLedger.push({category:group,points:pts,label,layer:'base'});if(pts!==0&&label)reasons.push({pts,label})};
 
   add((comfort[role]?.[champ]||5)*3,"comfort");
+  category='comp';
   // A tied/open comp is not evidence to force its core picks.
   const anchorWeight=({öppen:0.25,låg:0.4,medel:0.7,hög:1})[compConfidence()]||0.25;
   if(c.core[role]===champ)add(18*anchorWeight*(window.RiftRoster?.compWeight(role,champ)??1),"core i "+compName);
   else if((c.alts[role]||[]).includes(champ))add(9*anchorWeight*(window.RiftRoster.affinity(compName,role,champ)?.weight??1),"passar "+compName);
 
+  category='structure';
   if(need.front===0&&traits.frontline.has(champ))add(14,"ger frontline");
   if(need.engage===0&&traits.engage.has(champ))add(14,"ger engage");
   if(need.dmg<2&&hasSmartTrait(champ,traits.damage,"Marksman"))add(6,"höjer damage");
@@ -1475,6 +1478,7 @@ function scoreCandidateDetails(champ,role,compName){
   if(need.ad>=2&&need.ap===0&&damageType[champ]==="AP")add(16,"fixar AD/AP-split");
   if(need.ap>=2&&need.ad===0&&damageType[champ]==="AD")add(12,"fixar AD/AP-split");
 
+  category='enemy';
   if(p.dive>=2){
     if(smartTraits.peel.has(champ)||traits.disengage.has(champ))add(10,"bra mot dive");
     if(["Xayah","Vex","Taliyah","Maokai","Malphite","Nautilus","Shen"].includes(champ))add(7,"starkt anti-dive-val");
@@ -1494,15 +1498,16 @@ function scoreCandidateDetails(champ,role,compName){
   if(role==="jungle"&&p.earlyJungle&&["Xin Zhao","Volibear","Udyr","Jarvan IV"].includes(champ))add(6,"stabil tidig 2v2");
   if(role==="jungle"&&champ==="Lillia"&&p.melee>=2)add(7,"Lillia kitar melee");
   if(role==="jungle"&&champ==="Lillia"&&p.tanks>=1)add(6,"%HP + sustained mot frontline");
+  category='structure';
   if(role==="jungle"&&["Lillia","Graves","Kindred","Viego"].includes(champ)){
     if(need.front===0&&ours().length>=2){
-      s-=7;
+      s-=7;scoreLedger.push({category:'risk',points:-7,label:'behöver frontline från annan roll',layer:'base'});
       reasons.push({pts:-7,label:"behöver frontline från annan roll"});
     }else if(need.front>0&&need.engage>0){
       add(6,"laget enablear carry-jungle");
     }
     if(need.engage===0&&ours().length>=3){
-      s-=4;
+      s-=4;scoreLedger.push({category:'risk',points:-4,label:'lite setup för carry-jungle',layer:'base'});
       reasons.push({pts:-4,label:"lite setup för carry-jungle"});
     }
   }
@@ -1518,16 +1523,18 @@ function scoreCandidateDetails(champ,role,compName){
     if(role==="support"&&["Nautilus","Maokai","Leona"].includes(champ))add(6,"setup för jungle");
   }
 
+  category='enemy';
   // Known matchup/synergy rules remain useful, but are no longer the whole brain.
   const rule=ruleBoost(champ,role);
   if(rule)add(rule,"specifik matchup/synergy");
 
+  category='order';
   // Draft-order intelligence: reward safe blinds, reward counters once lane is shown.
   if(enemyRoleShown(role)){
     add(role==="top"||role==="mid"?7:4,"rollen är visad");
   }else if(ours().length<3){
     if(roleBlindSafety[role]?.has(champ))add(6,"säker blind");
-    else if((role==="top"||role==="mid")&&smartTraits.counterSensitive.has(champ)){s-=6;reasons.push({pts:-6,label:"counterkänslig blind"});}
+    else if((role==="top"||role==="mid")&&smartTraits.counterSensitive.has(champ)){s-=6;scoreLedger.push({category:'risk',points:-6,label:'counterkänslig blind',layer:'base'});reasons.push({pts:-6,label:"counterkänslig blind"});}
   }
 
   const riotStat=window.RiftStats?.scoreChampion({
@@ -1538,6 +1545,7 @@ function scoreCandidateDetails(champ,role,compName){
   });
   if(riotStat?.available){
     s+=riotStat.points;
+    scoreLedger.push({category:'meta',points:riotStat.points,label:'metadata',layer:'base'});
     if(Math.abs(riotStat.points)>=1.5){
       reasons.push({pts:riotStat.points,label:"LoLalytics "+(riotStat.points>=0?"+":"")+riotStat.points.toFixed(1)});
     }
@@ -1547,7 +1555,7 @@ function scoreCandidateDetails(champ,role,compName){
   }
 
 
-  return {ch:champ,score:s,reasons:reasons.sort((a,b)=>b.pts-a.pts)};
+  return {ch:champ,score:s,scoreLedger,reasons:reasons.sort((a,b)=>b.pts-a.pts)};
 }
 
 function candidateScore(champ,role,compName){

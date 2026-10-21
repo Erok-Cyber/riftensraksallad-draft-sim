@@ -1,0 +1,669 @@
+{
+  "stage": "A1 score transparency only",
+  "baselineCommit": "97390a6b67d6bef8cff849154504e12d12c810c3",
+  "scope": "Three recorded Xenia drafts, 15 prefix decisions; identical current default pools, no history/scouting/meta supplied. This is a change-regression comparison, not historical reproduction or a quality label.",
+  "positions": [
+    {
+      "draft": "Xenia game 1",
+      "step": 7,
+      "before": {
+        "champ": "Jarvan IV",
+        "role": "jungle",
+        "total": 121.6224,
+        "layers": {
+          "base": 83.2,
+          "identity": 0.7999999999999998,
+          "teamPreference": 0,
+          "structure": 4.771200000000002,
+          "lookahead": 7.251199999999999,
+          "flexibility": 17.6,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Jarvan IV",
+        "role": "jungle",
+        "total": 121.6224,
+        "layers": {
+          "base": 83.2,
+          "identity": 0.7999999999999998,
+          "teamPreference": 0,
+          "structure": 4.771200000000002,
+          "lookahead": 7.251199999999999,
+          "flexibility": 17.6,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      }
+    },
+    {
+      "draft": "Xenia game 1",
+      "step": 8,
+      "before": {
+        "champ": "Xayah",
+        "role": "adc",
+        "total": 106.1508,
+        "layers": {
+          "base": 78.3,
+          "identity": 0,
+          "teamPreference": 0,
+          "structure": 5.9724,
+          "lookahead": 4.7783999999999995,
+          "flexibility": 12.100000000000001,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 0,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Xayah",
+        "role": "adc",
+        "total": 106.1508,
+        "layers": {
+          "base": 78.3,
+          "identity": 0,
+          "teamPreference": 0,
+          "structure": 5.9724,
+          "lookahead": 4.7783999999999995,
+          "flexibility": 12.100000000000001,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 0,
+          "execution": 0
+        }
+      }
+    },
+    {
+      "draft": "Xenia game 1",
+      "step": 11,
+      "before": {
+        "champ": "Taliyah",
+        "role": "mid",
+        "total": 104.3878,
+        "layers": {
+          "base": 86.3,
+          "identity": 0,
+          "teamPreference": -10,
+          "structure": 10.8164,
+          "lookahead": 1.071400000000001,
+          "flexibility": 13.200000000000001,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Taliyah",
+        "role": "mid",
+        "total": 104.3878,
+        "layers": {
+          "base": 86.3,
+          "identity": 0,
+          "teamPreference": -10,
+          "structure": 10.8164,
+          "lookahead": 1.071400000000001,
+          "flexibility": 13.200000000000001,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      }
+    },
+    {
+      "draft": "Xenia game 1",
+      "step": 16,
+      "before": {
+        "champ": "Jarvan IV",
+        "role": "jungle",
+        "total": 97.6302,
+        "layers": {
+          "base": 64,
+          "identity": 0,
+          "teamPreference": 0,
+          "structure": 10.7324,
+          "lookahead": -0.0022000000000011255,
+          "flexibility": 9.9,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Jarvan IV",
+        "role": "jungle",
+        "total": 97.6302,
+        "layers": {
+          "base": 64,
+          "identity": 0,
+          "teamPreference": 0,
+          "structure": 10.7324,
+          "lookahead": -0.0022000000000011255,
+          "flexibility": 9.9,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      }
+    },
+    {
+      "draft": "Xenia game 1",
+      "step": 19,
+      "before": {
+        "champ": "Shen",
+        "role": "top",
+        "total": 88.9696,
+        "layers": {
+          "base": 64,
+          "identity": 0,
+          "teamPreference": 0,
+          "structure": 11.849599999999999,
+          "lookahead": -0.88,
+          "flexibility": 0,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Shen",
+        "role": "top",
+        "total": 88.9696,
+        "layers": {
+          "base": 64,
+          "identity": 0,
+          "teamPreference": 0,
+          "structure": 11.849599999999999,
+          "lookahead": -0.88,
+          "flexibility": 0,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      }
+    },
+    {
+      "draft": "Xenia game 2",
+      "step": 7,
+      "before": {
+        "champ": "Nautilus",
+        "role": "support",
+        "total": 111.75595999999999,
+        "layers": {
+          "base": 79.2,
+          "identity": 0.7999999999999998,
+          "teamPreference": 0,
+          "structure": 5.394480000000002,
+          "lookahead": 6.761479999999999,
+          "flexibility": 17.6,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Nautilus",
+        "role": "support",
+        "total": 111.75595999999999,
+        "layers": {
+          "base": 79.2,
+          "identity": 0.7999999999999998,
+          "teamPreference": 0,
+          "structure": 5.394480000000002,
+          "lookahead": 6.761479999999999,
+          "flexibility": 17.6,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      }
+    },
+    {
+      "draft": "Xenia game 2",
+      "step": 8,
+      "before": {
+        "champ": "Ashe",
+        "role": "adc",
+        "total": 101.08232,
+        "layers": {
+          "base": 69.2,
+          "identity": 0.7999999999999998,
+          "teamPreference": 0,
+          "structure": 7.3841600000000005,
+          "lookahead": 5.19816,
+          "flexibility": 16.5,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Ashe",
+        "role": "adc",
+        "total": 101.08232,
+        "layers": {
+          "base": 69.2,
+          "identity": 0.7999999999999998,
+          "teamPreference": 0,
+          "structure": 7.3841600000000005,
+          "lookahead": 5.19816,
+          "flexibility": 16.5,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      }
+    },
+    {
+      "draft": "Xenia game 2",
+      "step": 11,
+      "before": {
+        "champ": "Ahri",
+        "role": "mid",
+        "total": 90.40867999999999,
+        "layers": {
+          "base": 65.6,
+          "identity": 0,
+          "teamPreference": 0,
+          "structure": 12.17384,
+          "lookahead": 1.4348400000000012,
+          "flexibility": 13.200000000000001,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Ahri",
+        "role": "mid",
+        "total": 90.40867999999999,
+        "layers": {
+          "base": 65.6,
+          "identity": 0,
+          "teamPreference": 0,
+          "structure": 12.17384,
+          "lookahead": 1.4348400000000012,
+          "flexibility": 13.200000000000001,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      }
+    },
+    {
+      "draft": "Xenia game 2",
+      "step": 16,
+      "before": {
+        "champ": "Ahri",
+        "role": "mid",
+        "total": 78.67564,
+        "layers": {
+          "base": 59,
+          "identity": 0,
+          "teamPreference": 0,
+          "structure": 13.88632,
+          "lookahead": 0.0893200000000013,
+          "flexibility": 7.700000000000001,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Ahri",
+        "role": "mid",
+        "total": 78.67564,
+        "layers": {
+          "base": 59,
+          "identity": 0,
+          "teamPreference": 0,
+          "structure": 13.88632,
+          "lookahead": 0.0893200000000013,
+          "flexibility": 7.700000000000001,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      }
+    },
+    {
+      "draft": "Xenia game 2",
+      "step": 19,
+      "before": {
+        "champ": "Taliyah",
+        "role": "mid",
+        "total": 88.76,
+        "layers": {
+          "base": 62.760000000000005,
+          "identity": 0,
+          "teamPreference": 0,
+          "structure": 14.000000000000002,
+          "lookahead": 0,
+          "flexibility": 0,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Taliyah",
+        "role": "mid",
+        "total": 88.76,
+        "layers": {
+          "base": 62.760000000000005,
+          "identity": 0,
+          "teamPreference": 0,
+          "structure": 14.000000000000002,
+          "lookahead": 0,
+          "flexibility": 0,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      }
+    },
+    {
+      "draft": "Xenia game 3",
+      "step": 7,
+      "before": {
+        "champ": "Nautilus",
+        "role": "support",
+        "total": 111.75595999999999,
+        "layers": {
+          "base": 79.2,
+          "identity": 0.7999999999999998,
+          "teamPreference": 0,
+          "structure": 5.394480000000002,
+          "lookahead": 6.761479999999999,
+          "flexibility": 17.6,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Nautilus",
+        "role": "support",
+        "total": 111.75595999999999,
+        "layers": {
+          "base": 79.2,
+          "identity": 0.7999999999999998,
+          "teamPreference": 0,
+          "structure": 5.394480000000002,
+          "lookahead": 6.761479999999999,
+          "flexibility": 17.6,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      }
+    },
+    {
+      "draft": "Xenia game 3",
+      "step": 8,
+      "before": {
+        "champ": "Xin Zhao",
+        "role": "jungle",
+        "total": 98.00456,
+        "layers": {
+          "base": 55.6,
+          "identity": 0.3999999999999999,
+          "teamPreference": 0,
+          "structure": 7.021279999999999,
+          "lookahead": 5.4832800000000015,
+          "flexibility": 16.5,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Xin Zhao",
+        "role": "jungle",
+        "total": 98.00456,
+        "layers": {
+          "base": 55.6,
+          "identity": 0.3999999999999999,
+          "teamPreference": 0,
+          "structure": 7.021279999999999,
+          "lookahead": 5.4832800000000015,
+          "flexibility": 16.5,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      }
+    },
+    {
+      "draft": "Xenia game 3",
+      "step": 11,
+      "before": {
+        "champ": "Ahri",
+        "role": "mid",
+        "total": 104.03092000000001,
+        "layers": {
+          "base": 73.2,
+          "identity": 0.7999999999999998,
+          "teamPreference": 0,
+          "structure": 13.210960000000002,
+          "lookahead": 0.6199599999999995,
+          "flexibility": 13.200000000000001,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Ahri",
+        "role": "mid",
+        "total": 104.03092000000001,
+        "layers": {
+          "base": 73.2,
+          "identity": 0.7999999999999998,
+          "teamPreference": 0,
+          "structure": 13.210960000000002,
+          "lookahead": 0.6199599999999995,
+          "flexibility": 13.200000000000001,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      }
+    },
+    {
+      "draft": "Xenia game 3",
+      "step": 16,
+      "before": {
+        "champ": "Ahri",
+        "role": "mid",
+        "total": 88.77952,
+        "layers": {
+          "base": 67,
+          "identity": 0,
+          "teamPreference": 0,
+          "structure": 13.437760000000003,
+          "lookahead": 0.44175999999999904,
+          "flexibility": 9.9,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Ahri",
+        "role": "mid",
+        "total": 88.77952,
+        "layers": {
+          "base": 67,
+          "identity": 0,
+          "teamPreference": 0,
+          "structure": 13.437760000000003,
+          "lookahead": 0.44175999999999904,
+          "flexibility": 9.9,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      }
+    },
+    {
+      "draft": "Xenia game 3",
+      "step": 19,
+      "before": {
+        "champ": "Annie",
+        "role": "mid",
+        "total": 110.3,
+        "layers": {
+          "base": 82.3,
+          "identity": 0,
+          "teamPreference": 2,
+          "structure": 14.000000000000002,
+          "lookahead": 0,
+          "flexibility": 0,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      },
+      "after": {
+        "champ": "Annie",
+        "role": "mid",
+        "total": 110.3,
+        "layers": {
+          "base": 82.3,
+          "identity": 0,
+          "teamPreference": 2,
+          "structure": 14.000000000000002,
+          "lookahead": 0,
+          "flexibility": 0,
+          "risk": 0,
+          "learning": 0,
+          "scouting": 0,
+          "responseRisk": 0,
+          "completion": 0,
+          "pivot": 2,
+          "execution": 0
+        }
+      }
+    }
+  ],
+  "changedFirstChoices": 0,
+  "changedFirstChoiceScores": 0
+}

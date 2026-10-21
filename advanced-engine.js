@@ -237,35 +237,37 @@ const advBaseScoreCandidateDetails=scoreCandidateDetails;
 scoreCandidateDetails=function(champ,role,compName){
   const out=advBaseScoreCandidateDetails(champ,role,compName);
   out.reasons=[...(out.reasons||[])];
+  out.scoreLedger=[...(out.scoreLedger||[])];
+  const track=(category,points,label)=>out.scoreLedger.push({category,points,label,layer:'advanced'});
 
   const dep=advPickDependency(champ,role);
   if(dep.penalty>0){
-    out.score-=dep.penalty;
+    out.score-=dep.penalty;track('risk',-dep.penalty,'pickberoenden');
     const d=dep.deps[0];
     if(d)out.reasons.push({pts:-dep.penalty,label:d.label});
   }
 
   const solve=advCandidateStructuralBonus(champ,role);
   if(solve.points){
-    out.score+=solve.points;
+    out.score+=solve.points;track('structure',solve.points,solve.label);
     out.reasons.push({pts:solve.points,label:solve.label});
   }
 
   const fam=advFamiliarity(champ,role);
   if(fam>=1){
-    out.score+=fam;
+    out.score+=fam;track('comfort',fam,'team familiarity');
     out.reasons.push({pts:fam,label:"team familiarity"});
   }
 
   const p=enemyProfile(),s=advStructure();
   if(p.tanks>=2&&ADV_SUSTAINED.has(champ)&&s.damage.sustained===0){
-    out.score+=4;out.reasons.push({pts:4,label:"sustained mot frontline"});
+    out.score+=4;track("enemy",4,"sustained mot frontline");out.reasons.push({pts:4,label:"sustained mot frontline"});
   }
   if(p.dive>=2&&(ADV_PEEL_Q[champ]||0)>=2&&s.peelQ<1.8){
-    out.score+=4;out.reasons.push({pts:4,label:"kvalitets-peel"});
+    out.score+=4;track("enemy",4,"kvalitets-peel");out.reasons.push({pts:4,label:"kvalitets-peel"});
   }
   if(s.engageQ<1.8&&(ADV_ENGAGE_Q[champ]||0)>=2.4){
-    out.score+=4;out.reasons.push({pts:4,label:"pålitlig GO-knapp"});
+    out.score+=4;track("structure",4,"pålitlig GO-knapp");out.reasons.push({pts:4,label:"pålitlig GO-knapp"});
   }
   out.reasons.sort((a,b)=>b.pts-a.pts);
   out.advanced={dependency:dep};
@@ -374,3 +376,4 @@ window.RiftAdvanced={
   teamPattern:advTeamPattern,
   objectiveProfile:advObjectiveProfile
 };
+

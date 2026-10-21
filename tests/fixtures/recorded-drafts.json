@@ -1,0 +1,20 @@
+[
+  {
+    "id": "Xenia game 1",
+    "draftContext": {
+      "key": "[\"red\",[[\"ban\",\"blue\",\"Udyr\"],[\"ban\",\"red\",\"Gnar\"],[\"ban\",\"blue\",\"Viego\"],[\"ban\",\"red\",\"Thresh\"],[\"ban\",\"blue\",\"Xin Zhao\"],[\"ban\",\"red\",\"Nunu & Willump\"],[\"pick\",\"blue\",\"Wukong\",\"unknown\"],[\"pick\",\"red\",\"Amumu\",\"support\"],[\"pick\",\"red\",\"Jinx\",\"adc\"],[\"pick\",\"blue\",\"Ashe\",\"unknown\"],[\"pick\",\"blue\",\"Nautilus\",\"unknown\"],[\"pick\",\"red\",\"Hwei\",\"mid\"],[\"ban\",\"red\",\"Renekton\"],[\"ban\",\"blue\",\"Lulu\"],[\"ban\",\"red\",\"Leona\"],[\"ban\",\"blue\",\"Gragas\"],[\"pick\",\"red\",\"Jarvan IV\",\"jungle\"],[\"pick\",\"blue\",\"Nasus\",\"unknown\"],[\"pick\",\"blue\",\"Ahri\",\"unknown\"],[\"pick\",\"red\",\"Shen\",\"top\"]]]"
+    }
+  },
+  {
+    "id": "Xenia game 2",
+    "draftContext": {
+      "key": "[\"red\",[[\"ban\",\"blue\",\"Udyr\"],[\"ban\",\"red\",\"Nunu & Willump\"],[\"ban\",\"blue\",\"Jarvan IV\"],[\"ban\",\"red\",\"Gnar\"],[\"ban\",\"blue\",\"Xin Zhao\"],[\"ban\",\"red\",\"Thresh\"],[\"pick\",\"blue\",\"Viego\",\"unknown\"],[\"pick\",\"red\",\"Nautilus\",\"support\"],[\"pick\",\"red\",\"Ashe\",\"adc\"],[\"pick\",\"blue\",\"Leona\",\"unknown\"],[\"pick\",\"blue\",\"Caitlyn\",\"unknown\"],[\"pick\",\"red\",\"Volibear\",\"jungle\"],[\"ban\",\"red\",\"Renekton\"],[\"ban\",\"blue\",\"Hwei\"],[\"ban\",\"red\",\"Nasus\"],[\"ban\",\"blue\",\"Vel'Koz\"],[\"pick\",\"red\",\"Shen\",\"top\"],[\"pick\",\"blue\",\"Olaf\",\"unknown\"],[\"pick\",\"blue\",\"Ahri\",\"unknown\"],[\"pick\",\"red\",\"Viktor\",\"mid\"]]]"
+    }
+  },
+  {
+    "id": "Xenia game 3",
+    "draftContext": {
+      "key": "[\"red\",[[\"ban\",\"blue\",\"Udyr\"],[\"ban\",\"red\",\"Nunu & Willump\"],[\"ban\",\"blue\",\"Jarvan IV\"],[\"ban\",\"red\",\"Caitlyn\"],[\"ban\",\"blue\",\"Hwei\"],[\"ban\",\"red\",\"Thresh\"],[\"pick\",\"blue\",\"Viego\",\"unknown\"],[\"pick\",\"red\",\"Maokai\",\"support\"],[\"pick\",\"red\",\"Xin Zhao\",\"jungle\"],[\"pick\",\"blue\",\"Sivir\",\"unknown\"],[\"pick\",\"blue\",\"Leona\",\"unknown\"],[\"pick\",\"red\",\"Xayah\",\"adc\"],[\"ban\",\"red\",\"Nasus\"],[\"ban\",\"blue\",\"Shen\"],[\"ban\",\"red\",\"Olaf\"],[\"ban\",\"blue\",\"Viktor\"],[\"pick\",\"red\",\"Malphite\",\"top\"],[\"pick\",\"blue\",\"Sylas\",\"unknown\"],[\"pick\",\"blue\",\"Cho'Gath\",\"unknown\"],[\"pick\",\"red\",\"Xerath\",\"mid\"]]]"
+    }
+  }
+]

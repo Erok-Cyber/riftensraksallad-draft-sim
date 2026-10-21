@@ -429,10 +429,11 @@ function aiCandidate(champ,role){
   // Preserve the current core direction, but reward a useful second pivot.
   if(compRanks[1]&&compRanks[1].score>=9)score+=2;
 
+  let executionPenalty=0;
   const reasons=base.reasons.filter(x=>x.pts>0&&x.label!=="comfort").sort((a,b)=>b.pts-a.pts).slice(0,3).map(x=>x.label);
   if(role==="support"&&["Galio","Shen"].includes(champ)){
     const hasSetup=ours().some(e=>ADV_HARD_ENGAGE.has(e.champ));
-    if(!hasSetup)score-=12;
+    if(!hasSetup){score-=12;executionPenalty=-12;}
     reasons.unshift(hasSetup?"follow-up på lagets engage":"behöver engage/setup från annan roll");
   }
   if(completion.penalty)reasons.unshift(completion.label);
@@ -455,10 +456,13 @@ function aiCandidate(champ,role){
     learning:Math.max(-3,Math.min(3,history.bonus+learning.points)),scouting:scouting?.points||0,
     responseRisk:-responseRisk,completion:-completion.penalty,pivot:compRanks[1]?.score>=9?2:0
   };
-  scoreBreakdown.execution=score-Object.values(scoreBreakdown).reduce((sum,n)=>sum+n,0);
+  scoreBreakdown.execution=executionPenalty;
+  const layerGroups={identity:'comp',teamPreference:'comp',structure:'structure',lookahead:'structure',flexibility:'order',risk:'risk',learning:'learning',scouting:'enemy',responseRisk:'risk',completion:'risk',pivot:'comp',execution:'risk'};
+  const scoreLedger=(base.scoreLedger||[]).map(row=>({...row,points:row.points*AI_CONFIG.baseWeight}));
+  for(const [layer,points]of Object.entries(scoreBreakdown))if(layer!=='base')scoreLedger.push({category:layerGroups[layer],points,label:layer,layer:'ai'});
 
   return {
-    ch:champ,role,score,scoreBreakdown,state,lookahead,flex,risk,history,execution,learning,completion,responses:scouting?.responses||[],
+    ch:champ,role,score,scoreBreakdown,scoreLedger,state,lookahead,flex,risk,history,execution,learning,completion,responses:scouting?.responses||[],
     reasons:[...new Set(reasons)].slice(0,4),
     anchors:compRanks.slice(0,2)
   };
@@ -552,7 +556,11 @@ function aiDecision(forcedRole=null){
       [...ranked].sort((a,b)=>b.state-a.state||b.score-a.score)[0]];
     [...new Map(diverse.filter(Boolean).map(x=>[x.ch,x])).values()].forEach(x=>{
       const timing=aiPickUrgency(x,ranked),denial=aiDenialRisk(x);
-      options.push({...x,urgency:timing,denial,comfort:comfort[role]?.[x.ch]||5,total:x.score+aiRoleTimingBonus(role)+timing.points-denial.penalty});
+      const roleTiming=aiRoleTimingBonus(role);
+      const scoreLedger=[...x.scoreLedger,{category:'order',points:roleTiming,label:'rollens pickordning',layer:'decision'},
+        {category:'order',points:timing.points,label:timing.reason||'pick urgency',layer:'decision'},
+        {category:'risk',points:-denial.penalty,label:denial.evidence||'risk att följdpick försvinner',layer:'decision'}];
+      options.push({...x,scoreLedger,urgency:timing,denial,comfort:comfort[role]?.[x.ch]||5,total:x.score+roleTiming+timing.points-denial.penalty});
     });
   });
 
@@ -634,6 +642,35 @@ function renderAIInsight(){
 }
 
 // One primary call, two alternatives. Extra analysis stays behind disclosure controls.
+const AI_SCORE_CATEGORIES={comfort:'Comfort',comp:'Comp-passform och lagpreferens',structure:'Struktur och egna följdpicks',enemy:'Motståndarhot och matchup',risk:'Risk och genomförbarhet',order:'Pickordning och flexibilitet',meta:'Metadata',learning:'Lagets historik'};
+function aiScoreAudit(candidate){
+  const rows=Object.entries(AI_SCORE_CATEGORIES).map(([category,label])=>({category,label,points:(candidate.scoreLedger||[]).filter(x=>x.category===category).reduce((sum,x)=>sum+x.points,0)}));
+  const sum=rows.reduce((n,r)=>n+r.points,0),total=candidate.total??candidate.score;
+  const valid=Number.isFinite(total)&&Math.abs(sum-total)<1e-8&&(candidate.scoreLedger||[]).every(x=>Object.hasOwn(AI_SCORE_CATEGORIES,x.category));
+  const display=rows.map(r=>({...r,units:Math.round(r.points*100)}));
+  const rounding=Math.round(total*100)-display.reduce((n,r)=>n+r.units,0);
+  return {valid,sum,total,rows:display,rounding};
+}
+function renderScoreAudit(list){
+  const box=document.getElementById('scoreBreakdown');if(!box)return;
+  box.replaceChildren();box.hidden=!testMode||!list.length;
+  if(box.hidden)return;
+  const details=document.createElement('details'),summary=document.createElement('summary');
+  summary.textContent='Test Mode · visa poängfördelning';details.appendChild(summary);
+  const note=document.createElement('p');note.textContent='Lokalmotorns poäng, inte vinstchans. AI kan ändra ordningen utan att ändra poängen. Poängbidragen visar befintliga lager; överlapp är ännu inte borttagna.';details.appendChild(note);
+  for(const candidate of list){
+    const audit=aiScoreAudit(candidate),section=document.createElement('section'),title=document.createElement('h4');
+    title.textContent=candidate.ch+' · '+roleNames[candidate.role];section.appendChild(title);
+    const fmt=units=>(units/100).toFixed(2);
+    for(const row of audit.rows){const p=document.createElement('p');p.textContent=row.label+': '+fmt(row.units);section.appendChild(p);}
+    if(audit.rounding){const p=document.createElement('p');p.textContent='Avrundning: '+fmt(audit.rounding);section.appendChild(p);}
+    const total=document.createElement('strong');total.textContent='Slutpoäng: '+fmt(Math.round(audit.total*100))+(audit.valid?' · summan stämmer':' · FEL: poäng saknas i redovisningen');section.appendChild(total);
+    const raw=document.createElement('details'),label=document.createElement('summary');label.textContent='Visa regel för regel';raw.appendChild(label);
+    for(const row of candidate.scoreLedger||[]){if(!row.points)continue;const p=document.createElement('p');p.textContent=row.layer+' · '+row.label+': '+row.points.toFixed(4);raw.appendChild(p);}
+    section.appendChild(raw);details.appendChild(section);
+  }
+  box.appendChild(details);
+}
 let aiPreviousCall=null,aiDisplayChoice=null;
 function aiStableChoices(list,key,previous){
   if(!list.length||previous?.key!==key)return list;
@@ -674,6 +711,7 @@ function renderRecommendation(){
     box.classList.add("hidden");return;
   }
   const top=list[0];
+  renderScoreAudit(t.type==='pick'?list:[]);
   $("recommendEyebrow").textContent=t.type==="ban"?"BANFÖRSLAG":"REKOMMENDERAT PICK";
   $("recommendRole").textContent=top.role?roleNames[top.role]:"BAN";
   $("recommendPicks").replaceChildren();

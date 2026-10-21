@@ -399,6 +399,13 @@ body.live-os .live-playbook-card .secondary{
 /* Extra bans remain a compact, optional list. */
 .more-ban-choices{display:grid;grid-template-columns:minmax(100px,max-content) minmax(0,1fr);gap:12px;align-items:start;margin-top:14px}
 .more-ban-choices small{color:#c9d4e6;line-height:1.5;overflow-wrap:anywhere}
+#scoreBreakdown[hidden]{display:none}
+#scoreBreakdown>details{border:1px solid #34465f;border-radius:10px;padding:12px;background:#101c2c;color:#d8e2ef}
+#scoreBreakdown summary{cursor:pointer;color:#e8ca7e;line-height:1.5}
+#scoreBreakdown section{border-top:1px solid #34465f;margin-top:12px;padding-top:12px;overflow-wrap:anywhere}
+#scoreBreakdown p{font-size:13px;line-height:1.55;margin:5px 0}
+#scoreBreakdown h4{margin:0 0 8px}
+#scoreBreakdown strong{display:block;margin:10px 0;color:#f2dca2}
 #moreBanSuggestions[hidden]{display:none}
 #moreBanSuggestions summary{cursor:pointer;color:#e8ca7e;padding:10px 0}
 @media(max-width:600px){.more-ban-choices{grid-template-columns:1fr;gap:8px}.more-ban-choices small{margin-bottom:10px}}
