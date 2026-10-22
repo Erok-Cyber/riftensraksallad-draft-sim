@@ -1,10 +1,24 @@
 /* Small, shared preparation helpers. No model calls, no inferred draft order. */
 (()=>{'use strict';
  const roles=['top','jungle','mid','adc','support'];
+const matchupRules = [
+  {enemy:["Tryndamere"],role:"top",boost:{"Renekton":22,"Malphite":24,"Shen":15}},
+  {enemy:["Dr. Mundo"],role:"top",boost:{"Trundle":30,"Mordekaiser":22,"Darius":12}},
+  {enemy:["Ornn","Sion","K'Sante","Malphite","Tahm Kench"],role:"top",boost:{"Trundle":24,"Mordekaiser":18,"Darius":12}},
+  {enemy:["Lee Sin"],role:"jungle",boost:{"Xin Zhao":18,"Volibear":14,"Jarvan IV":10}},
+  {enemy:["Nocturne"],role:"jungle",boost:{"Volibear":18,"Xin Zhao":14,"Vi":10}},
+  {enemy:["Kog'Maw","Jinx","Aphelios"],role:"jungle",boost:{"Vi":26,"Jarvan IV":18,"Xin Zhao":8}},
+  {enemy:["Nocturne","Vi","Jarvan IV","Wukong"],role:"mid",boost:{"Vex":22,"Taliyah":18,"Annie":8}},
+  {enemy:["Nocturne","Vi","Jarvan IV","Wukong"],role:"adc",boost:{"Xayah":28,"Ashe":8}},
+  {enemy:["Kog'Maw","Jinx","Aphelios"],role:"support",boost:{"Nautilus":22,"Leona":18,"Maokai":10}},
+  {enemy:["Lulu","Milio","Janna"],role:"jungle",boost:{"Vi":16,"Jarvan IV":12}},
+  {enemy:["Lulu","Milio","Janna"],role:"top",boost:{"Malphite":12,"Renekton":8}},
+  {enemy:["Darius","Garen","Renekton","Mordekaiser","Olaf","Trundle"],role:"top",boost:{"Heimerdinger":10,"Renekton":8,"Olaf":8}}
+];
  const profile=ch=>window.RiftProfiles?.get(ch);
  const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const stored=()=>{try{const a=JSON.parse(localStorage.getItem('rs_match_history')||'[]');return Array.isArray(a)?a:[];}catch{return [];}};
- function answerScore(ch,threat,rules=[],role){
+ function answerScore(ch,threat,rules=matchupRules,role){
   const own=profile(ch),enemy=profile(threat);let value=0,why='';
   for(const r of rules)if(r.role===role&&r.enemy.includes(threat)&&(r.boost[ch]||0)>value){value=r.boost[ch];why='Specifik kitregel';}
   if(!own||!enemy)return {value,why,unknown:!own||!enemy};
@@ -14,7 +28,7 @@
   if(enemy.tags.includes('zone')&&own.engage>=2)add(own.engage*2.5,'Kan nå deras zonkontroll');
   return {value,why,unknown:false};
  }
- function answers(threats,{map={},used=[],rules=[]}={}){
+ function answers(threats,{map={},used=[],rules=matchupRules}={}){
   const unavailable=new Set(used.map(c=>c.toLowerCase()));
   return threats.map(t=>{
    const player=window.RiftRoster?.player(t.role),pool=map[t.role]?[map[t.role]]:(player?.pool||[]).filter(c=>!(player.paused||[]).includes(c)&&!unavailable.has(c.toLowerCase()));
@@ -137,5 +151,5 @@
   return 1+Math.min(.2,opening*.2+(shown?.1:0)+(replacement>=2?.1:0));
  }
  function preparationHTML(plan,threats=[]){return '<details class="planner-section"><summary>Visa serie, draftgrenar och träning</summary>'+[...branchLines(plan),...summaryLines(plan,threats)].map(s=>'<p class="analysis-note">'+esc(s)+'</p>').join('')+'</details>';}
- window.RiftDraftContext={roles,esc,stored,answerScore,answers,warnings,flexRoles,matches,series,tendencies,branches,branchLines,practice,decisionLog,summaryLines,predictionFactor,preparationHTML,observe:(plan,data)=>{rivalCache.set(String(plan.id),data);}};
+ window.RiftDraftContext={roles,rules:matchupRules,esc,stored,answerScore,answers,warnings,flexRoles,matches,series,tendencies,branches,branchLines,practice,decisionLog,summaryLines,predictionFactor,preparationHTML,observe:(plan,data)=>{rivalCache.set(String(plan.id),data);}};
 })();
