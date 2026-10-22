@@ -18,7 +18,16 @@
     const active=window.RiftRoster?.snapshot?.()?.active||{},seen=new Set();
     const games=parse('rs_match_history').filter(m=>m&&m.id&&!m.deletedAt&&!m.testMode&&!m.walkover&&m.type!=='walkover'&&['win','loss'].includes(m.result)&&recent(m.savedAt)).sort((a,b)=>Date.parse(b.savedAt)-Date.parse(a.savedAt)).filter(m=>{if(seen.has(m.id))return false;seen.add(m.id);return true;}).map(m=>({source:'match-review',date:m.savedAt,opponent:String(m.series?.opponent||'').slice(0,80),sameLineup:roles.every(r=>m.draftContext?.roster?.players?.some(p=>p.role===r&&p.id===active[r])),...fields(m.postReview)})).filter(m=>m.worked||m.difficult||m.next).slice(0,3);
     const series=parse('rs_ban_plans_cache').filter(p=>p?.status==='completed'&&recent(p.scheduledAt)&&p.seriesReview).sort((a,b)=>Date.parse(b.scheduledAt)-Date.parse(a.scheduledAt)).map(p=>({source:'series-review',date:p.scheduledAt,opponent:String(p.opponent||'').slice(0,80),sameLineup:false,...fields(p.seriesReview)})).filter(p=>p.worked||p.difficult||p.next).slice(0,2);
-    return [...games,...series];
+    const plan=window.RiftOpponent?.active?.(),context=window.RiftDraftContext;
+    const current=[];
+    if(plan&&context){
+      const played=context.series(plan),notes=plan.gameNotes||{};
+      const noteText=Object.entries(notes).filter(([,v])=>String(v||'').trim()).map(([k,v])=>k+': '+v).join(' · ');
+      if(played.length||noteText)current.push({source:'series-review',date:plan.scheduledAt||'',opponent:String(plan.opponent||'').slice(0,80),sameLineup:false,
+        worked:('Pågående BO'+(plan.bestOf||3)+': '+played.map((m,i)=>'G'+(i+1)+' '+(m.result==='win'?'W':'L')+' '+m.comp).join('; ')).slice(0,220),
+        difficult:noteText.slice(0,220),next:context.branchLines(plan,{enemy:enemies().map(e=>e.champ),used:[...unavailable()],map:ownRoleMap()}).join(' · ').slice(0,220)});
+    }
+    return [...current,...games,...series].slice(0,5);
   }
   function snapshot(){
     const t=current(),final=events.length===20;if(!userSide||(!final&&(!t||t.side!==userSide)))return null;
@@ -110,5 +119,6 @@
   window.RiftGroq={recommendations,refresh,snapshot:savedAdvice,lessons};
   refresh();controls();
 })();
+
 
 

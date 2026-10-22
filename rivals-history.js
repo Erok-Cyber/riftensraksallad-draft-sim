@@ -48,7 +48,7 @@
       return {series:[...series.values()],partial:true,totalSeries};
     })();
     cache.set(id,{until:Date.now()+10*60*1000,promise});
-    try{return await promise;}catch(e){cache.delete(id);throw e;}
+    try{const data=await promise;window.RiftDraftContext?.observe(plan,data);return data;}catch(e){cache.delete(id);throw e;}
   }
   function mount(host,plan){
     if(!host)return;
@@ -63,7 +63,7 @@
       busy=true;body.innerHTML='<p class="rivals-note">Hämtar matcher från Challengermode…</p>';
       try{
         const data=await load(plan);if(host.dataset.rivalsPlan!==id||!host.contains(body))return;
-        body.innerHTML='<p class="rivals-note">'+esc(plan.opponent)+'s faktiska tävlingspicks · hämtade ligaserier.</p>'+rows(data,plan);loaded=true;
+        body.innerHTML='<p class="rivals-note">'+esc(plan.opponent)+'s faktiska tävlingspicks · hämtade ligaserier.</p>'+rows(data,plan)+(window.RiftDraftContext?.preparationHTML(plan)||'');loaded=true;
       }catch{
         if(host.dataset.rivalsPlan!==id||!host.contains(body))return;
         body.innerHTML='<p class="rivals-note">Kunde inte hämta Rivals-matcher.</p><button type="button" class="secondary">Försök igen</button>';
@@ -75,5 +75,6 @@
   }
   window.RiftRivals={mount,load};
 })();
+
 
 

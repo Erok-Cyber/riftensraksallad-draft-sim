@@ -273,6 +273,7 @@ function lockCurrent(){
     role=selectedRole;
   }
   const brainBefore=turn.side===userSide?{
+    decision:turn.type==='pick'&&typeof currentDecisionLog==='function'?currentDecisionLog():null,
     role:role||null,
     suggestions:turn.type==="ban"?banRecommendations().slice(0,3):topRecommendations(role).slice(0,3),
     comp:desiredComp(),
@@ -1067,6 +1068,7 @@ function buildMatchRecord(){
         ai:e.brain.ai||null,
         role:e.brain.role||null,
         suggestions:[...(e.brain.suggestions||[])],
+        decision:e.brain.decision||null,
         comp:e.brain.comp||null,
         matchup:e.brain.matchup?{
           score:e.brain.matchup.score,

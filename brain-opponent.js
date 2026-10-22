@@ -84,8 +84,9 @@
     const rows=availableEvidence(),out=[];
     for(const role of roles){
       const pool=rows.filter(r=>r.role===role).sort((a,b)=>evidenceScore(b)-evidenceScore(a)).slice(0,4);
-      const total=pool.reduce((n,r)=>n+evidenceScore(r),0);
-      pool.forEach(r=>out.push({...r,weight:reliability(r)*evidenceScore(r)/(total||1)}));
+      const weighted=pool.map(r=>({row:r,value:evidenceScore(r)*(window.RiftDraftContext?.predictionFactor(active(),r,userSide==='blue'?'red':'blue',events.filter(e=>e.type==='ban').map(e=>e.champ))||1)}));
+      const total=weighted.reduce((n,r)=>n+r.value,0);
+      weighted.forEach(({row:r,value})=>out.push({...r,weight:reliability(r)*value/(total||1)}));
     }
     return out;
   }
@@ -145,7 +146,7 @@
       const safeDiscount=phase2&&response?.answer?Math.min(8,response.answer.value*.3):0;
       const score=evidenceScore(row)*(.65+.35*reliability(row))*(phase2?.65:1)+rankBonus*reliability(row)+replacement.bonus+impactBonus+championImpact+Math.min(phase2?18:10,threat.points*(phase2?.8:.4))+completion+gap+meta-Math.max(answer.points,safeDiscount)-protection.penalty,existing=merged.get(row.champ);
       const context=[...threat.reasons,answer.reason,response?.answer?'Tryggt kitsvar i poolen: '+response.answer.ch:'',gap?'Inget tryggt kitsvar i rollen':'',completion?'Fullbordar deras frontline/engage/peel':'',protection.reason,meta?'Meta: liten bonus, inte huvudskäl':''].filter(Boolean).join(' · ');
-      if(!existing||score>existing.score)merged.set(row.champ,{ch:row.champ,score,reason:sourceText(row)+' · '+replacement.reason+(context?' · '+context:'')});
+      if(!existing||score>existing.score)merged.set(row.champ,{ch:row.champ,score,brief:[row.cm?row.cm+' tävlingspicks':row.recent?row.recent+' senaste OP.GG-games':row.season+' OP.GG-games',row.player,threat.reasons[0]||(gap?'saknar tryggt kitsvar':completion?'fullbordar deras comp':'styrkt comfort')].filter(Boolean).join(' · '),reason:sourceText(row)+' · '+replacement.reason+(context?' · '+context:'')});
     });
     const plan=active()?.phase1Plan;
     const explicit=[plan?.b1,plan?.b2,plan?.b3].filter(Boolean);
@@ -183,6 +184,7 @@
     banCandidates:()=>banRows().slice(0,12).map(r=>r.ch),
     openingBans:()=>step<6?banRows().filter(r=>r.reason.startsWith('Banplan: ')).map(r=>r.ch):[],
     banScore:champ=>banRows().find(r=>r.ch===champ)?.score||0,
+    banShortReason:champ=>{const row=banRows().find(r=>r.ch===champ);return row?(row.reason.startsWith('Banplan: ')?'Banplan: ':'')+row.brief:'';},
     banReason:champ=>active()?banRows().find(r=>r.ch===champ)?.reason:''};
   function update(){
     if(!select)return;

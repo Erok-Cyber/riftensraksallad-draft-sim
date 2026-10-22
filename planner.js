@@ -88,6 +88,7 @@
       phase1Plan:plan.phase1Plan||{b1:"",b2:"",b3:"",note:""},
       conditionalBans:Array.isArray(plan.conditionalBans)?plan.conditionalBans:[],
       ourFallbacks:Array.isArray(plan.ourFallbacks)?plan.ourFallbacks:[],
+      draftBranches:window.RiftDraftContext?.branches(plan)||[],
       gameNotes:plan.gameNotes||{preSeries:"",game1:"",game2:"",general:""}
     };
   }
@@ -328,6 +329,7 @@
         '<button type="button" class="planner-edit-btn" data-planner-action="followup">'+(plan.status==='completed'?'Öppna matchreview':'Reviewa matchen')+'</button>'+
         '<p class="analysis-note">En kort review räcker. Resultaten per game finns under kopplade games.</p></section>':'')+
       (window.RiftPostmatch?.seriesHTML(plan)||'')+
+      (window.RiftDraftContext?.preparationHTML(plan,scoutLineup(plan).flatMap(e=>(e.pool||[]).slice(0,3).map(c=>({champ:c.champ,role:e.role}))))||'')+
       '<div class="planner-phase1">'+
         ['b1','b2','b3'].map((k,i)=>'<div class="planner-ban-call"><span>B'+(i+1)+'</span><strong>'+esc(plan.phase1Plan?.[k]||"Öppen")+'</strong></div>').join("")+
       '</div>'+
@@ -346,13 +348,13 @@
       evidenceHtml(plan)+
       '<div class="planner-preparation">'+(plan.challengermode?cmRosterHtml(plan):(plan.challengermodeUrl?'<section class="planner-section planner-cm-section"><div class="planner-section-head"><h3>Challengermode Live</h3><span class="planner-cm-badge pending">VÄNTAR</span></div><p class="analysis-note">'+esc(cmApiState.error||'Turneringen är länkad. Synka för roster, subs och matchhistorik.')+'</p></section>':''))+'</div>'+
       '<section class="planner-section">'+
-        '<div class="planner-section-head"><h3>Ban-prioritet</h3><span class="analysis-note">3–5 champs</span></div>'+
+        '<div class="planner-section-head"><h3>Ban-prioritet</h3><span class="analysis-note">topp 3 · fler vid behov</span></div>'+
         '<div class="planner-ban-list">'+(bans.length?bans.map((b,i)=>'<div class="planner-ban-row">'+
           '<span class="planner-ban-num">'+(i+1)+'</span>'+
           '<strong class="planner-ban-champ">'+esc(b.champ||"—")+'</strong>'+
           '<span class="planner-ban-type '+esc(b.type||"watch")+'">'+esc(b.type||"watch")+'</span>'+
           '<span class="planner-ban-why">'+esc(b.why||"")+'</span>'+
-        '</div>').join(""):'<span class="analysis-note">Ingen banlista ännu.</span>')+'</div>'+
+        '</div>').map((row,i)=>(i===3?'<details><summary>Visa fler bans</summary>':'')+row).join("")+(bans.length>3?'</details>':''):'<span class="analysis-note">Ingen banlista ännu.</span>')+'</div>'+
       '</section>'+
       '<section class="planner-section">'+
         '<div class="planner-section-head"><h3>Matchanteckningar</h3><span class="analysis-note">uppdatera mellan games</span></div>'+
@@ -410,10 +412,15 @@
           '<textarea data-field="why" placeholder="Varför?">'+esc(b.why||'')+'</textarea>'+
         '</div>').join("")+'</div>'+
       '</section>'+
+      '<details class="planner-section"><summary>Frivilligt: förbered upp till tre draftgrenar</summary><p class="analysis-note">Om de tar X, svarar vi Y. Delas med laget när planen sparas. Brain visar grenen men låser inget pick.</p>'+
+      '<datalist id="peChampions">'+(window.RiftRoster?.catalog?.()||[]).map(ch=>'<option value="'+esc(ch)+'"></option>').join('')+'</datalist>'+
+      [0,1,2].map(i=>'<div class="planner-note-grid">'+field('Om de tar', '<input id="peBranchWhen'+i+'" list="peChampions" placeholder="Sök champion" value="'+esc(plan.draftBranches?.[i]?.when||'')+'">')+field('Svarar vi', '<input id="peBranchReply'+i+'" list="peChampions" placeholder="Sök champion" value="'+esc(plan.draftBranches?.[i]?.reply||'')+'">')+'</div>').join('')+'</details>'+
       '<section class="planner-section"><div class="planner-section-head"><h3>Matchanteckningar</h3></div><div class="planner-note-grid">'+
         field("Inför serien",'<textarea id="pePreSeries">'+esc(notes.preSeries||'')+'</textarea>')+
         field("Game 1",'<textarea id="peGame1">'+esc(notes.game1||'')+'</textarea>')+
         field("Game 2",'<textarea id="peGame2">'+esc(notes.game2||'')+'</textarea>')+
+        field("Game 3 / BO5",'<textarea id="peGame3">'+esc(notes.game3||'')+'</textarea>')+
+        field("Game 4 / BO5",'<textarea id="peGame4">'+esc(notes.game4||'')+'</textarea>')+
         field("Efter matchen / övrigt",'<textarea id="peGeneral" placeholder="Seriescore, vad fungerade och vad ändrar vi nästa gång?">'+esc(notes.general||'')+'</textarea>')+
       '</div></section>';
   }
@@ -433,18 +440,22 @@
     out.players=val("pePlayers").split(/\n+/).map(x=>x.trim()).filter(Boolean);
     out.phase1Plan={b1:val("peB1"),b2:val("peB2"),b3:val("peB3"),note:val("pePhaseNote")};
     out.scoutingConfidence=$("peConfidence")?.value||"preliminary";
-    out.scoutingUpdatedAt=new Date().toISOString().slice(0,10);
+    // Editing match notes is not a scouting refresh.
+    out.scoutingUpdatedAt=plan.scoutingUpdatedAt||'';
     out.banPriority=[...document.querySelectorAll("[data-edit-ban]")].map((row,i)=>({
       champ:row.querySelector('[data-field="champ"]').value.trim(),
       type:row.querySelector('[data-field="type"]').value,
       priority:i+1,
       why:row.querySelector('[data-field="why"]').value.trim()
     })).filter(x=>x.champ);
-    out.gameNotes={preSeries:val("pePreSeries"),game1:val("peGame1"),game2:val("peGame2"),general:val("peGeneral")};
+    out.draftBranches=[0,1,2].map(i=>({when:val('peBranchWhen'+i),reply:val('peBranchReply'+i)})).filter(b=>b.when||b.reply);
+    out.gameNotes={...plan.gameNotes,preSeries:val("pePreSeries"),game1:val("peGame1"),game2:val("peGame2"),game3:val("peGame3"),game4:val("peGame4"),general:val("peGeneral")};
     return normalize(out);
   }
   async function saveCurrent(){
     if(saving||!(await ensureWrite()))return;
+    const rawBranches=[0,1,2].map(i=>({when:$("peBranchWhen"+i)?.value?.trim(),reply:$("peBranchReply"+i)?.value?.trim()})).filter(b=>b.when||b.reply);
+    if(window.RiftDraftContext&&window.RiftDraftContext.branches({draftBranches:rawBranches}).length!==rawBranches.length){alert('Välj två olika, giltiga champions i varje draftgren, eller töm båda fälten.');return;}
     saving=true;
     const plan=collect(editPlan||current());
     const status=$("plannerSaveStatus");
