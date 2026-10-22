@@ -106,7 +106,7 @@
     return '<article class="planner-scout-profile">'+
       '<div class="planner-scout-profile-head"><div><span class="planner-role-chip">'+esc(entry.roleName)+'</span><strong>'+esc(p.riotId||"Okänd spelare")+'</strong></div>'+
       '<small>'+esc(p.tier||"UNRANKED")+
-        (entry.source==="challengermode"
+        (entry.source==="team-confirmed" ? ' · Bekräftad för matchen' : entry.source==="challengermode"
           ?' · RIVALS-roll'
           :entry.source==="challengermode-inferred"
             ?' · CM-starter · rollsignal '+esc(entry.roleConfidence||0)+'%'

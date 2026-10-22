@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 
-import { mergeReview, preserveEvidence } from "./plan-policy.mjs";
+import { mergeReview, preserveEvidence, applyConfirmedLineup } from "./plan-policy.mjs";
 import { seriesHistory } from "./rivals-history.mjs";
 import "./ban-policy.js";
 
@@ -988,10 +988,11 @@ Deno.serve(async(req:Request)=>{
 
       let cmSyncError="";
       if(body?.syncChallengermode===true&&body?.reviewOnly!==true){
-        try{plan=await syncChallengermodePlan(plan)}
+        try{plan=applyConfirmedLineup(await syncChallengermodePlan(plan))}
         catch(err){cmSyncError=clean(err instanceof Error?err.message:err,220)}
       }
 
+      plan=applyConfirmedLineup(plan);
       if(body?.scout===true&&body?.reviewOnly!==true){
         try{plan=await scoutPlan(plan,body?.aiBanPlan===true)}
         catch(err){

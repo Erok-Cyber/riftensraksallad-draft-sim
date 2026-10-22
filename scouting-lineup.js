@@ -90,7 +90,7 @@
       let unresolvedIndex=0;
       const entries=starterRows.map(item=>{
         if(item.lockedRole){
-          return makeEntry(item.row,item.player,item.lockedRole,"challengermode",100);
+          return makeEntry(item.row,item.player,item.lockedRole,item.row.confirmedBy==='team'?"team-confirmed":"challengermode",100);
         }
         const role=best.assign[unresolvedIndex++]||remainingRoles[unresolvedIndex-1]||"";
         const candidateScores=remainingRoles.map(r=>scoutRoleScore(item.player,r));
@@ -138,3 +138,4 @@
   }
   window.RiftScouting={lineup:scoutLineup};
 })();
+

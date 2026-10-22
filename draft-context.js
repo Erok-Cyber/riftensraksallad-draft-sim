@@ -44,7 +44,7 @@ const matchupRules = [
   if(plan){
    if(!plan.scoutingUpdatedAt||!Number.isFinite(age(plan.scoutingUpdatedAt))||age(plan.scoutingUpdatedAt)>14)out.push('Scouting saknas eller är äldre än 14 dagar.');
    if(plan.competitiveEvidence?.rosterChanged)out.push('Motståndarnas roster har ändrats.');
-   if(lineup.length!==5||lineup.some(p=>p.source!=='challengermode'))out.push('Alla fem starters/roller är inte tävlingsbekräftade.');
+   if(lineup.length!==5||lineup.some(p=>!['challengermode','team-confirmed'].includes(p.source)))out.push('Alla fem starters/roller är inte tävlingsbekräftade.');
   }else out.push('Inget motståndarlag valt.');
   if(initialRoster&&initialRoster!==JSON.stringify(window.RiftRoster?.snapshot().active))out.push('Er aktiva femma har ändrats sedan draftförberedelsen.');
   return out;

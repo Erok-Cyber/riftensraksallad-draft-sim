@@ -36,10 +36,10 @@
       const impactRows=played.filter(p=>Number.isFinite(p.performance?.impact));
       const playerImpact=impactRows.length?impactRows.reduce((n,p)=>n+p.performance.impact,0)/impactRows.length:null;
       const recentRole=[...played].reverse().find(p=>roles.includes(p.role))?.role;
-      const lockedRoles=lineup.filter(e=>e.source==='challengermode').map(e=>e.role);
-      const role=entry.source==='challengermode'?entry.role:
+      const lockedRoles=lineup.filter(e=>['challengermode','team-confirmed'].includes(e.source)).map(e=>e.role);
+      const role=['challengermode','team-confirmed'].includes(entry.source)?entry.role:
         recentRole&&!lockedRoles.includes(recentRole)?recentRole:entry.role;
-      const roleCertain=entry.source==='challengermode'||role===recentRole;
+      const roleCertain=['challengermode','team-confirmed'].includes(entry.source)||role===recentRole;
       const add=(champ)=>{
         const ch=canonical(champ);if(!ch)return null;
         let row=out.find(x=>x.champ===ch&&x.player===entry.player.riotId);
