@@ -151,8 +151,19 @@
     const plan=active()?.phase1Plan;
     const explicit=[plan?.b1,plan?.b2,plan?.b3].filter(Boolean);
     const opening=step<6?(explicit.length?explicit:(active()?.banPriority||[]).slice(0,3).map(b=>b.champ).filter(Boolean)):[];
-    const priority=ch=>{const i=opening.indexOf(ch);return i<0?99:i;};
-    return [...merged.values()].map(row=>({...row,reason:(opening.includes(row.ch)?'Banplan: ':'')+row.reason})).sort((a,b)=>priority(a.ch)-priority(b.ch)||b.score-a.score||a.ch.localeCompare(b.ch));
+    const rows=[...merged.values()].sort((a,b)=>b.score-a.score||a.ch.localeCompare(b.ch));
+    const planned=opening.map(ch=>rows.find(r=>r.ch===ch)).find(Boolean),best=rows[0];
+    // Preserve preparation only within a small, explicit tolerance. Never add hidden score.
+    if(planned&&best){
+      if(best.score-planned.score<=8){
+        rows.splice(rows.indexOf(planned),1);rows.unshift(planned);
+        planned.reason='Banplan: '+planned.reason;planned.brief='Banplan: '+planned.brief;
+      }else{
+        const change='Avviker från '+planned.ch+': tydligt högre samlat banvärde ('+Math.round(best.score-planned.score)+' poäng) · ';
+        best.reason=change+best.reason;best.brief=change+best.brief;
+      }
+    }
+    return rows;
   }
   async function loadRivals(plan){
     const id=String(plan?.id||'');
@@ -184,7 +195,7 @@
     banCandidates:()=>banRows().slice(0,12).map(r=>r.ch),
     openingBans:()=>step<6?banRows().filter(r=>r.reason.startsWith('Banplan: ')).map(r=>r.ch):[],
     banScore:champ=>banRows().find(r=>r.ch===champ)?.score||0,
-    banShortReason:champ=>{const row=banRows().find(r=>r.ch===champ);return row?(row.reason.startsWith('Banplan: ')?'Banplan: ':'')+row.brief:'';},
+    banShortReason:champ=>banRows().find(r=>r.ch===champ)?.brief||'',
     banReason:champ=>active()?banRows().find(r=>r.ch===champ)?.reason:''};
   function update(){
     if(!select)return;

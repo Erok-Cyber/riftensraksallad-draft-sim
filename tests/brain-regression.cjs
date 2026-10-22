@@ -170,7 +170,7 @@ tournamentFixture.competitiveEvidence.games=[{picks:[
 const tournament=harness(['live.js','advanced-engine.js','draft-ai.js','scouting-lineup.js','brain-opponent.js'],
  {'rs_ban_plans_cache':JSON.stringify([tournamentFixture]),'rs_brain_opponent':'opponent'});
 tournament.fire('document','DOMContentLoaded');tournament.run('userSide="blue";events=[];step=0;');
-assert.equal(tournament.run('JSON.stringify(banRecommendations())'),JSON.stringify(['Nocturne','Jarvan IV']),'supported opening banplan takes priority');
+assert.equal(tournament.run('JSON.stringify(banRecommendations())'),JSON.stringify(['Jarvan IV','Nocturne']),'materially stronger evidence can override the opening banplan');
 tournament.run('step=12');
 assert.equal(tournament.run('JSON.stringify(banRecommendations())'),JSON.stringify(['Jarvan IV','Nocturne']),'phase two recomputes rather than following opening plan');
 assert(tournament.run('window.RiftOpponent.banReason("Jarvan IV").includes("CM: 1")'));

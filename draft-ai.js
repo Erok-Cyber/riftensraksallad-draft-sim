@@ -691,12 +691,12 @@ function renderRecommendation(){
   const localList=t.type==="ban"?banRecommendations().slice(0,10).map(ch=>({ch})):aiDecision(selectedRole||null);
   const displayKey=JSON.stringify([userSide,step,events,selectedRole,window.RiftRoster.key(),window.RiftOpponent?.key?.()]);
   const stable=t.type==='pick'?aiStableChoices(localList,displayKey,aiDisplayChoice):localList;
-  const ranked=window.RiftGroq?.recommendations(stable)||stable;
+  // Scouted ban order has one authority: the current evidence/comp assessment.
+  // A remote reorder must not silently restore an outdated opening plan.
+  const ranked=t.type==='ban'&&window.RiftOpponent?.active()?localList:(window.RiftGroq?.recommendations(stable)||stable);
   const allowedBans=t.type==='ban'&&window.RiftOpponent?.active()?new Set(window.RiftOpponent.banCandidates()):null;
-  const planned=t.type==='ban'?(window.RiftOpponent?.openingBans?.()||[]):[];
   const candidates=t.type==='ban'?[...ranked,...localList.filter(c=>!ranked.some(r=>r.ch===c.ch))]:ranked;
   const valid=candidates.filter(c=>t.type!=='ban'||(allowedBans?allowedBans.has(c.ch):banIsRelevant(c.ch)));
-  if(planned.length)valid.sort((a,b)=>{const pos=ch=>planned.includes(ch)?planned.indexOf(ch):99;return pos(a.ch)-pos(b.ch);});
   const list=valid.slice(0,3);
   aiShownDecision=t.type==='pick'?{step,side:userSide,eventsKey:JSON.stringify(events.map(e=>[e.type,e.side,e.champ,e.role])),version:1,scope:selectedRole||'all',top3:list.map(c=>({ch:c.ch,role:c.role,score:c.total})),ai:!!list[0]?.groqReason}:null;
   if(t.type==='pick'&&list[0])aiDisplayChoice={key:displayKey,ch:list[0].ch,role:list[0].role};
