@@ -100,6 +100,15 @@
     (role==='jungle'?carry&&dps&&p.front<1:role==='support'?p.peel>=2:role==='top'?p.front>=2&&p.peel>=1.8:role==='mid'?tag('wave')&&(p.engage>=1.2||p.peel>=1.7):p.engage>=1||p.peel>=1.5))return role==='jungle'?'ihållande jungledamage':'setup eller skydd för junglern';
   return '';
  }
- window.RiftProfiles={get,all:()=>profiles,assess,affinity};
+ function coverage(picks){
+  const unknown=picks.filter(p=>!get(p.champ)).map(p=>p.champ),out={unknown};
+  for(const [key,target]of Object.entries({front:3,engage:2.5,peel:2.5})){
+   const values=picks.map(p=>get(p.champ)?.[key]||0).sort((a,b)=>b-a);
+   const ratio=Math.min(1,((values[0]||0)+.35*(values[1]||0))/target);
+   out[key]={ratio,state:ratio===0?'saknas':ratio<1?'delvis':'täckt'};
+  }
+  return out;
+ }
+ window.RiftProfiles={get,all:()=>profiles,assess,affinity,coverage};
 })();
 

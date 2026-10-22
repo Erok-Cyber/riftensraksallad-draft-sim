@@ -201,7 +201,8 @@ function advPickDependency(champ,role){
   if(d.ap>=3&&d.ad===0)add("AD","låser er AP-tungt",2.0);
   if(s.engageQ<1.5&&list.length>=3)add("ENGAGE","kräver tydligare GO-knapp",1.5);
 
-  const penalty=advClamp(deps.reduce((n,x)=>n+x.weight,0),0,7);
+  const scored=deps.filter(d=>!['FRONTLINE','ENGAGE','PEEL'].includes(d.key));
+  const penalty=advClamp(scored.reduce((n,x)=>n+x.weight,0),0,7);
   return {deps,penalty};
 }
 
@@ -219,7 +220,8 @@ function advFamiliarity(champ,role){
 function advCandidateStructuralBonus(champ,role){
   const urgent=advUrgentNeeds();
   if(!urgent.length)return {points:0,label:null};
-  const top=urgent[0];
+  const top=urgent.find(n=>!['FRONTLINE','ENGAGE','PEEL'].includes(n.key));
+  if(!top)return {points:0,label:null};
   let solves=false;
   if(top.key==="FRONTLINE")solves=(ADV_FRONT_Q[champ]||0)>=2||traits.frontline.has(champ);
   if(top.key==="ENGAGE")solves=(ADV_ENGAGE_Q[champ]||0)>=2||traits.engage.has(champ);
@@ -263,12 +265,8 @@ scoreCandidateDetails=function(champ,role,compName){
   if(p.tanks>=2&&ADV_SUSTAINED.has(champ)&&s.damage.sustained===0){
     out.score+=4;track("enemy",4,"sustained mot frontline");out.reasons.push({pts:4,label:"sustained mot frontline"});
   }
-  if(p.dive>=2&&(ADV_PEEL_Q[champ]||0)>=2&&s.peelQ<1.8){
-    out.score+=4;track("enemy",4,"kvalitets-peel");out.reasons.push({pts:4,label:"kvalitets-peel"});
-  }
-  if(s.engageQ<1.8&&(ADV_ENGAGE_Q[champ]||0)>=2.4){
-    out.score+=4;track("structure",4,"pålitlig GO-knapp");out.reasons.push({pts:4,label:"pålitlig GO-knapp"});
-  }
+
+
   out.reasons.sort((a,b)=>b.pts-a.pts);
   out.advanced={dependency:dep};
   return out;

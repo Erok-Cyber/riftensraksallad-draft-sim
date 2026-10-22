@@ -1468,10 +1468,12 @@ function scoreCandidateDetails(champ,role,compName){
   else if((c.alts[role]||[]).includes(champ))add(9*anchorWeight*(window.RiftRoster.affinity(compName,role,champ)?.weight??1),"passar "+compName);
 
   category='structure';
-  if(need.front===0&&traits.frontline.has(champ))add(14,"ger frontline");
-  if(need.engage===0&&traits.engage.has(champ))add(14,"ger engage");
+  const oldCoverage=window.RiftProfiles.coverage(ours()),newCoverage=window.RiftProfiles.coverage([...ours(),{champ,role}]);
+  for(const [key,weight]of Object.entries({front:14,engage:14,peel:9})){
+    const gain=newCoverage[key].ratio-oldCoverage[key].ratio;
+    if(gain>0)add(weight*gain,'täcker '+key+': '+oldCoverage[key].state+' → '+newCoverage[key].state);
+  }
   if(need.dmg<2&&hasSmartTrait(champ,traits.damage,"Marksman"))add(6,"höjer damage");
-  if(need.peel===0&&smartTraits.peel.has(champ)&&(hasOwn("Jinx")||hasOwn("Ashe")||hasOwn("Varus")||hasOwn("Viktor")||hasOwn("Hwei")))add(9,"peel för carry");
   if(need.wave===0&&smartTraits.waveclear.has(champ)&&ours().length>=2)add(6,"fixar waveclear");
   if(need.ranged===0&&smartTraits.rangedDamage.has(champ)&&ours().length>=2)add(7,"ger range");
 
@@ -1499,21 +1501,8 @@ function scoreCandidateDetails(champ,role,compName){
   if(role==="jungle"&&champ==="Lillia"&&p.melee>=2)add(7,"Lillia kitar melee");
   if(role==="jungle"&&champ==="Lillia"&&p.tanks>=1)add(6,"%HP + sustained mot frontline");
   category='structure';
-  if(role==="jungle"&&["Lillia","Graves","Kindred","Viego"].includes(champ)){
-    if(need.front===0&&ours().length>=2){
-      s-=7;scoreLedger.push({category:'risk',points:-7,label:'behöver frontline från annan roll',layer:'base'});
-      reasons.push({pts:-7,label:"behöver frontline från annan roll"});
-    }else if(need.front>0&&need.engage>0){
-      add(6,"laget enablear carry-jungle");
-    }
-    if(need.engage===0&&ours().length>=3){
-      s-=4;scoreLedger.push({category:'risk',points:-4,label:'lite setup för carry-jungle',layer:'base'});
-      reasons.push({pts:-4,label:"lite setup för carry-jungle"});
-    }
-  }
 
   if(ours().some(e=>traits.engage.has(e.champ))&&smartTraits.reliableFollow.has(champ))add(5,"bra follow-up");
-  if(ours().some(e=>traits.immobileCarry.has(e.champ))&&(smartTraits.peel.has(champ)||traits.frontline.has(champ)))add(6,"skyddar egen carry");
 
   // Generic enabling for the team's jungle-carry identity.
   const ownJg=ownRoleMap().jungle;

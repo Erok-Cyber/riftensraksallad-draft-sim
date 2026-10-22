@@ -18,7 +18,7 @@ h.storage.set('rs_match_history',JSON.stringify([1,2,3].map(i=>({...sample(i),po
 h.storage.set('rs_match_history',JSON.stringify([sample(1),sample(2),sample(3)]));h.run('window.RiftRoster.select("support","jacob-support")');assert.equal(signal().points,0,'another five must not inherit this trend');
 h.storage.set('rs_match_history','[null,{}]');assert.equal(signal().points,0);
 h.run('window.RiftRoster.select("support","core-support")');
-const clear=h.run('aiExecution({top:"Malphite",jungle:"Jarvan IV",mid:"Annie",adc:"Jinx",support:"Leona"})');assert(clear.points>0);
+const clear=h.run('aiExecution({top:"Malphite",jungle:"Jarvan IV",mid:"Annie",adc:"Jinx",support:"Leona"})');assert.equal(clear.points,0,'engage coverage must not receive a second execution bonus');
 h.run('comfort.mid.Annie=3;comfort.adc.Jinx=3');assert(h.run('aiExecution({top:"Malphite",jungle:"Jarvan IV",mid:"Annie",adc:"Jinx",support:"Leona"}).points')<clear.points);
 // Observed replacement depth affects ban value, but an absent pool is not invented.
 const plan={id:'fixture',status:'upcoming',competitiveEvidence:{currentRoster:[{riotId:'M#1',role:'mid'}]},scoutingPlayers:[{riotId:'M#1',tier:'GOLD',topChampions:[{champ:'Ahri',seasonGames:100,recentGames:10},{champ:'Annie',seasonGames:1,recentGames:0}]}]};
@@ -29,3 +29,4 @@ scout.run('Object.assign(window.RiftOpponent.active().scoutingPlayers[0].topCham
 scout.run('window.RiftOpponent.active().scoutingPlayers[0].topChampions.pop()');assert(scout.run('window.RiftOpponent.banReason("Ahri")').includes('Alternativ saknas'));
 const reliable=scout.run('window.RiftOpponent.prospects()[0].weight');scout.run('Object.assign(window.RiftOpponent.active().scoutingPlayers[0].topChampions[0],{seasonGames:1,recentGames:0})');assert(scout.run('window.RiftOpponent.prospects()[0].weight')<reliable);
 console.log('PASS: stable ties, meaningful changes, illegal removal, explicit repeated review only, roster isolation, deduplication, recency, solved needs, execution comfort, replacement bans and sample uncertainty.');
+

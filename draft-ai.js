@@ -184,7 +184,7 @@ function aiExecution(map){
   const follow=list.some(e=>e.role!=='support'&&smartTraits.reliableFollow.has(e.champ));
   const unfamiliar=list.filter(e=>(comfort[e.role]?.[e.champ]??5)<7).length;
   const clear=starter&&follow&&n.damage>=2;
-  const points=Math.max(-5,Math.min(5,(clear?5:0)-unfamiliar*1.5));
+  const points=Math.max(-5,Math.min(5,-unfamiliar*1.5))||0;
   return {points,label:unfamiliar?'Execution: '+unfamiliar+' picks under trygg comfort.':clear?'Tydlig engage och uppföljning med trygga picks.':'Execution: spela setup; enkel engage-kedja är inte säkrad.'};
 }
 
@@ -216,10 +216,10 @@ function aiStateScore(map){
   let s=48;
 
   // Structural fundamentals.
-  if(n.front>0)s+=6; else if(n.count>=3)s-=8;
-  if(n.engage>0)s+=6; else if(n.count>=3)s-=7;
+
+
   if(n.damage>=2)s+=5;
-  if(n.peel>0)s+=3;
+
   if(n.wave>0)s+=3;
   if(n.ranged>0)s+=2;
   if(n.pick>0)s+=2;
@@ -233,14 +233,8 @@ function aiStateScore(map){
   }
 
   // Enemy-specific answers.
-  if(p.dive>=2){
-    if(n.peel>0)s+=6;
-    if(n.front>0)s+=3;
-  }
-  if(p.poke>=2){
-    if(n.engage>0||n.pick>0)s+=6;
-    else s-=5;
-  }
+
+
   if(p.melee>=3){
     s+=Math.min(7,n.zone*2+n.ranged);
   }
@@ -248,18 +242,15 @@ function aiStateScore(map){
     if(n.antiTank>0)s+=7;
     else if(n.count>=4)s-=7;
   }
-  if(p.hyper>=1&&p.enchanter>=1){
-    if(n.engage>0||n.pick>0)s+=5;
-    else s-=5;
-  }
+
 
   // Execution depends on this lineup's comfort and actual follow-up.
   s+=aiExecution(map).points;
   // Initiation is only useful when allies can reach the same fight.
   const carries=aiSimList(map).filter(e=>e.role!=="support");
   const follow=carries.filter(e=>smartTraits.reliableFollow.has(e.champ)).length;
-  if(n.count>=4&&n.engage>0&&!follow)s-=7;
-  if(n.count>=4&&!n.wave&&!n.peel)s-=6; // Few options when playing from behind.
+
+
   if(map.jungle&&map.mid&&traits.early.has(map.jungle)&&laneSetupScore(map.mid)>0)s+=3;
 
   // Core comps are priors, not hard locks.
@@ -372,7 +363,7 @@ function aiRisk(champ,role,map){
   const n=aiNeeds(map);
   if(n.count>=3&&n.ad>=3&&n.ap===0){risk+=2;reasons.push("för AD-tungt");}
   if(n.count>=3&&n.ap>=3&&n.ad===0){risk+=2;reasons.push("för AP-tungt");}
-  if(n.count>=4&&n.engage===0){risk+=2;reasons.push("saknar GO-knapp");}
+
   if(enemyProfile().tanks>=2&&n.count>=4&&n.antiTank===0){risk+=2;reasons.push("svagt mot tanks");}
 
   const dep=window.RiftAdvanced?.pickDependency?.(champ,role);
@@ -421,7 +412,7 @@ function aiCandidate(champ,role){
   const dependencyRisk=base.advanced?.dependency?.penalty>=4?2:base.advanced?.dependency?.penalty>=2?1:0;
   score-=Math.max(0,risk.value-dependencyRisk)*2.4;
   const learning=aiReviewSignal(champ,role);
-  score+=Math.max(-3,Math.min(3,history.bonus+learning.points));
+  score+=Math.max(-3,Math.min(3,history.bonus));
   const scouting=window.RiftOpponent?.pickSignal(champ,role);
   score+=scouting?.points||0;
   const responseRisk=aiResponseRisk(map);
@@ -434,7 +425,7 @@ function aiCandidate(champ,role){
   const reasons=base.reasons.filter(x=>x.pts>0&&x.label!=="comfort").sort((a,b)=>b.pts-a.pts).slice(0,3).map(x=>x.label);
   if(role==="support"&&["Galio","Shen"].includes(champ)){
     const hasSetup=ours().some(e=>ADV_HARD_ENGAGE.has(e.champ));
-    if(!hasSetup){score-=12;executionPenalty=-12;}
+    // Setup coverage is scored once in the profile-based structural assessment.
     reasons.unshift(hasSetup?"follow-up på lagets engage":"behöver engage/setup från annan roll");
   }
   if(completion.penalty)reasons.unshift(completion.label);
@@ -454,7 +445,7 @@ function aiCandidate(champ,role){
     teamPreference:preferred==='TEAMFIGHT CONTROL'&&role==='mid'?aiTeamfightMidPriority(champ):0,
     structure:(state-50)*AI_CONFIG.stateWeight,lookahead:Math.max(-8,Math.min(8,(lookahead-state)*AI_CONFIG.lookaheadWeight)),
     flexibility:flex*AI_CONFIG.flexibilityWeight,risk:-Math.max(0,risk.value-dependencyRisk)*2.4,
-    learning:Math.max(-3,Math.min(3,history.bonus+learning.points)),scouting:scouting?.points||0,
+    learning:Math.max(-3,Math.min(3,history.bonus)),scouting:scouting?.points||0,
     responseRisk:-responseRisk,completion:-completion.penalty,pivot:compRanks[1]?.score>=9?2:0
   };
   scoreBreakdown.execution=executionPenalty;
@@ -476,7 +467,10 @@ function aiResponseRisk(map,scouted){
   if(n.count<3||!predicted.length)return 0;
   // Compare observed replies role by role, combining typical exposure with a bounded
   // adverse reply. Weights are evidence strength, never claimed pick probabilities.
-  const danger=p=>(n.peel===0&&traits.dive.has(p.champ)?2:0)+(n.antiTank===0&&traits.tanks.has(p.champ)?1.5:0)+(n.engage===0&&traits.poke.has(p.champ)?2:0);
+  // Matchup exposure, not a second missing-peel/engage penalty.
+  const exposed=aiSimList(map).filter(e=>e.role!=='support'&&traits.immobileCarry.has(e.champ)).length;
+  const antiDive=aiSimList(map).some(e=>(window.RiftProfiles.get(e.champ)?.peel||0)>=2.5);
+  const danger=p=>(traits.dive.has(p.champ)&&!antiDive?Math.min(2,exposed):0)+(n.antiTank===0&&traits.tanks.has(p.champ)?1.5:0);
   let risk=0;
   for(const role of roles){
     const replies=predicted.filter(p=>p.role===role&&p.weight>0);
@@ -566,6 +560,13 @@ function aiDecision(forcedRole=null){
   });
 
   options.sort((a,b)=>b.total-a.total);
+  // Tie-break only: no new score layer. Never trade away comfort to hide a role.
+  if(options.length){
+    const best=options[0],near=options.filter(x=>best.total-x.total<3&&x.comfort>=best.comfort);
+    near.sort((a,b)=>b.comfort-a.comfort||a.risk.value-b.risk.value||(ours().length<2?(window.RiftDraftContext?.flexRoles(b.ch).length||0)-(window.RiftDraftContext?.flexRoles(a.ch).length||0):0)||b.total-a.total);
+    const safe=near[0];safe.safetyNote=near.length>1?'Jämna alternativ · tryggast enligt comfort och risk'+(ours().length<2&&(window.RiftDraftContext?.flexRoles(safe.ch).length||0)>1?' · döljer rollen':''):'';
+    if(safe!==best){options.splice(options.indexOf(safe),1);options.unshift(safe);}
+  }
   return options;
 }
 
@@ -733,7 +734,7 @@ function renderRecommendation(){
     more.hidden=false;
     valid.slice(3,10).forEach(x=>{addButton(x,moreChoices);const note=document.createElement('small');note.textContent=window.RiftOpponent?.banReason(x.ch)||generalBanReason(x.ch);moreChoices.appendChild(note);});
   }
-  $("recommendStrength").textContent=t.type==="pick"?aiConfidenceLabel(list[1]?top.total-list[1].total:null)+" · poängskillnad, inte vinstsäkerhet":window.RiftOpponent?.active()?"Endast styrkta motståndarpicks":"Alternativ om banplanen ändras";
+  $("recommendStrength").textContent=t.type==="pick"?(top.safetyNote||aiConfidenceLabel(list[1]?top.total-list[1].total:null))+" · poängskillnad, inte vinstsäkerhet":window.RiftOpponent?.active()?"Endast styrkta motståndarpicks":"Alternativ om banplanen ändras";
   if(top.groqReason){
     $("recommendReason").textContent=top.groqReason+(top.groqComparison?' · Jämförelse: '+top.groqComparison:'')+(top.groqRisk?' · Risk: '+top.groqRisk:'');
     $("recommendStrength").textContent='AI-bedömning · förslag inom aktuell championpool';
@@ -757,8 +758,28 @@ function renderRecommendation(){
   renderAIInsight();
 }
 
+let aiPreparationRoster=null;
+function renderPreparation(){
+  const api=window.RiftDraftContext,host=document.getElementById('brainPreparationDetails'),warning=document.getElementById('brainWarnings');if(!api||!host||!warning)return;
+  aiPreparationRoster??=JSON.stringify(window.RiftRoster.snapshot().active);
+  const plan=window.RiftOpponent?.active(),lineup=plan?(window.RiftScouting?.lineup(plan)||[]):[];
+  const warnings=api.warnings(plan,window.RiftStats?.getStatus?.(),lineup,aiPreparationRoster);
+  warning.textContent=warnings.length?'Kontrollera före draft: '+warnings.join(' '):'Underlaget är aktuellt · kontrollera ändå femman före start.';
+  const coverage=window.RiftProfiles.coverage(ours());
+  const parts=['Behov: '+['front','engage','peel'].map(k=>k+' '+coverage[k].state).join(' · ')];
+  if(coverage.unknown.length)parts.push('Okänd profil: '+coverage.unknown.join(', '));
+  const prospects=window.RiftOpponent?.prospects?.()||[];
+  const threats=roles.flatMap(role=>prospects.filter(p=>p.role===role).slice(0,3));
+  for(const row of api.answers(threats,{map:ownRoleMap(),used:[...unavailable()],rules:specificRules}))parts.push(roleNames[row.role]+' · '+row.champ+' → '+row.label);
+  if(!threats.length)parts.push('Inga styrkta öppna motståndarpicks att bedöma.');
+  host.replaceChildren();for(const line of parts){const p=document.createElement('p');p.textContent=line;host.appendChild(p);}
+}
+document.addEventListener('DOMContentLoaded',renderPreparation);
+document.addEventListener('riftstats:change',renderPreparation);
+document.addEventListener('riftroster:change',renderPreparation);
 const deterministicRender = render;
 render = function(){
+  renderPreparation();
   try{
     deterministicRender();
   }catch(err){
