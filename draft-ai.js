@@ -658,7 +658,7 @@ function renderScoreAudit(list){
   if(box.hidden)return;
   const details=document.createElement('details'),summary=document.createElement('summary');
   summary.textContent='Test Mode · visa poängfördelning';details.appendChild(summary);
-  const note=document.createElement('p');note.textContent='Lokalmotorns poäng, inte vinstchans. AI kan ändra ordningen utan att ändra poängen. Poängbidragen visar befintliga lager; överlapp är ännu inte borttagna.';details.appendChild(note);
+  const note=document.createElement('p');note.textContent='Lokalmotorns poäng, inte vinstchans. AI och comfort-baserade skiljeval kan ändra ordningen utan att ändra poängen. Frontline, engage och peel har en gemensam behovsbedömning; visa reglerna för att granska bidragen.';details.appendChild(note);
   for(const candidate of list){
     const audit=aiScoreAudit(candidate),section=document.createElement('section'),title=document.createElement('h4');
     title.textContent=candidate.ch+' · '+roleNames[candidate.role];section.appendChild(title);
