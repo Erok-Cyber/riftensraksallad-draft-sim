@@ -136,8 +136,15 @@
       const protection=ownBanCost(row.champ);
       const threat=banThreat(row.champ),answer=ours().length?banAnswerDiscount(row.champ):{points:0,reason:''};
       const meta=window.RiftStats?.banSignal?.(row.champ)?.points||0;
-      const score=evidenceScore(row)*(.65+.35*reliability(row))+rankBonus*reliability(row)+replacement.bonus+impactBonus+championImpact+Math.min(10,threat.points*.4)+meta-answer.points-protection.penalty,existing=merged.get(row.champ);
-      const context=[...threat.reasons,answer.reason,protection.reason,meta?'Meta: liten bonus, inte huvudskäl':''].filter(Boolean).join(' · ');
+      const phase2=step>=12;
+      const response=window.RiftDraftContext?.answers([row],{map:ownRoleMap(),used:[...unavailable()],rules:specificRules})[0];
+      const gap=phase2&&response&&!response.answer&&!response.unknown?6:0;
+      const covered=window.RiftProfiles?.coverage(enemies());
+      const completed=window.RiftProfiles?.coverage([...enemies(),{champ:row.champ,role:row.role}]);
+      const completion=phase2&&covered&&completed?Math.min(8,['front','engage','peel'].reduce((sum,k)=>sum+Math.max(0,completed[k].ratio-covered[k].ratio)*4,0)):0;
+      const safeDiscount=phase2&&response?.answer?Math.min(8,response.answer.value*.3):0;
+      const score=evidenceScore(row)*(.65+.35*reliability(row))*(phase2?.65:1)+rankBonus*reliability(row)+replacement.bonus+impactBonus+championImpact+Math.min(phase2?18:10,threat.points*(phase2?.8:.4))+completion+gap+meta-Math.max(answer.points,safeDiscount)-protection.penalty,existing=merged.get(row.champ);
+      const context=[...threat.reasons,answer.reason,response?.answer?'Tryggt kitsvar i poolen: '+response.answer.ch:'',gap?'Inget tryggt kitsvar i rollen':'',completion?'Fullbordar deras frontline/engage/peel':'',protection.reason,meta?'Meta: liten bonus, inte huvudskäl':''].filter(Boolean).join(' · ');
       if(!existing||score>existing.score)merged.set(row.champ,{ch:row.champ,score,reason:sourceText(row)+' · '+replacement.reason+(context?' · '+context:'')});
     });
     const plan=active()?.phase1Plan;
@@ -193,6 +200,7 @@
     hint.textContent=replay?'Historisk övning använder ingen aktuell motståndarscouting.':plan
       ?(offline?'Cachad scouting · ':'')+summary()
       :(loading?'Laddar lag… ':offline?'Kunde inte uppdatera lagen. ':'')+(plans.length?'Välj ett lag för anpassade bans och picks.':'Lägg till en match i Ban Planner för att välja motståndare.');
+    if(typeof renderPreparation==='function')renderPreparation();
   }
   select?.addEventListener('change',()=>{
     selected=select.value;try{sessionStorage.setItem('rs_brain_opponent',selected);}catch{}

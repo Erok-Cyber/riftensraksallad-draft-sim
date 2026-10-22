@@ -723,6 +723,7 @@ function renderRecommendation(){
     if(item.role)b.dataset.suggestRole=item.role;
     b.textContent=item.ch;parent.appendChild(b);
     if(t.type==='pick'&&item!==top){const note=document.createElement('small');note.textContent=' · '+aiAlternativeReason(top,item);parent.appendChild(note);}
+    if(t.type==='ban'&&item!==top&&list.includes(item)){const note=document.createElement('small');note.textContent=' · '+(window.RiftOpponent?.banReason(item.ch)||generalBanReason(item.ch));parent.appendChild(note);}
   };
   addButton(top,$("recommendPicks"));
   $("recommendReason").textContent=top.reasons?.slice(0,2).join(" · ")||window.RiftOpponent?.banReason(top.ch)||(t.type==='ban'?generalBanReason(top.ch):"Baserat på comp och visade hot.");
@@ -777,6 +778,7 @@ function renderPreparation(){
 document.addEventListener('DOMContentLoaded',renderPreparation);
 document.addEventListener('riftstats:change',renderPreparation);
 document.addEventListener('riftroster:change',renderPreparation);
+window.RiftRoster?.subscribe(renderPreparation);
 const deterministicRender = render;
 render = function(){
   renderPreparation();
