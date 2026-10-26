@@ -37,6 +37,15 @@
     const counts=new Map();games.forEach(g=>(g.picks||[]).forEach(p=>{if(p.champ)counts.set(p.champ,(counts.get(p.champ)||0)+1);}));
     $('overview').innerHTML+='<div class="frequent"><span>Mest spelade</span>'+[...counts].sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0])).slice(0,8).map(([c,n])=>'<button type="button" data-champion="'+esc(c)+'">'+esc(c)+' · '+n+'</button>').join('')+'</div>';
     $('overview').querySelectorAll('[data-champion]').forEach(b=>b.onclick=()=>{$('search').value=b.dataset.champion;render();});
+    if(window.RiftRivalsThreats){
+      $('threats').innerHTML=window.RiftRivalsThreats.render(data,plan);
+      $('threats').querySelectorAll('[data-threat-champ]').forEach(b=>b.onclick=()=>{
+        $('search').value=b.dataset.threatChamp;$('role').value='';$('result').value='';render();$('matches').scrollIntoView({block:'start'});
+      });
+      $('threats').querySelectorAll('[data-threat-player-only]').forEach(b=>b.onclick=()=>{
+        $('search').value=b.dataset.threatPlayerOnly;$('role').value='';$('result').value='';render();$('matches').scrollIntoView({block:'start'});
+      });
+    }
     const visible=filtered(all,search,result,role);
     $('count').textContent=visible.length+' serier · '+visible.reduce((n,s)=>n+s.games.length,0)+' games visas';
     $('matches').innerHTML=visible.length?visible.map(s=>{
@@ -49,7 +58,7 @@
   function focusSeries(){const el=document.getElementById(location.hash.slice(1));if(el?.classList.contains('series')){el.open=true;el.scrollIntoView({block:'start'});}}
   async function select(id){
     const ticket=++requestId;plan=plans.find(p=>String(p.id)===String(id));data=null;openSeries.clear();
-    $('overview').replaceChildren();$('matches').replaceChildren();$('count').textContent='';
+    $('overview').replaceChildren();$('threats').replaceChildren();$('matches').replaceChildren();$('count').textContent='';
     if(!plan){$('status').textContent='Laget finns inte i de tillgängliga banplanerna. Välj ett annat lag.';return;}
     $('team').value=String(plan.id);query.set('plan',plan.id);history.replaceState(null,'','?'+query.toString()+location.hash);
     document.title=plan.opponent+' · Rivals matcharkiv';

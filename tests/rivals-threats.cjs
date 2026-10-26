@@ -1,0 +1,15 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+let roster=[{cmUsername:'Carry',player:{riotId:'Carry#EUW'}},{cmUsername:'Support',player:{riotId:'Sup#EUW'}},{cmUsername:'New',player:{riotId:'New#EUW'}}];
+const ctx={window:{RiftScouting:{lineup:()=>roster}},Map,Set};vm.createContext(ctx);vm.runInContext(fs.readFileSync('rivals-threats.js','utf8'),ctx);
+const api=ctx.window.RiftRivalsThreats;
+const game=(id)=>({id,result:'win',picks:[{player:'Carry',champ:'Jinx',performance:{impact:.7,damageShare:.35,killParticipation:.8}},{player:'Support',champ:'Thresh',performance:{impact:.2,damageShare:.08,killParticipation:.9}},{player:'OldSub',champ:'Ahri',performance:{impact:1}}]});
+const data={series:[{games:[game('1'),game('2'),game('3'),game('4'),game('4')]}]};
+const s=api.summarize(data,{});assert.equal(s.rows.length,2);assert.equal(s.rows[0].name,'Carry');assert.equal(s.rows[0].games,4);assert.equal(s.rows[0].champions[0].games,4);assert.equal(s.rows[0].signal,24*.7*4/9);assert(s.missing.includes('New#EUW'));
+assert(!s.rows.some(p=>p.name==='OldSub'));
+const small=api.summarize({series:[{games:[game('a')]}]},{});assert(small.rows.every(p=>p.signal===null));
+const partial=game('p');partial.partial=true;assert.equal(api.summarize({series:[{games:[partial]}]},{}).rows[0].impactGames,0);
+const missing=game('m');missing.result='';delete missing.picks[0].performance;assert.equal(api.summarize({series:[{games:[missing]}]},{}).rows.find(p=>p.name==='Carry').champions[0].known,0);
+roster=[];assert.equal(api.summarize(data,{}).scoped,false);assert.equal(api.summarize(data,{}).rows.length,3);
+const html=api.render({partial:true,series:[{games:[{picks:[{player:'<img>',champ:'<script>'}]}]}]},{});assert(!html.includes('<script>'));assert(html.includes('&lt;script&gt;'));assert(html.includes('delvis'));assert(html.includes('LITET UNDERLAG'));assert(html.includes('Aktiv femma saknas'));
+assert(api.render({series:[]},{}).includes('Inga registrerade'));
+console.log('PASS: active roster only, impact shrinkage, deduplication, small/missing/partial samples, missing starters, honest fallback and escaping');
