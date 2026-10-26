@@ -14,12 +14,12 @@ const ui={window:{RiftScouting:{lineup:()=>roles.map((role,i)=>({role,cmUsername
 vm.createContext(ui);vm.runInContext(fs.readFileSync(path.join(root,'rivals-history.js'),'utf8').replace('window.RiftRivals={mount,load};','window.RiftRivals={mount,orderedPicks,rows};'),ui);
 const picks=[3,1,4,0,2].map(i=>({player:'Player'+i,champ:'Champ'+i}));
 const sorted=ui.window.RiftRivals.orderedPicks(picks,{});
-assert(sorted.every(p=>p.role===''&&!p.inferred));assert.equal(sorted.map(p=>p.player).join(','),picks.map(p=>p.player).join(','));
+assert(sorted.every(p=>p.inferred&&p.roleUncertain));assert.equal(new Set(sorted.map(p=>p.role)).size,5);
 assert.equal(picks[0].player,'Player3','do not mutate historical data');
 const known=ui.window.RiftRivals.orderedPicks([{player:'Player0',champ:'X',role:'support'}],{});assert.equal(known[0].role,'support');assert.equal(known[0].inferred,false);
-assert.equal(ui.window.RiftRivals.orderedPicks([{player:'Unknown',champ:'X'}],{})[0].role,'');
+assert(ui.window.RiftRivals.orderedPicks([{player:'Unknown',champ:'X'}],{})[0].roleUncertain);
 const html=ui.window.RiftRivals.rows({series:[{team:'<script>',games:[{number:1,picks}]}]},{});
-assert(!html.includes('TOP ≈'));assert(html.includes('Historiska roller saknas'));assert(html.includes('ROLL OKÄND'));assert(!html.includes('<script>'));
+assert(html.includes('TOP ≈ ?'));assert(html.includes('Sannolik roll utifrån hela femmans champions'));assert(!html.includes('<script>'));
 console.log('PASS: early-brief path directions, no-jungle fallback, AI-safe display, no current-lineup role leakage, historical role precedence, unknown players and escaping.');
 
 
