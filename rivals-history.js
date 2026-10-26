@@ -5,15 +5,12 @@
   const date=v=>Number.isFinite(Date.parse(v))?new Date(v).toLocaleDateString('sv-SE',{day:'numeric',month:'short'}):'Datum saknas';
   const roleOrder=['top','jungle','mid','adc','support'];
   function orderedPicks(picks,plan){
-    const lineup=window.RiftScouting?.lineup?.(plan)||[];
-    const identity=v=>String(v||'').trim().toLowerCase();
-    const rows=picks.map((p,index)=>{
-      if(roleOrder.includes(p.role))return {...p,index,inferred:false};
-      const matches=lineup.filter(e=>e.roleConfidence>0&&e.cmUsername&&identity(e.cmUsername)===identity(p.player));
-      const role=matches.length===1&&roleOrder.includes(matches[0].role)?matches[0].role:'';
-      // Current lineup roles are a display fallback, not proof of a historical role.
-      return {...p,index,role,inferred:!!role};
-    });
+    // A current starter's role is not evidence of their role in an older game.
+    // Keep only roles attached to the historical pick; never use lineup order,
+    // current scouting, champion stereotypes or remaining slots as proof.
+    const rows=picks.map((p,index)=>({
+      ...p,index,role:roleOrder.includes(p.role)&&!p.inferred?p.role:'',inferred:false
+    }));
     return rows.sort((a,b)=>(roleOrder.includes(a.role)?roleOrder.indexOf(a.role):5)-(roleOrder.includes(b.role)?roleOrder.indexOf(b.role):5)||a.index-b.index);
   }
   function archiveUrl(plan,series){
@@ -26,7 +23,7 @@
       (series.length?series.map(s=>'<details class="rivals-series"><summary><span><strong>'+esc(s.team)+' <span class="rivals-vs">vs</span> '+esc(s.opponent||'Motståndare saknas')+'</strong><small>'+esc(date(s.playedAt))+' · '+(s.games||[]).length+' registrerade games</small></span></summary>'+
         '<div class="rivals-games"><a class="rivals-archive-link" target="_blank" rel="noopener" href="'+esc(archiveUrl(plan,s))+'">Öppna serien i matcharkivet ↗</a>'+((s.games||[]).length?(s.games||[]).map(g=>'<section class="rivals-game"><h4>Game '+esc(g.number)+'<span class="rivals-result '+(g.result==='win'?'win':g.result==='loss'?'loss':'')+'">'+(g.result==='win'?'W · Vinst':g.result==='loss'?'L · Förlust':g.result==='draw'?'Oavgjort':'Resultat saknas')+'</span></h4>'+
           ((g.picks||[]).length?'<ul class="rivals-picks">'+orderedPicks(g.picks,plan).map(p=>'<li><span>'+esc(p.role?p.role.toUpperCase()+(p.inferred?' ≈':''):'ROLL OKÄND')+'</span><strong>'+esc(p.champ)+'</strong><span>'+esc(p.player)+(p.performance?' · '+esc(p.performance.kills!=null&&p.performance.deaths!=null&&p.performance.assists!=null?[p.performance.kills,p.performance.deaths,p.performance.assists].join('/'):'')+(p.performance.damageShare!=null?' · '+Math.round(p.performance.damageShare*100)+'% lagskada':''):'')+'</span></li>').join('')+'</ul>'+
-            (orderedPicks(g.picks,plan).some(p=>p.inferred)?'<p class="rivals-note">≈ Rollordning uppskattad från aktuell scouting; historisk roll är inte bekräftad.</p>':''):'')+
+            (orderedPicks(g.picks,plan).some(p=>!p.role)?'<p class="rivals-note">Historiska roller saknas i underlaget. Spelarna visas utan uppskattad roll.</p>':''):'')+
           ((g.picks||[]).length<5?'<p class="rivals-note">'+((g.picks||[]).length?'Vissa championval saknas.':'Championdata saknas för detta game.')+'</p>':'')+'</section>').join(''):'<p class="rivals-note">Inga spelade games registrerade. Serien kan vara administrativt avgjord.</p>')+'</div></details>').join(''):'<p class="rivals-note">Inga spelade Rivals-serier tillgängliga ännu.</p>');
   }
   async function load(plan){

@@ -18,6 +18,16 @@ const html=api.renderGame({number:1,picks:[{champ:'<script>',player:'<img onerro
 assert(!html.includes('<script>'));assert(html.includes('&lt;img'));assert(html.includes('RESULTAT SAKNAS'));assert(html.includes('ofullständig'));assert(html.includes('Vissa championval saknas'));
 const url=ctx.window.RiftRivals.archiveUrl({id:'a&b'},{id:'s#1'});
 assert.equal(url,'rivals.html?plan=a%26b#series-s%231');
-for(const page of ['live.html','index.html'])assert(fs.readFileSync(page,'utf8').includes('rivals-history.js?v=20261026-1'));
+for(const page of ['live.html','index.html'])assert(fs.readFileSync(page,'utf8').includes('rivals-history.js?v=20261026-roles2'));
 assert(fs.readFileSync('rivals-history.js','utf8').includes('rel="noopener"'));
 console.log('PASS: archive filters, unknown results/roles, partial scores, safe markup and shared deep links');
+
+// Regression: current scouting must never relabel historical games.
+ctx.window.RiftScouting.lineup=()=>[{cmUsername:'Stingyx#',role:'mid',roleConfidence:100},{cmUsername:'DahGasoline',role:'support',roleConfidence:100}];
+const historic=ctx.window.RiftRivals.orderedPicks([{player:'Stingyx#',champ:'Thresh'},{player:'DahGasoline',champ:'Gangplank'}],{});
+assert(historic.every(p=>p.role===''&&!p.inferred));
+const explicit=ctx.window.RiftRivals.orderedPicks([{champ:'Thresh',role:'support'},{champ:'Gangplank',role:'top'},{champ:'Viego',role:'jungle',inferred:true}],{});
+assert.equal(explicit[0].role,'top');assert.equal(explicit[1].role,'support');assert.equal(explicit[2].role,'');
+assert(api.renderGame({picks:[{player:'Stingyx#',champ:'Thresh'}]},'','').includes('ROLL OKÄND'));
+assert.equal(api.filtered([{games:[{picks:[{player:'Stingyx#',champ:'Thresh'}]}]}],'','','mid').length,0);
+console.log('PASS: historical roles do not inherit current scouting, inferred roles or roster order');

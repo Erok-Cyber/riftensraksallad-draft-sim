@@ -26,7 +26,7 @@
       const image=icons.get(p.champ);
       const matched=(!!search&&norm(p.champ+' '+p.player).includes(search))||(!!role&&(role==='unknown'?!p.role:p.role===role));
       return '<div class="pick'+(matched?' match':'')+'"><span class="role">'+esc((roles[p.role]||'ROLL OKÄND')+(p.inferred?' ≈':''))+'</span><div class="portrait">'+(image?'<img loading="lazy" alt="" src="'+esc(image)+'">':esc(String(p.champ||'?').slice(0,2)))+'</div><strong>'+esc(p.champ)+'</strong><span class="player">'+esc(p.player||'Spelare saknas')+'</span>'+(kda?'<p class="performance">'+esc(kda)+' <span class="note">KDA</span></p>':'')+(Number.isFinite(perf.damageShare)?'<p class="note">'+Math.round(perf.damageShare*100)+'% av lagskadan</p>':'')+'</div>';
-    }).join('')+'</div>'+(rows.length<5?'<p class="note">'+(rows.length?'Vissa championval saknas.':'Championdata saknas för detta game.')+'</p>':'')+(rows.some(p=>p.inferred)?'<p class="note">≈ Roll uppskattad från aktuell scouting.</p>':'')+(g.partial?'<p class="note">Statistiken för detta game är ofullständig.</p>':'')+'</article>';
+    }).join('')+'</div>'+(rows.length<5?'<p class="note">'+(rows.length?'Vissa championval saknas.':'Championdata saknas för detta game.')+'</p>':'')+(rows.some(p=>!p.role)?'<p class="note">Historiska roller saknas i underlaget. Spelarna visas utan uppskattad roll.</p>':'')+(g.partial?'<p class="note">Statistiken för detta game är ofullständig.</p>':'')+'</article>';
   }
   function render(){
     if(!data)return;
