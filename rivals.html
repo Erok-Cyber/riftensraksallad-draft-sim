@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="sv">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Rivals matcharkiv · Riftensräksallad</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Oxanium:wght@500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="rivals-page.css?v=20261026-1">
+</head>
+<body>
+<header class="topbar"><a href="live.html" class="brand">RIFTENSRÄKSALLAD <span>DRAFT OS</span></a><nav aria-label="Huvudmeny"><a href="index.html?workspace=planner">Ban Planner</a><a href="live.html">Draft Brain</a><a href="rivals.html" aria-current="page">Rivals</a></nav></header>
+<main>
+<div class="intro"><div><p class="eyebrow">SCOUTING / MATCHARKIV</p><h1>Deras historia.<br><span>Er nästa fördel.</span></h1><p class="lead">Gå igenom tidigare Rivals-serier och se vilka champions laget faktiskt har spelat.</p></div><label class="team-label" for="team">VÄLJ LAG / BANPLAN<select id="team" disabled><option>Hämtar lag…</option></select></label></div>
+<div id="status" class="status" role="status" aria-live="polite">Hämtar banplaner…</div>
+<section id="overview" aria-label="Lagets matchöversikt"></section>
+<form id="filters" class="filters" role="search"><label for="search">Sök champion, spelare eller motståndare<input id="search" type="search" placeholder="T.ex. Viego eller Krillesnille" autocomplete="off"></label><label for="result">Resultat<select id="result"><option value="">Alla resultat</option><option value="win">Vinst</option><option value="loss">Förlust</option><option value="unknown">Resultat saknas</option></select></label><label for="role">Roll<select id="role"><option value="">Alla roller</option><option value="top">Top</option><option value="jungle">Jungle</option><option value="mid">Mid</option><option value="adc">Bot</option><option value="support">Support</option><option value="unknown">Okänd roll</option></select></label><button type="reset">Rensa filter</button></form>
+<div class="section-head"><h2>Tidigare serier</h2><span id="count" aria-live="polite"></span></div>
+<div id="matches"></div>
+<p class="footnote">Endast registrerad tävlingsdata. ≈ anger roll uppskattad från aktuell scouting, inte en bekräftad historisk roll. Saknade picks och resultat visas som saknade.</p>
+</main>
+<script src="db-config.js"></script><script src="scouting-lineup.js"></script><script src="rivals-history.js?v=20261026-1"></script><script src="rivals-page.js?v=20261026-1"></script>
+</body></html>
