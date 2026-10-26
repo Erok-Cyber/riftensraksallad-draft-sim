@@ -62,6 +62,10 @@
     if(!plan){$('status').textContent='Laget finns inte i de tillgängliga banplanerna. Välj ett annat lag.';return;}
     $('team').value=String(plan.id);query.set('plan',plan.id);history.replaceState(null,'','?'+query.toString()+location.hash);
     document.title=plan.opponent+' · Rivals matcharkiv';
+    document.querySelector('.intro h1').innerHTML=plan.isOwnTeam?'Riftensräksallad 🦐<br><span>Fem spelare. En räksallad.</span>':'Deras historia.<br><span>Er nästa fördel.</span>';
+    document.querySelector('.intro .eyebrow').textContent=plan.isOwnTeam?'VÅRT LAG / RIVALS':'SCOUTING / MATCHARKIV';
+    document.querySelector('.intro .lead').textContent=plan.isOwnTeam?'Våra matcher, våra comfortpicks och spelarna de helst slipper möta. Samma statistik som för motståndarna – nu är det vår tur att bli scoutade.':'Gå igenom tidigare Rivals-serier och se vilka champions laget faktiskt har spelat.';
+
     $('status').textContent='Hämtar '+plan.opponent+'s tidigare Rivals-matcher…';
     try{
       const loaded=await window.RiftRivals.load(plan);if(ticket!==requestId)return;data=loaded;
@@ -78,6 +82,11 @@
       const body=await res.json();if(!Array.isArray(body.plans))throw Error('Data');
       plans=body.plans.map(r=>({...r.payload,id:r.id,opponent:r.opponent||r.payload?.opponent})).filter(p=>p.id&&(p.challengermode||p.challengermodeUrl));
       plans.sort((a,b)=>String(a.opponent).localeCompare(String(b.opponent),'sv'));
+      // Use the most represented saved tournament, keeping our view out of ban plans.
+      const tournaments=new Map();plans.forEach(p=>{const id=p.challengermode?.tournamentId;if(id)tournaments.set(id,(tournaments.get(id)||0)+1);});
+      const tournament=[...tournaments].sort((a,b)=>b[1]-a[1])[0]?.[0];
+      const source=plans.find(p=>p.challengermode?.tournamentId===tournament&&tournament);
+      if(source)plans.unshift({id:'riftensraksallad',opponent:'Riftensräksallad 🦐',isOwnTeam:true,sourcePlanId:source.id,challengermode:{tournamentId:tournament}});
       $('team').innerHTML=plans.length?plans.map(p=>'<option value="'+esc(p.id)+'">'+esc(p.opponent)+(p.scheduledAt?' · '+esc(date(p.scheduledAt)):'')+'</option>').join(''):'<option>Inga lag med Rivals-koppling</option>';
       $('team').disabled=!plans.length;
       if(!plans.length){$('status').textContent='Lägg till en Rivals-koppling på lagets plan i Ban Planner först.';return;}

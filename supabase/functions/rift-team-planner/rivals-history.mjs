@@ -85,3 +85,10 @@ export function seriesHistory(series,teamName,champions=new Map()){
   });
   return {id:clean(series.id),team:clean(target.name),opponent:rivals.join(' / '),title:clean(series.title),playedAt:series.startedAt||'',games};
 }
+
+
+// Fixed own-team projection: reuse a known tournament, never opponent cached series.
+export function ownTeamHistoryPlan(plan){
+  return {opponent:'Riftens Räksallad',challengermodeTeamName:'Riftens Räksallad',
+    challengermode:{tournamentId:plan.challengermode?.tournamentId,teamName:'Riftens Räksallad',series:[]}};
+}

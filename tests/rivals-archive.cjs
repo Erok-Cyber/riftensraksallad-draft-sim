@@ -18,7 +18,7 @@ const html=api.renderGame({number:1,picks:[{champ:'<script>',player:'<img onerro
 assert(!html.includes('<script>'));assert(html.includes('&lt;img'));assert(html.includes('RESULTAT SAKNAS'));assert(html.includes('ofullständig'));assert(html.includes('Vissa championval saknas'));
 const url=ctx.window.RiftRivals.archiveUrl({id:'a&b'},{id:'s#1'});
 assert.equal(url,'rivals.html?plan=a%26b#series-s%231');
-for(const page of ['live.html','index.html'])assert(fs.readFileSync(page,'utf8').includes('rivals-history.js?v=20261026-roles3'));
+for(const page of ['live.html','index.html'])assert(fs.readFileSync(page,'utf8').includes('rivals-history.js?v=20261026-own1'));
 assert(fs.readFileSync('rivals-history.js','utf8').includes('rel="noopener"'));
 console.log('PASS: archive filters, unknown results/roles, partial scores, safe markup and shared deep links');
 

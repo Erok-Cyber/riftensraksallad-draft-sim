@@ -65,7 +65,7 @@
       const endpoint=window.RIFT_DB_CONFIG?.plannerFunctionUrl;if(!endpoint)throw Error('Saknar anslutning');
       const series=new Map();let offset=0,partial=false,totalSeries=0;
       for(let page=0;page<126;page++){
-        const url=new URL(endpoint);url.searchParams.set('id',id);url.searchParams.set('rivals','1');url.searchParams.set('offset',String(offset));
+        const url=new URL(endpoint);url.searchParams.set('id',String(plan.sourcePlanId||id));url.searchParams.set('rivals','1');if(plan.isOwnTeam)url.searchParams.set('own','1');url.searchParams.set('offset',String(offset));
         const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),45000);
         try{
           const res=await fetch(url,{signal:controller.signal,cache:'no-store'});if(!res.ok)throw Error('HTTP '+res.status);

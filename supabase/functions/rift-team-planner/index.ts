@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.95.0";
 
 import { mergeReview, preserveEvidence, applyConfirmedLineup } from "./plan-policy.mjs";
-import { seriesHistory } from "./rivals-history.mjs";
+import { seriesHistory, ownTeamHistoryPlan } from "./rivals-history.mjs";
 import "./ban-policy.js";
 
 const corsHeaders={
@@ -951,7 +951,8 @@ Deno.serve(async(req:Request)=>{
         const row=data?.[0];if(!row)return json({error:"Plan not found"},404);
         const offset=Number(url.searchParams.get("offset")||0);
         if(!Number.isInteger(offset)||offset<0||offset>500)return json({error:"Invalid offset"},400);
-        return json(await rivalsHistory({...row.payload,opponent:row.opponent},offset));
+        const historyPlan={...row.payload,opponent:row.opponent};
+        return json(await rivalsHistory(url.searchParams.get("own")==="1"?ownTeamHistoryPlan(historyPlan):historyPlan,offset));
       }
       return json({
         plans:data||[],
@@ -1042,6 +1043,7 @@ Deno.serve(async(req:Request)=>{
     return json({error:"Method not allowed"},405);
   }catch(err){console.error(err);return json({error:"Unexpected server error"},500)}
 });
+
 
 
 
